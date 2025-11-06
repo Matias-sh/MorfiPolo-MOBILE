@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Primary Colors - Inspirado en Meal Reminder (verdes y azules suaves) -->
+    <color name="primary_green">#66BB6A</color>
+    <color name="primary_green_dark">#4CAF50</color>
+    <color name="primary_green_light">#81C784</color>
+    <color name="primary_blue">#42A5F5</color>
+    <color name="primary_blue_dark">#1E88E5</color>
+    <color name="primary_blue_light">#64B5F6</color>
+    <color name="accent_orange">#FFA726</color>
+    <color name="accent_orange_light">#FFB74D</color>
+    
+    <!-- Status Colors -->
+    <color name="status_open">#66BB6A</color>
+    <color name="status_closed">#EF5350</color>
+    <color name="status_selected">#66BB6A</color>
+    <color name="status_pending">#FFA726</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#263238</color>
+    <color name="text_secondary">#78909C</color>
+    <color name="text_hint">#B0BEC5</color>
+    <color name="text_instruction">#42A5F5</color>
+    <color name="text_warning">#EF5350</color>
+    <color name="text_success">#66BB6A</color>
+    
+    <!-- Background Colors -->
+    <color name="background_light">#F5F7FA</color>
+    <color name="background_card">#FFFFFF</color>
+    <color name="background_card_elevated">#FFFFFF</color>
+    <color name="divider">#E1E8ED</color>
+    <color name="divider_light">#F0F4F8</color>
+    
+    <!-- Gradient Colors -->
+    <color name="gradient_start">#66BB6A</color>
+    <color name="gradient_end">#42A5F5</color>
+    
+    <!-- Widget specific colors -->
+    <color name="widget_background">#FFFFFF</color>
+</resources>

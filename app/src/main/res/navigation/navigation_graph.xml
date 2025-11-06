@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/navigation_graph"
+    app:startDestination="@id/dailyMenuFragment">
+
+    <fragment
+        android:id="@+id/dailyMenuFragment"
+        android:name="com.cocido.morfipolo.ui.menu.daily.DailyMenuFragment"
+        android:label="@string/menu_daily"
+        tools:layout="@layout/fragment_daily_menu" />
+
+    <fragment
+        android:id="@+id/weeklyMenuFragment"
+        android:name="com.cocido.morfipolo.ui.menu.weekly.WeeklyMenuFragment"
+        android:label="@string/menu_weekly"
+        tools:layout="@layout/fragment_weekly_menu" />
+
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.cocido.morfipolo.ui.profile.ProfileFragment"
+        android:label="@string/profile"
+        tools:layout="@layout/fragment_profile" />
+
+</navigation>
+
+
