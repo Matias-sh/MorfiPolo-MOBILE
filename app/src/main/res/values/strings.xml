@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Morfipolo</string>
+    <string name="app_name">Comedor</string>
     
     <!-- Login -->
     <string name="login_title">Iniciar Sesión</string>

@@ -21,7 +21,7 @@
                 android:id="@+id/logoImageView"
                 android:layout_width="match_parent"
                 android:layout_height="250dp"
-                android:src="@drawable/morfi_polo_logo"
+                android:src="@drawable/comedor_polo_logo"
                 android:contentDescription="@string/app_name"
                 android:scaleType="fitCenter"
                 app:layout_constraintEnd_toEndOf="parent"
