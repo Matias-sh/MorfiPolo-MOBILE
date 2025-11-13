@@ -1,11 +1,19 @@
 package com.cocido.morfipolo.domain.model
 
 data class User(
-    val id: Long = 0,
+    val id: String,
+    val name: String,
+    val lastName: String,
+    val email: String,
     val dni: String,
-    val nombre: String,
-    val email: String? = null,
-    val passwordHash: String
+    val dependence: String,
+    val birthDate: String,
+    val isActive: Boolean,
+    val roles: List<String>,
+    val createdAt: String,
+    val updatedAt: String
 )
+
+
 
 

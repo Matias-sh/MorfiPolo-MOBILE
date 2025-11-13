@@ -4,7 +4,7 @@
     android:minHeight="110dp"
     android:updatePeriodMillis="1800000"
     android:previewLayout="@layout/widget_menu"
-    android:initialLayout="@layout/widget_menu"
+    android:initialLayout="@layout/widget_menu_simple"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="2"
     android:targetCellHeight="2"

@@ -6,12 +6,13 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.core.widget.doOnTextChanged
+import com.google.android.material.textfield.TextInputLayout
 import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.R
 import com.cocido.morfipolo.databinding.FragmentProfileBinding
@@ -24,8 +25,10 @@ class ProfileFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: ProfileViewModel by viewModels {
+        val app = requireActivity().application as MorfipoloApplication
         ProfileViewModelFactory(
-            (requireActivity().application as MorfipoloApplication).userRepository
+            app.userRepository,
+            app.authManager
         )
     }
 
@@ -54,8 +57,9 @@ class ProfileFragment : Fragment() {
                         // Show loading if needed
                     }
                     is ProfileUiState.Success -> {
-                        binding.nameTextView.text = state.user.nombre
-                        binding.avatarTextView.text = state.user.nombre.firstOrNull()?.toString() ?: "U"
+                        val fullName = "${state.user.name} ${state.user.lastName}"
+                        binding.nameTextView.text = fullName
+                        binding.avatarTextView.text = state.user.name.firstOrNull()?.toString() ?: "U"
                     }
                     is ProfileUiState.Error -> {
                         Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
@@ -107,31 +111,68 @@ class ProfileFragment : Fragment() {
         val dialogView = LayoutInflater.from(requireContext())
             .inflate(R.layout.dialog_change_password, null)
 
-        val currentPasswordEditText = dialogView.findViewById<EditText>(R.id.currentPasswordEditText)
-        val newPasswordEditText = dialogView.findViewById<EditText>(R.id.newPasswordEditText)
-        val confirmPasswordEditText = dialogView.findViewById<EditText>(R.id.confirmPasswordEditText)
+        val currentPasswordLayout = dialogView.findViewById<TextInputLayout>(R.id.currentPasswordLayout)
+        val newPasswordLayout = dialogView.findViewById<TextInputLayout>(R.id.newPasswordLayout)
+        val confirmPasswordLayout = dialogView.findViewById<TextInputLayout>(R.id.confirmPasswordLayout)
 
-        AlertDialog.Builder(requireContext())
+        val currentPasswordEditText = currentPasswordLayout.editText
+        val newPasswordEditText = newPasswordLayout.editText
+        val confirmPasswordEditText = confirmPasswordLayout.editText
+
+        newPasswordEditText?.doOnTextChanged { text, _, _, _ ->
+            if (newPasswordLayout.error != null) {
+                val isValid = isPasswordValid(text?.toString().orEmpty())
+                newPasswordLayout.error = if (isValid) null else getString(R.string.password_requirements_error)
+            }
+        }
+
+        confirmPasswordEditText?.doOnTextChanged { _, _, _, _ ->
+            confirmPasswordLayout.error = null
+        }
+
+        val dialog = AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.change_password))
             .setView(dialogView)
-            .setPositiveButton(getString(R.string.save)) { _, _ ->
-                val currentPassword = currentPasswordEditText.text.toString()
-                val newPassword = newPasswordEditText.text.toString()
-                val confirmPassword = confirmPasswordEditText.text.toString()
+            .setNegativeButton(getString(R.string.cancel), null)
+            .setPositiveButton(getString(R.string.save), null)
+            .create()
 
-                if (newPassword != confirmPassword) {
-                    Toast.makeText(
-                        requireContext(),
-                        getString(R.string.passwords_not_match),
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@setPositiveButton
+        dialog.setOnShowListener {
+            val positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            positiveButton.setOnClickListener {
+                currentPasswordLayout.error = null
+                newPasswordLayout.error = null
+                confirmPasswordLayout.error = null
+
+                val currentPassword = currentPasswordEditText?.text?.toString().orEmpty()
+                val newPassword = newPasswordEditText?.text?.toString().orEmpty()
+                val confirmPassword = confirmPasswordEditText?.text?.toString().orEmpty()
+
+                var isValid = true
+
+                if (currentPassword.isBlank()) {
+                    currentPasswordLayout.error = getString(R.string.password_current_required)
+                    isValid = false
                 }
 
-                viewModel.changePassword(currentPassword, newPassword)
+                if (!isPasswordValid(newPassword)) {
+                    newPasswordLayout.error = getString(R.string.password_requirements_error)
+                    isValid = false
+                }
+
+                if (newPassword != confirmPassword) {
+                    confirmPasswordLayout.error = getString(R.string.passwords_not_match)
+                    isValid = false
+                }
+
+                if (isValid) {
+                    viewModel.changePassword(currentPassword, newPassword)
+                    dialog.dismiss()
+                }
             }
-            .setNegativeButton(getString(R.string.cancel), null)
-            .show()
+        }
+
+        dialog.show()
     }
 
     private fun showLogoutDialog() {
@@ -153,18 +194,26 @@ class ProfileFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+
+    private fun isPasswordValid(password: String): Boolean {
+        val passwordPattern = Regex("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$")
+        return passwordPattern.matches(password)
+    }
 }
 
 class ProfileViewModelFactory(
-    private val userRepository: com.cocido.morfipolo.data.repository.UserRepository
+    private val userRepository: com.cocido.morfipolo.data.repository.UserRepository,
+    private val authManager: com.cocido.morfipolo.data.remote.AuthManager
 ) : androidx.lifecycle.ViewModelProvider.Factory {
     override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ProfileViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return ProfileViewModel(userRepository) as T
+            return ProfileViewModel(userRepository, authManager) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
+
 
 

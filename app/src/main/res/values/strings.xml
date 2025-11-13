@@ -45,6 +45,9 @@
     <string name="password_changed_success">Contraseña cambiada exitosamente</string>
     <string name="password_change_error">Error al cambiar la contraseña</string>
     <string name="passwords_not_match">Las contraseñas no coinciden</string>
+    <string name="password_requirements_message">Debe incluir mayúscula, minúscula, número y al menos 8 caracteres.</string>
+    <string name="password_requirements_error">La contraseña debe tener mayúscula, minúscula, número y al menos 8 caracteres.</string>
+    <string name="password_current_required">Ingresá tu contraseña actual</string>
     
     <!-- Notifications -->
     <string name="notification_channel_name">Actualizaciones de Menú</string>
@@ -56,4 +59,5 @@
     <string name="widget_title">Menú del Día</string>
     <string name="widget_join">Sumarse</string>
     <string name="widget_remove">Quitarse</string>
+    <string name="widget_error">No se puede cargar el widget</string>
 </resources>

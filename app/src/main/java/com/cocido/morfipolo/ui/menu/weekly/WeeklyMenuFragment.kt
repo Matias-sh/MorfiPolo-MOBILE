@@ -20,8 +20,12 @@ class WeeklyMenuFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: WeeklyMenuViewModel by viewModels {
+        val app = requireActivity().application as MorfipoloApplication
         WeeklyMenuViewModelFactory(
-            (requireActivity().application as MorfipoloApplication).menuRepository
+            app.menuRepository,
+            app.authManager,
+            app.voteRepository,
+            app.sessionManager
         )
     }
 
@@ -39,7 +43,41 @@ class WeeklyMenuFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        adapter = WeeklyMenuAdapter()
+        adapter = WeeklyMenuAdapter(
+            onMenuClick = { item ->
+                // Cuando se hace clic en un menú, navegar al menú del día con esa fecha
+                android.util.Log.d("WeeklyMenuFragment", "Menú clickeado: ${item.menu.date}")
+                // Por ahora solo logueamos, pero podrías navegar al DailyMenuFragment con esta fecha
+                // TODO: Implementar navegación al menú del día seleccionado
+            },
+            onRemoveVote = { voteId ->
+                // Eliminar voto y recargar menús
+                lifecycleScope.launch {
+                    try {
+                        val app = requireActivity().application as MorfipoloApplication
+                        val result = app.voteRepository.deleteVote(voteId)
+                        if (result.isSuccess) {
+                            android.util.Log.d("WeeklyMenuFragment", "Voto eliminado exitosamente")
+                            viewModel.loadWeeklyMenus()
+                        } else {
+                            android.util.Log.e("WeeklyMenuFragment", "Error al eliminar voto")
+                            android.widget.Toast.makeText(
+                                requireContext(),
+                                "Error al eliminar voto",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("WeeklyMenuFragment", "Error al eliminar voto", e)
+                        android.widget.Toast.makeText(
+                            requireContext(),
+                            "Error al eliminar voto: ${e.message}",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+        )
         binding.menusRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.menusRecyclerView.adapter = adapter
 
@@ -54,14 +92,26 @@ class WeeklyMenuFragment : Fragment() {
                     is WeeklyMenuUiState.Loading -> {
                         binding.progressBar.visibility = View.VISIBLE
                         binding.menusRecyclerView.visibility = View.GONE
+                        android.util.Log.d("WeeklyMenuFragment", "Cargando menús...")
                     }
                     is WeeklyMenuUiState.Success -> {
                         binding.progressBar.visibility = View.GONE
                         binding.menusRecyclerView.visibility = View.VISIBLE
-                        adapter.submitList(state.menus)
+                        android.util.Log.d("WeeklyMenuFragment", "Menús cargados exitosamente: ${state.menus.size}")
+                        adapter.submitList(state.menus) {
+                            android.util.Log.d("WeeklyMenuFragment", "Adapter actualizado con ${state.menus.size} menús")
+                        }
                     }
                     is WeeklyMenuUiState.Error -> {
                         binding.progressBar.visibility = View.GONE
+                        binding.menusRecyclerView.visibility = View.GONE
+                        android.util.Log.e("WeeklyMenuFragment", "Error al cargar menús: ${state.message}")
+                        // Mostrar mensaje de error al usuario
+                        android.widget.Toast.makeText(
+                            requireContext(),
+                            state.message,
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
             }
@@ -75,15 +125,22 @@ class WeeklyMenuFragment : Fragment() {
 }
 
 class WeeklyMenuViewModelFactory(
-    private val menuRepository: com.cocido.morfipolo.data.repository.MenuRepository
+    private val menuRepository: com.cocido.morfipolo.data.repository.MenuRepository,
+    private val authManager: com.cocido.morfipolo.data.remote.AuthManager,
+    private val voteRepository: com.cocido.morfipolo.data.repository.VoteRepository,
+    private val sessionManager: com.cocido.morfipolo.data.local.preferences.SessionManager
 ) : androidx.lifecycle.ViewModelProvider.Factory {
     override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(WeeklyMenuViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return WeeklyMenuViewModel(menuRepository) as T
+            return WeeklyMenuViewModel(menuRepository, authManager, voteRepository, sessionManager) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
+
+
+
 
 

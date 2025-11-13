@@ -3,12 +3,15 @@ package com.cocido.morfipolo.util.notifications
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.cocido.morfipolo.R
 import com.cocido.morfipolo.ui.main.MainActivity
+import com.cocido.morfipolo.util.widget.MenuWidgetProvider
 
 class NotificationHelper(private val context: Context) {
 
@@ -32,7 +35,7 @@ class NotificationHelper(private val context: Context) {
         }
     }
 
-    fun showMenuLoadedNotification(menuDescription: String) {
+    fun showMenuLoadedNotification(menuDescription: String, optionsText: String? = null) {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
@@ -44,13 +47,19 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        val contentText = if (optionsText != null && optionsText.isNotEmpty()) {
+            "${context.getString(R.string.menu_loaded_notification_text)}\n\n$menuDescription\n\nOpciones disponibles:\n$optionsText"
+        } else {
+            "${context.getString(R.string.menu_loaded_notification_text)}\n\n$menuDescription"
+        }
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(context.getString(R.string.menu_loaded_notification_title))
-            .setContentText("$menuDescription - ${context.getString(R.string.menu_loaded_notification_text)}")
+            .setContentText(contentText)
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("$menuDescription - ${context.getString(R.string.menu_loaded_notification_text)}")
+                    .bigText(contentText)
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
@@ -58,6 +67,31 @@ class NotificationHelper(private val context: Context) {
             .build()
 
         notificationManager.notify(NOTIFICATION_ID, notification)
+        
+        // Actualizar widget cuando se envía la notificación
+        updateWidget(context)
+    }
+
+    /**
+     * Actualiza el widget cuando se envía una notificación de nuevo menú
+     */
+    private fun updateWidget(context: Context) {
+        try {
+            val appWidgetManager = AppWidgetManager.getInstance(context)
+            val appWidgetIds = appWidgetManager.getAppWidgetIds(
+                ComponentName(context, MenuWidgetProvider::class.java)
+            )
+            if (appWidgetIds.isNotEmpty()) {
+                android.util.Log.d("NotificationHelper", "Actualizando ${appWidgetIds.size} widgets después de notificación")
+                val updateIntent = Intent(context, MenuWidgetProvider::class.java).apply {
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+                }
+                context.sendBroadcast(updateIntent)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("NotificationHelper", "Error al actualizar widget", e)
+        }
     }
 
     companion object {
@@ -65,5 +99,7 @@ class NotificationHelper(private val context: Context) {
         private const val NOTIFICATION_ID = 1
     }
 }
+
+
 
 

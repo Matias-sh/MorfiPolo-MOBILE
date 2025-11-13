@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("kotlin-kapt")
+    id("kotlin-parcelize")
 }
 
 android {
@@ -72,6 +73,19 @@ dependencies {
     
     // RecyclerView
     implementation(libs.androidx.recyclerview)
+    
+    // Retrofit
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.moshi)
+    
+    // OkHttp
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
+    
+    // Moshi
+    implementation(libs.moshi)
+    implementation(libs.moshi.kotlin)
+    kapt(libs.moshi.kapt)
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -20,9 +20,12 @@ interface MenuDao {
 
     @Query("SELECT * FROM menus ORDER BY fecha DESC")
     fun getAllMenus(): Flow<List<MenuEntity>>
+    
+    @Query("SELECT * FROM menus ORDER BY fecha DESC")
+    suspend fun getAllMenusSync(): List<MenuEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMenu(menu: MenuEntity): Long
+    suspend fun insertMenu(menu: MenuEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMenus(menus: List<MenuEntity>)
@@ -34,7 +37,9 @@ interface MenuDao {
     suspend fun deleteMenu(menu: MenuEntity)
 
     @Query("SELECT * FROM menus WHERE id = :id LIMIT 1")
-    suspend fun getMenuById(id: Long): MenuEntity?
+    suspend fun getMenuById(id: String): MenuEntity?
 }
+
+
 
 

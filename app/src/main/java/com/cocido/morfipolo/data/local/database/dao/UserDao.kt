@@ -10,10 +10,10 @@ interface UserDao {
     suspend fun getUserByDni(dni: String): UserEntity?
 
     @Query("SELECT * FROM users WHERE id = :id LIMIT 1")
-    suspend fun getUserById(id: Long): UserEntity?
+    suspend fun getUserById(id: String): UserEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertUser(user: UserEntity): Long
+    suspend fun insertUser(user: UserEntity)
 
     @Update
     suspend fun updateUser(user: UserEntity)
@@ -24,5 +24,7 @@ interface UserDao {
     @Query("SELECT * FROM users")
     fun getAllUsers(): Flow<List<UserEntity>>
 }
+
+
 
 

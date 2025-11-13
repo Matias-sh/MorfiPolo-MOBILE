@@ -28,10 +28,10 @@ import androidx.room.PrimaryKey
     ]
 )
 data class MenuSelectionEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val userId: Long,
-    val menuId: Long,
+    @PrimaryKey
+    val id: String,
+    val userId: String,
+    val menuId: String,
     val fechaSeleccion: Long // Timestamp
 )
 

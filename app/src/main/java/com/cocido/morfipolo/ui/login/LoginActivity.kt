@@ -6,10 +6,12 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import android.appwidget.AppWidgetManager
 import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.R
 import com.cocido.morfipolo.databinding.ActivityLoginBinding
 import com.cocido.morfipolo.ui.main.MainActivity
+import com.cocido.morfipolo.util.widget.MenuWidgetProvider
 import kotlinx.coroutines.launch
 
 class LoginActivity : AppCompatActivity() {
@@ -27,9 +29,21 @@ class LoginActivity : AppCompatActivity() {
         setupObservers()
         setupListeners()
 
-        // Verificar si ya está logueado
-        if ((application as MorfipoloApplication).userRepository.isLoggedIn()) {
-            navigateToMain()
+        // Verificar y refrescar autenticación automáticamente
+        lifecycleScope.launch {
+            val app = application as MorfipoloApplication
+            val authResult = app.authManager.verifyAndRefreshAuth()
+            
+            when (authResult) {
+                is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.Authenticated -> {
+                    // Usuario autenticado correctamente, ir a MainActivity
+                    navigateToMain()
+                }
+                is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.RefreshFailed,
+                is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.NotLoggedIn -> {
+                    // Mantener en login, no hacer nada
+                }
+            }
         }
     }
 
@@ -48,6 +62,8 @@ class LoginActivity : AppCompatActivity() {
                     is LoginUiState.Success -> {
                         binding.progressBar.visibility = android.view.View.GONE
                         binding.loginButton.isEnabled = true
+                        // Actualizar widget después del login exitoso
+                        updateWidget()
                         navigateToMain()
                     }
                     is LoginUiState.Error -> {
@@ -74,6 +90,25 @@ class LoginActivity : AppCompatActivity() {
         startActivity(intent)
         finish()
     }
+    
+    private fun updateWidget() {
+        try {
+            val appWidgetManager = AppWidgetManager.getInstance(this)
+            val appWidgetIds = appWidgetManager.getAppWidgetIds(
+                android.content.ComponentName(this, MenuWidgetProvider::class.java)
+            )
+            if (appWidgetIds.isNotEmpty()) {
+                android.util.Log.d("LoginActivity", "Actualizando ${appWidgetIds.size} widgets después del login")
+                val updateIntent = Intent(this, MenuWidgetProvider::class.java).apply {
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+                }
+                sendBroadcast(updateIntent)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("LoginActivity", "Error al actualizar widget después del login", e)
+        }
+    }
 }
 
 class LoginViewModelFactory(private val userRepository: com.cocido.morfipolo.data.repository.UserRepository) :
@@ -86,5 +121,7 @@ class LoginViewModelFactory(private val userRepository: com.cocido.morfipolo.dat
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
+
 
 

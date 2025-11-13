@@ -5,82 +5,588 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.view.View
 import android.widget.RemoteViews
 import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.R
-import com.cocido.morfipolo.data.repository.MenuRepository
 import com.cocido.morfipolo.ui.main.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
+/**
+ * Widget provider para mostrar el menú del día.
+ * 
+ * Enfoque simplificado:
+ * - Carga datos de forma asíncrona usando corrutinas
+ * - Muestra estado de carga inmediatamente
+ * - Maneja errores de forma robusta
+ * - Actualiza el widget solo cuando hay datos válidos
+ */
 class MenuWidgetProvider : AppWidgetProvider() {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    companion object {
+        private const val TAG = "MenuWidgetProvider"
+        private const val ACTION_SELECT_OPTION = "com.cocido.morfipolo.SELECT_OPTION"
+        private const val ACTION_DELETE_VOTE = "com.cocido.morfipolo.DELETE_VOTE"
+        private const val EXTRA_MENU_ID = "menu_id"
+        private const val EXTRA_OPTION_ID = "option_id"
+        private const val EXTRA_VOTE_ID = "vote_id"
+        private const val EXTRA_OPTION_INDEX = "option_index"
+    }
+
+    private val widgetScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId)
+        android.util.Log.d(TAG, "=== onUpdate llamado con ${appWidgetIds.size} widgets ===")
+        appWidgetIds.forEach { appWidgetId ->
+            android.util.Log.d(TAG, "onUpdate: Procesando widget $appWidgetId")
+            try {
+                // CRÍTICO: Usar widget_menu_simple desde el principio para evitar cambio de layout
+                android.util.Log.d(TAG, "onUpdate: Creando RemoteViews con widget_menu_simple")
+                val initialViews = try {
+                    RemoteViews(context.packageName, R.layout.widget_menu_simple)
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "onUpdate: ERROR al crear RemoteViews", e)
+                    e.printStackTrace()
+                    return@forEach
+                }
+                android.util.Log.d(TAG, "onUpdate: RemoteViews creado exitosamente")
+                
+                // Configurar estado inicial: mostrar solo el texto de carga, ocultar todo lo demás
+                try {
+                    initialViews.setTextViewText(R.id.widgetDateTextView, "Menú del Día - Cargando...")
+                    initialViews.setTextViewText(R.id.widgetMenuDescriptionTextView, "")
+                    initialViews.setViewVisibility(R.id.widgetStatusTextView, View.GONE)
+                    initialViews.setViewVisibility(R.id.widgetOption1Container, View.GONE)
+                    initialViews.setViewVisibility(R.id.widgetOption2Container, View.GONE)
+                    initialViews.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
+                    android.util.Log.d(TAG, "onUpdate: Estado inicial configurado")
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "onUpdate: ERROR al configurar estado inicial", e)
+                    e.printStackTrace()
+                }
+                
+                // Actualizar widget
+                try {
+                    appWidgetManager.updateAppWidget(appWidgetId, initialViews)
+                    android.util.Log.d(TAG, "onUpdate: ✅ Widget $appWidgetId actualizado con estado inicial exitosamente")
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "onUpdate: ❌ ERROR al actualizar widget $appWidgetId", e)
+                    e.printStackTrace()
+                    throw e // Re-lanzar para que se capture arriba
+                }
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "onUpdate: ❌ ERROR CRÍTICO al procesar widget $appWidgetId", e)
+                e.printStackTrace()
+                // Intentar mostrar un widget de error
+                try {
+                    val errorViews = RemoteViews(context.packageName, R.layout.widget_menu_simple)
+                    errorViews.setTextViewText(R.id.widgetDateTextView, "Error al cargar")
+                    errorViews.setViewVisibility(R.id.widgetMenuDescriptionTextView, View.GONE)
+                    errorViews.setViewVisibility(R.id.widgetStatusTextView, View.GONE)
+                    errorViews.setViewVisibility(R.id.widgetOption1Container, View.GONE)
+                    errorViews.setViewVisibility(R.id.widgetOption2Container, View.GONE)
+                    errorViews.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
+                    appWidgetManager.updateAppWidget(appWidgetId, errorViews)
+                } catch (e2: Exception) {
+                    android.util.Log.e(TAG, "onUpdate: ❌ ERROR incluso al mostrar widget de error", e2)
+                    e2.printStackTrace()
+                }
+                return@forEach
+            }
+            // Luego actualizar con datos
+            updateWidget(context, appWidgetManager, appWidgetId)
         }
     }
 
-    private fun updateAppWidget(
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val appWidgetIds = appWidgetManager.getAppWidgetIds(
+            android.content.ComponentName(context, MenuWidgetProvider::class.java)
+        )
+        appWidgetIds.forEach { updateWidget(context, appWidgetManager, it) }
+    }
+
+    override fun onDisabled(context: Context) {
+        super.onDisabled(context)
+        widgetScope.coroutineContext.cancel()
+    }
+
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+
+        when (intent.action) {
+            ACTION_SELECT_OPTION -> {
+                handleSelectOption(context, intent)
+            }
+            ACTION_DELETE_VOTE -> {
+                handleDeleteVote(context, intent)
+            }
+        }
+    }
+
+    /**
+     * Actualiza un widget específico.
+     * Enfoque: mostrar estado de carga inmediatamente, luego cargar datos y actualizar.
+     */
+    private fun updateWidget(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int
     ) {
-        val app = context.applicationContext as MorfipoloApplication
-        val menuRepository = app.menuRepository
+        android.util.Log.d(TAG, "updateWidget: Iniciando actualización para widget $appWidgetId")
+        
+        // Cargar datos de forma asíncrona
+        widgetScope.launch {
+            try {
+                android.util.Log.d(TAG, "updateWidget: Obteniendo aplicación...")
+                val app = context.applicationContext as? MorfipoloApplication
+                    ?: run {
+                        android.util.Log.e(TAG, "updateWidget: ERROR - No se pudo obtener MorfipoloApplication")
+                        showErrorState(context, appWidgetManager, appWidgetId, "Error de inicialización")
+                        return@launch
+                    }
+                android.util.Log.d(TAG, "updateWidget: Aplicación obtenida correctamente")
 
-        val views = RemoteViews(context.packageName, R.layout.widget_menu)
+                // Verificar autenticación
+                android.util.Log.d(TAG, "updateWidget: Verificando autenticación...")
+                if (!app.sessionManager.isLoggedIn()) {
+                    android.util.Log.w(TAG, "updateWidget: Usuario no logueado")
+                    showNotLoggedInState(context, appWidgetManager, appWidgetId)
+                    return@launch
+                }
+                android.util.Log.d(TAG, "updateWidget: Usuario logueado")
 
-        scope.launch {
-            val today = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
+                // Verificar y refrescar autenticación
+                android.util.Log.d(TAG, "updateWidget: Verificando y refrescando autenticación...")
+                val authResult = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    try {
+                        app.authManager.verifyAndRefreshAuth()
+                    } catch (e: Exception) {
+                        android.util.Log.e(TAG, "updateWidget: Error al verificar autenticación", e)
+                        null
+                    }
+                }
+
+                if (authResult !is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.Authenticated) {
+                    android.util.Log.w(TAG, "updateWidget: Autenticación fallida")
+                    showNotLoggedInState(context, appWidgetManager, appWidgetId)
+                    return@launch
+                }
+                android.util.Log.d(TAG, "updateWidget: Autenticación exitosa")
+
+                // Obtener menú del día
+                android.util.Log.d(TAG, "updateWidget: Obteniendo menú del día...")
+                val today = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+
+                val menu = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    try {
+                        app.menuRepository.getMenuByDate(today.time)
+                    } catch (e: Exception) {
+                        android.util.Log.e(TAG, "updateWidget: Error al obtener menú", e)
+                        null
+                    }
+                }
+
+                if (menu == null) {
+                    android.util.Log.w(TAG, "updateWidget: No hay menú disponible")
+                    showNoMenuState(context, appWidgetManager, appWidgetId)
+                    return@launch
+                }
+                android.util.Log.d(TAG, "updateWidget: Menú obtenido: ${menu.id}, opciones: ${menu.getOptionsOrEmpty().size}")
+
+                val options = menu.getOptionsOrEmpty()
+                if (options.isEmpty()) {
+                    android.util.Log.w(TAG, "updateWidget: Menú sin opciones")
+                    showNoOptionsState(context, appWidgetManager, appWidgetId, menu)
+                    return@launch
+                }
+                android.util.Log.d(TAG, "updateWidget: Opciones encontradas: ${options.size}")
+
+                // Obtener voto del usuario
+                android.util.Log.d(TAG, "updateWidget: Obteniendo voto del usuario...")
+                val userId = app.sessionManager.getCurrentUserId()
+                if (userId == null) {
+                    android.util.Log.w(TAG, "updateWidget: No hay userId")
+                    showNotLoggedInState(context, appWidgetManager, appWidgetId)
+                    return@launch
+                }
+
+                val userVote = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    try {
+                        app.voteRepository.getUserVoteForMenu(menu.id, userId)
+                    } catch (e: Exception) {
+                        android.util.Log.e(TAG, "updateWidget: Error al obtener voto", e)
+                        null
+                    }
+                }
+                android.util.Log.d(TAG, "updateWidget: Voto obtenido: ${if (userVote != null) "Sí" else "No"}")
+
+                // Mostrar menú con datos
+                android.util.Log.d(TAG, "updateWidget: Mostrando estado del menú...")
+                showMenuState(context, appWidgetManager, appWidgetId, menu, options, userVote)
+                android.util.Log.d(TAG, "updateWidget: ✅ Widget actualizado exitosamente")
+
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "updateWidget: ❌ ERROR al actualizar widget", e)
+                e.printStackTrace()
+                showErrorState(context, appWidgetManager, appWidgetId, "Error al cargar datos")
             }
+        }
+    }
 
-            val menu = menuRepository.getMenuByDate(today.time)
-            // Obtener userId desde sessionManager (no es suspend)
-            val userId = app.sessionManager.getCurrentUserId()
+    /**
+     * Muestra el estado de carga.
+     */
+    private fun showLoadingState(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int
+    ) {
+        android.util.Log.d(TAG, "showLoadingState: Mostrando estado de carga para widget $appWidgetId")
+        try {
+            val views = RemoteViews(context.packageName, R.layout.widget_menu_simple)
+            views.setTextViewText(R.id.widgetDateTextView, "Menú del Día - Cargando...")
+            views.setTextViewText(R.id.widgetMenuDescriptionTextView, "")
+            views.setViewVisibility(R.id.widgetStatusTextView, View.GONE)
+            views.setViewVisibility(R.id.widgetOption1Container, View.GONE)
+            views.setViewVisibility(R.id.widgetOption2Container, View.GONE)
+            views.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
+            appWidgetManager.updateAppWidget(appWidgetId, views)
+            android.util.Log.d(TAG, "showLoadingState: ✅ Estado de carga mostrado")
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "showLoadingState: ❌ ERROR", e)
+            e.printStackTrace()
+        }
+    }
 
-            if (menu != null && userId != null) {
-                val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                views.setTextViewText(R.id.widgetDateTextView, dateFormat.format(menu.fecha))
-                views.setTextViewText(R.id.widgetMenuTextView, menu.descripcion)
+    /**
+     * Muestra el estado cuando no hay usuario logueado.
+     */
+    private fun showNotLoggedInState(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int
+    ) {
+        try {
+            val views = RemoteViews(context.packageName, R.layout.widget_menu_simple)
+            views.setTextViewText(R.id.widgetDateTextView, "Inicia sesión para ver el menú")
+            views.setTextViewText(R.id.widgetMenuDescriptionTextView, "")
+            views.setViewVisibility(R.id.widgetStatusTextView, View.GONE)
+            views.setViewVisibility(R.id.widgetOption1Container, View.GONE)
+            views.setViewVisibility(R.id.widgetOption2Container, View.GONE)
+            views.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
+            appWidgetManager.updateAppWidget(appWidgetId, views)
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "showNotLoggedInState: ❌ ERROR", e)
+            e.printStackTrace()
+        }
+    }
 
-                val hasSelected = menuRepository.hasUserSelectedMenu(userId, menu.id)
+    /**
+     * Muestra el estado cuando no hay menú disponible.
+     */
+    private fun showNoMenuState(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int
+    ) {
+        try {
+            val views = RemoteViews(context.packageName, R.layout.widget_menu_simple)
+            views.setTextViewText(R.id.widgetDateTextView, "No hay menú disponible")
+            views.setTextViewText(R.id.widgetMenuDescriptionTextView, "")
+            views.setViewVisibility(R.id.widgetStatusTextView, View.GONE)
+            views.setViewVisibility(R.id.widgetOption1Container, View.GONE)
+            views.setViewVisibility(R.id.widgetOption2Container, View.GONE)
+            views.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
+            appWidgetManager.updateAppWidget(appWidgetId, views)
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "showNoMenuState: ❌ ERROR", e)
+            e.printStackTrace()
+        }
+    }
 
-                if (hasSelected) {
-                    views.setTextViewText(R.id.widgetActionButton, context.getString(R.string.widget_remove))
-                    views.setOnClickPendingIntent(
-                        R.id.widgetActionButton,
-                        getPendingIntent(context, ACTION_REMOVE_MENU, menu.id)
-                    )
+    /**
+     * Muestra el estado cuando no hay opciones disponibles.
+     */
+    private fun showNoOptionsState(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        menu: com.cocido.morfipolo.domain.model.Menu
+    ) {
+        try {
+            val views = RemoteViews(context.packageName, R.layout.widget_menu_simple)
+            views.setTextViewText(R.id.widgetDateTextView, "${formatDate(menu.date)} - Sin opciones")
+            views.setTextViewText(R.id.widgetMenuDescriptionTextView, menu.description)
+            views.setViewVisibility(R.id.widgetStatusTextView, View.GONE)
+            views.setViewVisibility(R.id.widgetOption1Container, View.GONE)
+            views.setViewVisibility(R.id.widgetOption2Container, View.GONE)
+            views.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
+            appWidgetManager.updateAppWidget(appWidgetId, views)
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "showNoOptionsState: ❌ ERROR", e)
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * Muestra el estado de error.
+     */
+    private fun showErrorState(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        errorMessage: String
+    ) {
+        try {
+            val views = RemoteViews(context.packageName, R.layout.widget_menu_simple)
+            views.setTextViewText(R.id.widgetDateTextView, "Error: $errorMessage")
+            views.setTextViewText(R.id.widgetMenuDescriptionTextView, "")
+            views.setViewVisibility(R.id.widgetStatusTextView, View.GONE)
+            views.setViewVisibility(R.id.widgetOption1Container, View.GONE)
+            views.setViewVisibility(R.id.widgetOption2Container, View.GONE)
+            views.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
+            appWidgetManager.updateAppWidget(appWidgetId, views)
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "showErrorState: ❌ ERROR", e)
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * Muestra el estado con el menú y opciones.
+     */
+    private fun showMenuState(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        menu: com.cocido.morfipolo.domain.model.Menu,
+        options: List<com.cocido.morfipolo.domain.model.MenuOption>,
+        userVote: com.cocido.morfipolo.domain.model.Vote?
+    ) {
+        android.util.Log.d(TAG, "showMenuState: Mostrando menú para widget $appWidgetId")
+        try {
+            // CRÍTICO: Usar widget_menu_simple que tiene todos los elementos necesarios
+            val views = RemoteViews(context.packageName, R.layout.widget_menu_simple)
+            android.util.Log.d(TAG, "showMenuState: RemoteViews creado con widget_menu_simple")
+            
+            // Configurar textos principales
+            views.setTextViewText(R.id.widgetDateTextView, formatDate(menu.date))
+            views.setTextViewText(R.id.widgetMenuDescriptionTextView, menu.description)
+            android.util.Log.d(TAG, "showMenuState: Textos principales configurados")
+            
+            // Configurar estado del menú
+            val statusText = when (menu.status) {
+                "open" -> "Abierto"
+                "closed" -> "Cerrado"
+                else -> menu.status
+            }
+            // Usar color sólido en lugar de drawable para evitar problemas de recursos
+            views.setViewVisibility(R.id.widgetStatusTextView, View.VISIBLE)
+            views.setTextViewText(R.id.widgetStatusTextView, statusText)
+            try {
+                val statusColor = if (menu.status == "open") {
+                    0xFF66BB6A.toInt() // Verde
                 } else {
-                    views.setTextViewText(R.id.widgetActionButton, context.getString(R.string.widget_join))
-                    views.setOnClickPendingIntent(
-                        R.id.widgetActionButton,
-                        getPendingIntent(context, ACTION_SELECT_MENU, menu.id)
+                    0xFFEF5350.toInt() // Rojo
+                }
+                views.setInt(R.id.widgetStatusTextView, "setBackgroundColor", statusColor)
+                android.util.Log.d(TAG, "showMenuState: Estado del menú configurado: $statusText")
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "showMenuState: Error al configurar color de estado", e)
+                // Continuar sin el color de fondo
+            }
+            
+            // CRÍTICO: Ocultar mensaje de error ANTES de mostrar contenido
+            views.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
+            views.setTextViewText(R.id.widgetNoMenuTextView, "") // Limpiar texto
+            android.util.Log.d(TAG, "showMenuState: Mensaje de error oculto")
+            
+            // Verificar si está dentro del tiempo de selección
+            val isWithinTime = isWithinSelectionTime(menu)
+            val isMenuOpen = menu.status == "open"
+            val canVote = isWithinTime && isMenuOpen
+            android.util.Log.d(TAG, "showMenuState: canVote=$canVote (isWithinTime=$isWithinTime, isMenuOpen=$isMenuOpen)")
+            
+            // Configurar opciones
+            // Nota: widget_menu_simple no tiene indicadores de selección, así que pasamos 0
+            configureOption(
+                context = context,
+                views = views,
+                optionContainerId = R.id.widgetOption1Container,
+                optionNameId = R.id.widgetOption1Name,
+                optionButtonId = R.id.widgetOption1Button,
+                optionSelectedIndicatorId = 0, // No existe en widget_menu_simple
+                option = options.getOrNull(0),
+                optionIndex = 0,
+                menuId = menu.id,
+                userVote = userVote,
+                canVote = canVote,
+                totalOptions = options.size
+            )
+            
+            configureOption(
+                context = context,
+                views = views,
+                optionContainerId = R.id.widgetOption2Container,
+                optionNameId = R.id.widgetOption2Name,
+                optionButtonId = R.id.widgetOption2Button,
+                optionSelectedIndicatorId = 0, // No existe en widget_menu_simple
+                option = options.getOrNull(1),
+                optionIndex = 1,
+                menuId = menu.id,
+                userVote = userVote,
+                canVote = canVote,
+                totalOptions = options.size
+            )
+            android.util.Log.d(TAG, "showMenuState: Opciones configuradas")
+            
+            configureClickIntent(context, views)
+            android.util.Log.d(TAG, "showMenuState: Llamando updateAppWidget...")
+            appWidgetManager.updateAppWidget(appWidgetId, views)
+            android.util.Log.d(TAG, "showMenuState: ✅ Widget actualizado con menú")
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "showMenuState: ❌ ERROR", e)
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * Configura una opción del menú en el widget.
+     */
+    private fun configureOption(
+        context: Context,
+        views: RemoteViews,
+        optionContainerId: Int,
+        optionNameId: Int,
+        optionButtonId: Int,
+        optionSelectedIndicatorId: Int,
+        option: com.cocido.morfipolo.domain.model.MenuOption?,
+        optionIndex: Int,
+        menuId: String,
+        userVote: com.cocido.morfipolo.domain.model.Vote?,
+        canVote: Boolean,
+        totalOptions: Int
+    ) {
+        if (option == null) {
+            views.setViewVisibility(optionContainerId, View.GONE)
+            return
+        }
+
+        views.setViewVisibility(optionContainerId, View.VISIBLE)
+        
+        // Configurar nombre de la opción
+        val optionName = if (totalOptions > 1) {
+            "Opción ${optionIndex + 1}: ${option.name}"
+        } else {
+            option.name
+        }
+        views.setTextViewText(optionNameId, optionName)
+        
+        // Verificar si está seleccionada
+        val isSelected = userVote?.option?.id == option.id
+        
+        // Mostrar indicador de selección (solo si existe en el layout)
+        // Nota: widget_menu_simple no tiene estos indicadores, así que los ignoramos silenciosamente
+        try {
+            // Intentar usar el indicador solo si el ID es válido (no 0)
+            if (optionSelectedIndicatorId != 0) {
+                views.setViewVisibility(
+                    optionSelectedIndicatorId,
+                    if (isSelected) View.VISIBLE else View.GONE
+                )
+            }
+        } catch (e: Exception) {
+            // El indicador no existe en el layout simplificado, ignorar silenciosamente
+            android.util.Log.d(TAG, "configureOption: Indicador de selección no disponible (esto es normal en widget_menu_simple)")
+        }
+        
+        // Configurar botón (TextView) - usar colores sólidos en lugar de drawables
+        try {
+            if (isSelected && userVote != null) {
+                // Botón para quitar selección
+                views.setTextViewText(optionButtonId, "Quitar selección")
+                try {
+                    views.setInt(optionButtonId, "setBackgroundColor", 0xFFEF5350.toInt()) // Rojo
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "configureOption: Error al configurar color de botón rojo", e)
+                }
+                try {
+                    val pendingIntent = createPendingIntent(
+                        context,
+                        ACTION_DELETE_VOTE,
+                        userVote.id,
+                        optionIndex
                     )
+                    views.setOnClickPendingIntent(optionButtonId, pendingIntent)
+                    android.util.Log.d(TAG, "configureOption: PendingIntent configurado para quitar selección")
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "configureOption: Error al configurar PendingIntent para quitar selección", e)
                 }
             } else {
-                views.setTextViewText(R.id.widgetDateTextView, context.getString(R.string.widget_title))
-                views.setTextViewText(R.id.widgetMenuTextView, context.getString(R.string.no_menu_available))
-                views.setTextViewText(R.id.widgetActionButton, "")
+                // Botón para seleccionar
+                views.setTextViewText(optionButtonId, if (canVote) "Elegir esta opción" else "No disponible")
+                try {
+                    views.setInt(optionButtonId, "setBackgroundColor", if (canVote) 0xFF42A5F5.toInt() else 0xFF9E9E9E.toInt()) // Azul o Gris
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "configureOption: Error al configurar color de botón", e)
+                }
+                if (canVote) {
+                    try {
+                        val pendingIntent = createPendingIntent(
+                            context,
+                            ACTION_SELECT_OPTION,
+                            menuId,
+                            optionIndex,
+                            option.id
+                        )
+                        views.setOnClickPendingIntent(optionButtonId, pendingIntent)
+                        android.util.Log.d(TAG, "configureOption: PendingIntent configurado para seleccionar")
+                    } catch (e: Exception) {
+                        android.util.Log.e(TAG, "configureOption: Error al configurar PendingIntent para seleccionar", e)
+                    }
+                } else {
+                    // Si no se puede votar, eliminar cualquier PendingIntent previo
+                    try {
+                        views.setOnClickPendingIntent(optionButtonId, null)
+                    } catch (e: Exception) {
+                        android.util.Log.e(TAG, "configureOption: Error al eliminar PendingIntent", e)
+                    }
+                }
             }
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "configureOption: ERROR general al configurar botón", e)
+            e.printStackTrace()
+        }
+    }
 
-            // Intent para abrir la app
-            val intent = Intent(context, MainActivity::class.java)
+    /**
+     * Configura el intent de click principal del widget.
+     */
+    private fun configureClickIntent(context: Context, views: RemoteViews) {
+        try {
+            val intent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
             val pendingIntent = PendingIntent.getActivity(
                 context,
                 0,
@@ -88,60 +594,165 @@ class MenuWidgetProvider : AppWidgetProvider() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             )
             views.setOnClickPendingIntent(R.id.widgetContainer, pendingIntent)
-
-            appWidgetManager.updateAppWidget(appWidgetId, views)
+            android.util.Log.d(TAG, "configureClickIntent: Click intent configurado correctamente")
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "configureClickIntent: ERROR al configurar click intent", e)
+            e.printStackTrace()
         }
     }
 
-    private fun getPendingIntent(context: Context, action: String, menuId: Long): PendingIntent {
+    /**
+     * Crea un PendingIntent para acciones del widget.
+     */
+    private fun createPendingIntent(
+        context: Context,
+        action: String,
+        menuId: String,
+        optionIndex: Int,
+        optionId: String? = null
+    ): PendingIntent {
         val intent = Intent(context, MenuWidgetProvider::class.java).apply {
             this.action = action
             putExtra(EXTRA_MENU_ID, menuId)
+            putExtra(EXTRA_OPTION_ID, optionId)
+            putExtra(EXTRA_OPTION_INDEX, optionIndex)
         }
         return PendingIntent.getBroadcast(
             context,
-            menuId.toInt(),
+            (menuId + optionIndex).hashCode(),
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
     }
 
-    override fun onReceive(context: Context, intent: Intent) {
-        super.onReceive(context, intent)
+    /**
+     * Crea un PendingIntent para eliminar voto.
+     */
+    private fun createPendingIntent(
+        context: Context,
+        action: String,
+        voteId: String,
+        optionIndex: Int
+    ): PendingIntent {
+        val intent = Intent(context, MenuWidgetProvider::class.java).apply {
+            this.action = action
+            putExtra(EXTRA_VOTE_ID, voteId)
+            putExtra(EXTRA_OPTION_INDEX, optionIndex)
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            (voteId + optionIndex).hashCode(),
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+    }
 
-        if (intent.action == ACTION_SELECT_MENU || intent.action == ACTION_REMOVE_MENU) {
-            val app = context.applicationContext as MorfipoloApplication
-            val menuRepository = app.menuRepository
-            val menuId = intent.getLongExtra(EXTRA_MENU_ID, -1)
-            
-            // Obtener userId desde sessionManager (no es suspend)
-            val userId = app.sessionManager.getCurrentUserId()
-
-            if (userId != null && menuId != -1L) {
-                scope.launch {
-                    if (intent.action == ACTION_SELECT_MENU) {
-                        menuRepository.selectMenu(userId, menuId)
-                    } else {
-                        menuRepository.deselectMenu(userId, menuId)
-                    }
-
-                    // Actualizar todos los widgets
-                    val appWidgetManager = AppWidgetManager.getInstance(context)
-                    val appWidgetIds = appWidgetManager.getAppWidgetIds(
-                        android.content.ComponentName(context, MenuWidgetProvider::class.java)
-                    )
-                    for (appWidgetId in appWidgetIds) {
-                        updateAppWidget(context, appWidgetManager, appWidgetId)
-                    }
+    /**
+     * Maneja la selección de una opción.
+     */
+    private fun handleSelectOption(context: Context, intent: Intent) {
+        val menuId = intent.getStringExtra(EXTRA_MENU_ID)
+        val optionId = intent.getStringExtra(EXTRA_OPTION_ID)
+        
+        if (menuId == null || optionId == null) return
+        
+        widgetScope.launch {
+            try {
+                val app = context.applicationContext as? MorfipoloApplication ?: return@launch
+                val userId = app.sessionManager.getCurrentUserId() ?: return@launch
+                
+                val result = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    app.voteRepository.createVoteOrReplace(optionId, menuId, userId)
                 }
+                
+                if (result.isSuccess) {
+                    // Actualizar todos los widgets
+                    updateAllWidgets(context)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error al seleccionar opción", e)
             }
         }
     }
 
-    companion object {
-        private const val ACTION_SELECT_MENU = "com.cocido.morfipolo.SELECT_MENU"
-        private const val ACTION_REMOVE_MENU = "com.cocido.morfipolo.REMOVE_MENU"
-        private const val EXTRA_MENU_ID = "menu_id"
+    /**
+     * Maneja la eliminación de un voto.
+     */
+    private fun handleDeleteVote(context: Context, intent: Intent) {
+        val voteId = intent.getStringExtra(EXTRA_VOTE_ID) ?: return
+        
+        widgetScope.launch {
+            try {
+                val app = context.applicationContext as? MorfipoloApplication ?: return@launch
+                
+                val result = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    app.voteRepository.deleteVote(voteId)
+                }
+                
+                if (result.isSuccess) {
+                    // Actualizar todos los widgets
+                    updateAllWidgets(context)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error al eliminar voto", e)
+            }
+        }
+    }
+
+    /**
+     * Actualiza todos los widgets instalados.
+     */
+    private fun updateAllWidgets(context: Context) {
+        try {
+            val appWidgetManager = AppWidgetManager.getInstance(context)
+            val appWidgetIds = appWidgetManager.getAppWidgetIds(
+                android.content.ComponentName(context, MenuWidgetProvider::class.java)
+            )
+            appWidgetIds.forEach { updateWidget(context, appWidgetManager, it) }
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Error al actualizar widgets", e)
+        }
+    }
+
+    /**
+     * Formatea una fecha de formato "yyyy-MM-dd" a "dd/MM/yyyy".
+     */
+    private fun formatDate(dateString: String): String {
+        return try {
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val outputFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            val date = inputFormat.parse(dateString) ?: Date()
+            outputFormat.format(date)
+        } catch (e: Exception) {
+            dateString
+        }
+    }
+
+    /**
+     * Verifica si la hora actual está dentro del tiempo de selección del menú.
+     */
+    private fun isWithinSelectionTime(menu: com.cocido.morfipolo.domain.model.Menu): Boolean {
+        if (menu.status != "open") return false
+        
+        return try {
+            if (menu.start_time.isBlank() || menu.end_time.isBlank()) return false
+            
+            val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+            }
+            
+            val startTime = isoFormat.parse(menu.start_time)
+            val endTime = isoFormat.parse(menu.end_time)
+            val now = Date()
+            
+            if (startTime != null && endTime != null) {
+                now.after(startTime) && now.before(endTime)
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            false
+        }
     }
 }
 
