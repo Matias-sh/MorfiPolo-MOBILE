@@ -7,11 +7,14 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.R
 import com.cocido.morfipolo.databinding.FragmentWeeklyMenuBinding
 import com.cocido.morfipolo.domain.model.Menu
+import com.cocido.morfipolo.util.NetworkUtils
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
 class WeeklyMenuFragment : Fragment() {
@@ -45,10 +48,12 @@ class WeeklyMenuFragment : Fragment() {
 
         adapter = WeeklyMenuAdapter(
             onMenuClick = { item ->
-                // Cuando se hace clic en un menú, navegar al menú del día con esa fecha
-                android.util.Log.d("WeeklyMenuFragment", "Menú clickeado: ${item.menu.date}")
-                // Por ahora solo logueamos, pero podrías navegar al DailyMenuFragment con esta fecha
-                // TODO: Implementar navegación al menú del día seleccionado
+                // Navegar al menú del día con la fecha seleccionada
+                android.util.Log.d("WeeklyMenuFragment", "Navegando al menú del día: ${item.menu.date}")
+                val bundle = Bundle().apply {
+                    putString("menuDate", item.menu.date)
+                }
+                findNavController().navigate(R.id.action_weeklyMenuFragment_to_dailyMenuFragment, bundle)
             },
             onRemoveVote = { voteId ->
                 // Eliminar voto y recargar menús
@@ -81,37 +86,85 @@ class WeeklyMenuFragment : Fragment() {
         binding.menusRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.menusRecyclerView.adapter = adapter
 
+        setupPullToRefresh()
         setupObservers()
+        checkNetworkStatus()
         viewModel.loadWeeklyMenus()
+    }
+    
+    private fun setupPullToRefresh() {
+        binding.swipeRefreshLayout.setColorSchemeResources(
+            R.color.nonna_brown_primary,
+            R.color.nonna_accent_warm,
+            R.color.nonna_success
+        )
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            viewModel.loadWeeklyMenus()
+        }
+    }
+    
+    private fun checkNetworkStatus() {
+        val isOnline = NetworkUtils.isNetworkAvailable(requireContext())
+        binding.offlineIndicator.visibility = if (!isOnline) View.VISIBLE else View.GONE
+    }
+    
+    private fun showErrorWithRetry(message: String, retryAction: () -> Unit) {
+        val snackbar = Snackbar.make(binding.root, message, Snackbar.LENGTH_INDEFINITE)
+        snackbar.setAction(getString(R.string.error_retry)) {
+            retryAction()
+        }
+        snackbar.setActionTextColor(resources.getColor(R.color.nonna_brown_primary, null))
+        snackbar.show()
     }
 
     private fun setupObservers() {
         lifecycleScope.launch {
             viewModel.uiState.collect { state ->
+                binding.swipeRefreshLayout.isRefreshing = false
+                
                 when (state) {
                     is WeeklyMenuUiState.Loading -> {
-                        binding.progressBar.visibility = View.VISIBLE
+                        if (!binding.swipeRefreshLayout.isRefreshing) {
+                            binding.progressBar.visibility = View.VISIBLE
+                        }
                         binding.menusRecyclerView.visibility = View.GONE
+                        binding.emptyStateLayout.visibility = View.GONE
                         android.util.Log.d("WeeklyMenuFragment", "Cargando menús...")
+                        checkNetworkStatus()
                     }
                     is WeeklyMenuUiState.Success -> {
                         binding.progressBar.visibility = View.GONE
-                        binding.menusRecyclerView.visibility = View.VISIBLE
-                        android.util.Log.d("WeeklyMenuFragment", "Menús cargados exitosamente: ${state.menus.size}")
-                        adapter.submitList(state.menus) {
-                            android.util.Log.d("WeeklyMenuFragment", "Adapter actualizado con ${state.menus.size} menús")
+                        binding.offlineIndicator.visibility = View.GONE
+                        
+                        if (state.menus.isEmpty()) {
+                            binding.menusRecyclerView.visibility = View.GONE
+                            binding.emptyStateLayout.visibility = View.VISIBLE
+                        } else {
+                            binding.menusRecyclerView.visibility = View.VISIBLE
+                            binding.emptyStateLayout.visibility = View.GONE
+                            android.util.Log.d("WeeklyMenuFragment", "Menús cargados exitosamente: ${state.menus.size}")
+                            adapter.submitList(state.menus) {
+                                android.util.Log.d("WeeklyMenuFragment", "Adapter actualizado con ${state.menus.size} menús")
+                            }
                         }
                     }
                     is WeeklyMenuUiState.Error -> {
                         binding.progressBar.visibility = View.GONE
                         binding.menusRecyclerView.visibility = View.GONE
+                        binding.emptyStateLayout.visibility = View.GONE
+                        checkNetworkStatus()
+                        
                         android.util.Log.e("WeeklyMenuFragment", "Error al cargar menús: ${state.message}")
-                        // Mostrar mensaje de error al usuario
-                        android.widget.Toast.makeText(
-                            requireContext(),
-                            state.message,
-                            android.widget.Toast.LENGTH_LONG
-                        ).show()
+                        
+                        val errorMessage = when {
+                            !NetworkUtils.isNetworkAvailable(requireContext()) -> getString(R.string.error_no_connection)
+                            state.message.contains("sesión", ignoreCase = true) || state.message.contains("session", ignoreCase = true) -> getString(R.string.error_session_expired)
+                            else -> state.message
+                        }
+                        
+                        showErrorWithRetry(errorMessage) {
+                            viewModel.loadWeeklyMenus()
+                        }
                     }
                 }
             }

@@ -43,6 +43,30 @@ class WeeklyMenuAdapter(
         private val isoDateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).apply {
             timeZone = java.util.TimeZone.getTimeZone("UTC")
         }
+        
+        private fun isWithinSelectionTime(menu: Menu): Boolean {
+            if (menu.status != "open") return false
+            
+            return try {
+                // Horario fijo: 08:00 - 11:00
+                val now = Calendar.getInstance()
+                val currentHour = now.get(Calendar.HOUR_OF_DAY)
+                val currentMinute = now.get(Calendar.MINUTE)
+
+                val startHour = 8
+                val startMin = 0
+                val endHour = 11
+                val endMin = 0
+
+                val currentTimeInMinutes = currentHour * 60 + currentMinute
+                val startTimeInMinutes = startHour * 60 + startMin
+                val endTimeInMinutes = endHour * 60 + endMin
+
+                currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes
+            } catch (e: Exception) {
+                false
+            }
+        }
 
         fun bind(item: WeeklyMenuItem) {
             val menu = item.menu
@@ -58,36 +82,28 @@ class WeeklyMenuAdapter(
             // Configurar fecha
             binding.dateTextView.text = dateFormat.format(menuDate)
             
-            // Configurar horario
-            val startTime = try {
-                menu.start_time.split("T")[1].substring(0, 5) // HH:mm
-            } catch (e: Exception) {
-                "08:00"
-            }
-            val endTime = try {
-                menu.end_time.split("T")[1].substring(0, 5) // HH:mm
-            } catch (e: Exception) {
-                "11:00"
-            }
+            // Configurar horario fijo: 08:00 - 11:00
             binding.timeRangeTextView.text = binding.root.context.getString(
                 R.string.selection_time,
-                startTime,
-                endTime
+                "08:00",
+                "11:00"
             )
             binding.timeRangeTextView.visibility = View.VISIBLE
             
-            // Configurar estado
-            val statusText = when (menu.status) {
-                "open" -> binding.root.context.getString(R.string.open)
-                "closed" -> binding.root.context.getString(R.string.closed)
-                else -> menu.status
+            // Configurar estado - validar si realmente está abierto según el horario (08:00 - 11:00)
+            val isWithinTime = isWithinSelectionTime(menu)
+            val isActuallyOpen = menu.status == "open" && isWithinTime
+            val statusText = when {
+                isActuallyOpen -> binding.root.context.getString(R.string.open)
+                menu.status == "closed" -> binding.root.context.getString(R.string.closed)
+                else -> binding.root.context.getString(R.string.closed) // Si pasó el horario, mostrar cerrado
             }
             binding.statusTextView.text = statusText
             binding.statusTextView.setBackgroundResource(
-                if (menu.status == "open") {
-                    R.drawable.status_badge_green
+                if (isActuallyOpen) {
+                    R.drawable.badge_success_modern
                 } else {
-                    R.drawable.status_badge_red
+                    R.drawable.badge_error_modern
                 }
             )
             
@@ -112,8 +128,8 @@ class WeeklyMenuAdapter(
                 binding.menuDescriptionTextView.text = binding.root.context.getString(R.string.no_menu_available)
             }
             
-            // Configurar botón "Quitar elección" si hay voto y el menú está abierto
-            if (userVote != null && menu.status == "open") {
+            // Configurar botón "Quitar elección" si hay voto y el menú está realmente abierto
+            if (userVote != null && isActuallyOpen) {
                 binding.removeVoteButton.visibility = View.VISIBLE
                 binding.removeVoteButton.setOnClickListener {
                     onRemoveVote(userVote.id)

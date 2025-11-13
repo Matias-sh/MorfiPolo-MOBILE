@@ -30,6 +30,11 @@ class NotificationHelper(private val context: Context) {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = context.getString(R.string.notification_channel_description)
+                // Habilitar sonido y vibración
+                enableVibration(true)
+                enableLights(true)
+                // Usar sonido por defecto del sistema
+                setShowBadge(true)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -54,7 +59,7 @@ class NotificationHelper(private val context: Context) {
         }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification_menu) // Icono de notificación personalizado
             .setContentTitle(context.getString(R.string.menu_loaded_notification_title))
             .setContentText(contentText)
             .setStyle(
@@ -62,8 +67,11 @@ class NotificationHelper(private val context: Context) {
                     .bigText(contentText)
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL) // Sonido, vibración y luz por defecto
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
 
         notificationManager.notify(NOTIFICATION_ID, notification)

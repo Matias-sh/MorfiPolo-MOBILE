@@ -33,7 +33,12 @@ class MenuRepository(
                 val menu = menusResponse?.data?.find { it.date == dateString }
                 
                 menu?.let {
-                           android.util.Log.d("MenuRepository", "Menú encontrado: ${it.id}, opciones: ${it.getOptionsOrEmpty().size}")
+                    // Filtrar menús "draft" - no mostrar borradores
+                    if (it.status == "draft") {
+                        android.util.Log.d("MenuRepository", "Menú encontrado pero es draft, no se muestra: ${it.id}")
+                        return null
+                    }
+                    android.util.Log.d("MenuRepository", "Menú encontrado: ${it.id}, opciones: ${it.getOptionsOrEmpty().size}")
                     // Guardar en base de datos local si es necesario
                     val menuEntity = menuToEntity(it)
                     menuDao.insertMenu(menuEntity)
@@ -47,18 +52,42 @@ class MenuRepository(
                 // Si falla, intentar desde base de datos local
                 val timestamp = date.time
                 val menuEntity = menuDao.getMenuByDate(timestamp)
-                menuEntity?.let { entityToMenu(it) }
+                menuEntity?.let { 
+                    val menu = entityToMenu(it)
+                    // Filtrar menús "draft" - no mostrar borradores
+                    if (menu.status == "draft") {
+                        null
+                    } else {
+                        menu
+                    }
+                }
             }
         } catch (e: HttpException) {
             // Si falla, intentar desde base de datos local
             val timestamp = date.time
             val menuEntity = menuDao.getMenuByDate(timestamp)
-            menuEntity?.let { entityToMenu(it) }
+            menuEntity?.let { 
+                val menu = entityToMenu(it)
+                // Filtrar menús "draft" - no mostrar borradores
+                if (menu.status == "draft") {
+                    null
+                } else {
+                    menu
+                }
+            }
         } catch (e: IOException) {
             // Si no hay conexión, usar base de datos local
             val timestamp = date.time
             val menuEntity = menuDao.getMenuByDate(timestamp)
-            menuEntity?.let { entityToMenu(it) }
+            menuEntity?.let { 
+                val menu = entityToMenu(it)
+                // Filtrar menús "draft" - no mostrar borradores
+                if (menu.status == "draft") {
+                    null
+                } else {
+                    menu
+                }
+            }
         } catch (e: Exception) {
             null
         }
@@ -82,8 +111,12 @@ class MenuRepository(
                 
                 android.util.Log.d("MenuRepository", "Menús obtenidos desde API: ${menus.size}")
                 
+                // Filtrar menús "draft" (borradores) - solo mostrar menús publicados
+                val publishedMenus = menus.filter { it.status != "draft" }
+                android.util.Log.d("MenuRepository", "Menús publicados (sin draft): ${publishedMenus.size}")
+                
                 // Ordenar menús por fecha (más recientes primero)
-                val sortedMenus = menus.sortedByDescending { menu ->
+                val sortedMenus = publishedMenus.sortedByDescending { menu ->
                     try {
                         dateFormat.parse(menu.date)?.time ?: 0L
                     } catch (e: Exception) {
@@ -119,9 +152,12 @@ class MenuRepository(
         val menuEntities = menuDao.getAllMenusSync()
         val menus = menuEntities.map { entityToMenu(it) }
         
-        android.util.Log.d("MenuRepository", "Menús obtenidos desde BD local: ${menus.size}")
+        // Filtrar menús "draft" - no mostrar borradores
+        val publishedMenus = menus.filter { it.status != "draft" }
         
-        return menus
+        android.util.Log.d("MenuRepository", "Menús obtenidos desde BD local: ${menus.size}, publicados: ${publishedMenus.size}")
+        
+        return publishedMenus
     }
 
     fun getWeeklyMenusFlow(): Flow<List<Menu>> {

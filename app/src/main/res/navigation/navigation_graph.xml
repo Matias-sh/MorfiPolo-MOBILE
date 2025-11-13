@@ -9,13 +9,23 @@
         android:id="@+id/dailyMenuFragment"
         android:name="com.cocido.morfipolo.ui.menu.daily.DailyMenuFragment"
         android:label="@string/menu_daily"
-        tools:layout="@layout/fragment_daily_menu" />
+        tools:layout="@layout/fragment_daily_menu">
+        <argument
+            android:name="menuDate"
+            app:argType="string"
+            android:defaultValue=""
+            app:nullable="true" />
+    </fragment>
 
     <fragment
         android:id="@+id/weeklyMenuFragment"
         android:name="com.cocido.morfipolo.ui.menu.weekly.WeeklyMenuFragment"
         android:label="@string/menu_weekly"
-        tools:layout="@layout/fragment_weekly_menu" />
+        tools:layout="@layout/fragment_weekly_menu">
+        <action
+            android:id="@+id/action_weeklyMenuFragment_to_dailyMenuFragment"
+            app:destination="@id/dailyMenuFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/profileFragment"

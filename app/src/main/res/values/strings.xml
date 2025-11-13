@@ -60,4 +60,23 @@
     <string name="widget_join">Sumarse</string>
     <string name="widget_remove">Quitarse</string>
     <string name="widget_error">No se puede cargar el widget</string>
+    
+    <!-- Network & Errors -->
+    <string name="offline_message">Sin conexión a internet. Los datos mostrados pueden estar desactualizados.</string>
+    <string name="offline_icon">Icono de sin conexión</string>
+    <string name="error_no_connection">Sin conexión a internet. Verifica tu conexión e intenta de nuevo.</string>
+    <string name="error_retry">Reintentar</string>
+    <string name="error_session_expired">Sesión expirada. Por favor, inicia sesión nuevamente.</string>
+    <string name="error_generic">Ocurrió un error. Por favor, intenta de nuevo.</string>
+    <string name="dni_invalid_format">El DNI debe tener entre 7 y 8 dígitos numéricos</string>
+    
+    <!-- Empty States -->
+    <string name="empty_state_title">No hay menús disponibles</string>
+    <string name="empty_state_message">No se encontraron menús para mostrar. Desliza hacia abajo para actualizar.</string>
+    <string name="empty_state_icon">Icono de estado vacío</string>
+    
+    <!-- Confirmations -->
+    <string name="confirm_remove_vote_title">Quitar elección</string>
+    <string name="confirm_remove_vote_message">¿Estás seguro que deseas quitar tu elección de este menú?</string>
+    <string name="confirm">Confirmar</string>
 </resources>

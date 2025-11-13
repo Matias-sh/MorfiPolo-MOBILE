@@ -4,235 +4,212 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_light"
+    android:background="@color/nonna_beige_primary"
     tools:context=".ui.menu.daily.DailyMenuFragment">
 
-    <ScrollView
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/offlineIndicator"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true"
-        android:fadeScrollbars="false">
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="@color/nonna_error"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="4dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="20dp">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="18dp">
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/headerCard"
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@android:drawable/ic_menu_revert"
+                android:tint="@color/nonna_text_white"
+                android:contentDescription="@string/offline_icon" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:text="@string/offline_message"
+                android:textColor="@color/nonna_text_white"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefreshLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/offlineIndicator">
+
+        <ScrollView
+            android:id="@+id/scrollView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:fadeScrollbars="false">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="@color/background_card"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="0dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent">
-
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="24dp">
-
-                    <TextView
-                        android:id="@+id/dateTextView"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="06/11/2025"
-                        android:textColor="@color/text_primary"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.02"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent" />
-
-                    <TextView
-                        android:id="@+id/timeRangeTextView"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/selection_time"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/dateTextView" />
-
-                    <LinearLayout
-                        android:id="@+id/statusLayout"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/timeRangeTextView">
-
-                        <TextView
-                            android:id="@+id/alreadySelectedTextView"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/status_badge_green"
-                            android:paddingStart="16dp"
-                            android:paddingEnd="16dp"
-                            android:paddingTop="8dp"
-                            android:paddingBottom="8dp"
-                            android:text="@string/already_selected"
-                            android:textColor="@color/white"
-                            android:textSize="12sp"
-                            android:textStyle="bold"
-                            android:visibility="gone" />
-
-                        <TextView
-                            android:id="@+id/statusTextView"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
-                            android:background="@drawable/status_badge_green"
-                            android:paddingStart="16dp"
-                            android:paddingEnd="16dp"
-                            android:paddingTop="8dp"
-                            android:paddingBottom="8dp"
-                            android:text="@string/open"
-                            android:textColor="@color/white"
-                            android:textSize="12sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-                </androidx.constraintlayout.widget.ConstraintLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/menuCardView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                app:cardBackgroundColor="@color/background_card"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="4dp"
-                app:strokeWidth="0dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/headerCard">
-
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="24dp">
-
-                    <TextView
-                        android:id="@+id/menuTitleTextView"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="MENÚ DEL DÍA"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.1"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent" />
-
-                    <TextView
-                        android:id="@+id/menuDescriptionTextView"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:text="Arrollado de pollo con pure de papas"
-                        android:textColor="@color/text_primary"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:lineSpacingExtra="4dp"
-                        android:gravity="center"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/menuTitleTextView" />
-
-                    <View
-                        android:id="@+id/divider"
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginTop="20dp"
-                        android:background="@color/divider_light"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/menuDescriptionTextView" />
-
-                    <LinearLayout
-                        android:id="@+id/optionsContainer"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        android:orientation="vertical"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/divider" />
-                </androidx.constraintlayout.widget.ConstraintLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-
-            <LinearLayout
-                android:id="@+id/navigationLayout"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/menuCardView">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/previousButton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/previous"
-                    android:textColor="@color/primary_green"
-                    app:strokeColor="@color/primary_green"
-                    app:cornerRadius="12dp" />
+                android:padding="20dp">
 
                 <TextView
-                    android:id="@+id/pageNumberTextView"
+                    android:id="@+id/dateTextView"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="24dp"
-                    android:layout_marginEnd="24dp"
-                    android:background="@drawable/status_badge_green"
-                    android:paddingStart="20dp"
-                    android:paddingEnd="20dp"
-                    android:paddingTop="12dp"
-                    android:paddingBottom="12dp"
-                    android:text="1"
-                    android:textColor="@color/white"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:text="06/11/2025"
+                    android:textColor="@color/nonna_text_primary"
+                    android:textSize="28sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.02"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/nextButton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
+                <TextView
+                    android:id="@+id/timeRangeTextView"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/next"
-                    android:textColor="@color/primary_green"
-                    app:strokeColor="@color/primary_green"
-                    app:cornerRadius="12dp" />
-            </LinearLayout>
+                    android:layout_marginTop="8dp"
+                    android:text="@string/selection_time"
+                    android:textColor="@color/nonna_text_secondary"
+                    android:textSize="14sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/dateTextView" />
 
-            <ProgressBar
-                android:id="@+id/progressBar"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:indeterminateTint="@color/primary_green"
-                android:visibility="gone"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                <LinearLayout
+                    android:id="@+id/statusLayout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/timeRangeTextView">
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
-    </ScrollView>
+                    <TextView
+                        android:id="@+id/alreadySelectedTextView"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/badge_success_modern"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:text="@string/already_selected"
+                        android:textColor="@color/nonna_text_white"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/statusTextView"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/badge_success_modern"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:text="@string/open"
+                        android:textColor="@color/nonna_text_white"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:maxLines="1" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/menuTitleTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="MENÚ DEL DÍA"
+                    android:textColor="@color/nonna_text_secondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/statusLayout" />
+
+                <TextView
+                    android:id="@+id/menuDescriptionTextView"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Arrollado de pollo con pure de papas"
+                    android:textColor="@color/nonna_text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:lineSpacingExtra="4dp"
+                    android:gravity="center"
+                    android:maxLines="3"
+                    android:ellipsize="end"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/menuTitleTextView" />
+
+                <View
+                    android:id="@+id/divider"
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="20dp"
+                    android:background="@color/divider_light"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/menuDescriptionTextView" />
+
+                <LinearLayout
+                    android:id="@+id/optionsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:orientation="vertical"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/divider" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/menuCardView"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <ProgressBar
+                    android:id="@+id/progressBar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:indeterminateTint="@color/nonna_brown_primary"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </ScrollView>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

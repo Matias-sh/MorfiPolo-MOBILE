@@ -3,41 +3,122 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     
-    <!-- Primary Colors - Inspirado en Meal Reminder (verdes y azules suaves) -->
-    <color name="primary_green">#66BB6A</color>
-    <color name="primary_green_dark">#4CAF50</color>
-    <color name="primary_green_light">#81C784</color>
-    <color name="primary_blue">#42A5F5</color>
-    <color name="primary_blue_dark">#1E88E5</color>
-    <color name="primary_blue_light">#64B5F6</color>
-    <color name="accent_orange">#FFA726</color>
-    <color name="accent_orange_light">#FFB74D</color>
+    <!-- Nonna Inspired Color Palette - Beige, Brown, White -->
+    <!-- Primary Browns (Nonna Style) -->
+    <color name="nonna_brown_primary">#8B6F47</color>
+    <color name="nonna_brown_dark">#6B5435</color>
+    <color name="nonna_brown_light">#A6895F</color>
+    <color name="nonna_brown_accent">#9D7A4F</color>
     
-    <!-- Status Colors -->
-    <color name="status_open">#66BB6A</color>
-    <color name="status_closed">#EF5350</color>
-    <color name="status_selected">#66BB6A</color>
-    <color name="status_pending">#FFA726</color>
+    <!-- Beige Backgrounds -->
+    <color name="nonna_beige_primary">#F5F1EB</color>
+    <color name="nonna_beige_light">#FAF8F5</color>
+    <color name="nonna_beige_dark">#E8E3DB</color>
+    
+    <!-- White Cards -->
+    <color name="nonna_white_card">#FFFFFF</color>
+    <color name="nonna_white_pure">#FFFFFF</color>
     
     <!-- Text Colors -->
-    <color name="text_primary">#263238</color>
-    <color name="text_secondary">#78909C</color>
-    <color name="text_hint">#B0BEC5</color>
-    <color name="text_instruction">#42A5F5</color>
-    <color name="text_warning">#EF5350</color>
-    <color name="text_success">#66BB6A</color>
+    <color name="nonna_text_primary">#3E2723</color>
+    <color name="nonna_text_secondary">#6D4C41</color>
+    <color name="nonna_text_hint">#A1887F</color>
+    <color name="nonna_text_white">#FFFFFF</color>
+    
+    <!-- Accent Colors -->
+    <color name="nonna_accent_warm">#D4A574</color>
+    <color name="nonna_accent_gold">#C9A961</color>
+    
+    <!-- Status Colors (Adapted to Nonna Style) -->
+    <color name="nonna_success">#6B8E23</color>
+    <color name="nonna_error">#C85A5A</color>
+    <color name="nonna_warning">#D4A574</color>
+    <color name="nonna_info">#8B6F47</color>
+    
+    <!-- Legacy Colors (for compatibility) -->
+    <color name="primary_green">#6B8E23</color>
+    <color name="primary_green_dark">#556B2F</color>
+    <color name="primary_green_light">#8FBC8F</color>
+    <color name="primary_blue">#8B6F47</color>
+    <color name="primary_blue_dark">#6B5435</color>
+    <color name="primary_blue_light">#A6895F</color>
+    <color name="accent_orange">#D4A574</color>
+    <color name="accent_orange_light">#E8C99F</color>
+    
+    <!-- Status Colors -->
+    <color name="status_open">#6B8E23</color>
+    <color name="status_closed">#C85A5A</color>
+    <color name="status_selected">#6B8E23</color>
+    <color name="status_pending">#D4A574</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#3E2723</color>
+    <color name="text_primary_dark">#3E2723</color>
+    <color name="text_secondary">#6D4C41</color>
+    <color name="text_secondary_gray">#6D4C41</color>
+    <color name="text_hint">#A1887F</color>
+    <color name="text_instruction">#8B6F47</color>
+    <color name="text_warning">#C85A5A</color>
+    <color name="text_success">#6B8E23</color>
+    <color name="text_white_primary">#FFFFFF</color>
+    <color name="text_blue_accent">#8B6F47</color>
     
     <!-- Background Colors -->
-    <color name="background_light">#F5F7FA</color>
+    <color name="background_light">#F5F1EB</color>
     <color name="background_card">#FFFFFF</color>
     <color name="background_card_elevated">#FFFFFF</color>
-    <color name="divider">#E1E8ED</color>
-    <color name="divider_light">#F0F4F8</color>
+    <color name="card_solid_white">#FFFFFF</color>
+    <color name="card_subtle_white">#FAF8F5</color>
+    <color name="divider">#E8E3DB</color>
+    <color name="divider_light">#E8E3DB</color>
     
     <!-- Gradient Colors -->
-    <color name="gradient_start">#66BB6A</color>
-    <color name="gradient_end">#42A5F5</color>
+    <color name="gradient_start">#F5F1EB</color>
+    <color name="gradient_end">#E8E3DB</color>
+    <color name="bg_gradient_start">#F5F1EB</color>
+    <color name="bg_gradient_middle">#FAF8F5</color>
+    <color name="bg_gradient_end">#E8E3DB</color>
+    
+    <!-- Button Colors -->
+    <color name="button_primary">#8B6F47</color>
+    <color name="button_primary_pressed">#6B5435</color>
+    <color name="button_secondary">#D4A574</color>
+    <color name="button_success">#6B8E23</color>
+    <color name="button_danger">#C85A5A</color>
+    
+    <!-- Shadow Colors -->
+    <color name="card_shadow">#20000000</color>
+    <color name="card_shadow_strong">#30000000</color>
+    
+    <!-- Accessibility Colors -->
+    <color name="error_red">#C85A5A</color>
+    <color name="error_color">#C85A5A</color>
+    <color name="warning_orange">#D4A574</color>
+    <color name="info_blue">#8B6F47</color>
+    <color name="success_color">#6B8E23</color>
+    <color name="success_green">#6B8E23</color>
+    <color name="success_green_light">#8FBC8F</color>
+    <color name="success_green_dark">#556B2F</color>
+    
+    <!-- Bottom Navigation -->
+    <color name="bottom_nav_item_selected">#8B6F47</color>
     
     <!-- Widget specific colors -->
     <color name="widget_background">#FFFFFF</color>
+    
+    <!-- Legacy compatibility -->
+    <color name="text_color">#3E2723</color>
+    <color name="text_secondary_color">#6D4C41</color>
+    <color name="background_color">#F5F1EB</color>
+    
+    <!-- Formosa Government (for reference, not used) -->
+    <color name="formosa_blue_primary">#003662</color>
+    <color name="formosa_blue_light">#1A4C84</color>
+    <color name="formosa_blue_dark">#002447</color>
+    <color name="formosa_blue_accent">#2E5BBA</color>
+    <color name="food_orange">#FF6B35</color>
+    <color name="food_orange_light">#FF8C5A</color>
+    <color name="food_orange_dark">#E55A2B</color>
+    <color name="food_yellow">#F7B801</color>
+    <color name="food_yellow_light">#FFD54F</color>
 </resources>

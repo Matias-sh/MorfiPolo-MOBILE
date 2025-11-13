@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     id("kotlin-kapt")
     id("kotlin-parcelize")
+    id("androidx.navigation.safeargs.kotlin")
 }
 
 android {
@@ -73,6 +74,9 @@ dependencies {
     
     // RecyclerView
     implementation(libs.androidx.recyclerview)
+    
+    // SwipeRefreshLayout
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     
     // Retrofit
     implementation(libs.retrofit)

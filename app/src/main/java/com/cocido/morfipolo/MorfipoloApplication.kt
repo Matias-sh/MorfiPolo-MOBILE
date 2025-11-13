@@ -1,6 +1,7 @@
 package com.cocido.morfipolo
 
 import android.app.Application
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.room.Room
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -63,6 +64,8 @@ class MorfipoloApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Forzar modo claro en toda la app, independientemente de la configuración del sistema
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         setupWorkManager()
     }
 

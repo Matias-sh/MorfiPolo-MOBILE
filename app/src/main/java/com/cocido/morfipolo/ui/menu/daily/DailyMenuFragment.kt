@@ -5,12 +5,16 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.R
 import com.cocido.morfipolo.databinding.FragmentDailyMenuBinding
+import com.cocido.morfipolo.util.NetworkUtils
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -29,6 +33,7 @@ class DailyMenuFragment : Fragment() {
     }
 
     private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    private val dateFormatApi = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -43,35 +48,94 @@ class DailyMenuFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupObservers()
-        setupListeners()
+        setupPullToRefresh()
+        checkNetworkStatus()
         
-        // Cargar menú cuando el Fragment esté listo
-        val today = Calendar.getInstance().apply {
+        // Cargar menú: usar fecha del argumento si existe, sino usar hoy
+        val menuDateArg = arguments?.getString("menuDate", "") ?: ""
+        val dateToLoad = if (menuDateArg.isNotEmpty()) {
+            try {
+                dateFormatApi.parse(menuDateArg) ?: getTodayDate()
+            } catch (e: Exception) {
+                getTodayDate()
+            }
+        } else {
+            getTodayDate()
+        }
+        viewModel.loadMenuForDate(dateToLoad)
+    }
+    
+    private fun getTodayDate(): Date {
+        return Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
+        }.time
+    }
+    
+    private fun setupPullToRefresh() {
+        binding.swipeRefreshLayout.setColorSchemeResources(
+            R.color.nonna_brown_primary,
+            R.color.nonna_accent_warm,
+            R.color.nonna_success
+        )
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            val currentDate = viewModel.getCurrentDate()
+            viewModel.loadMenuForDate(currentDate)
         }
-        viewModel.loadMenuForDate(today.time)
+    }
+    
+    private fun checkNetworkStatus() {
+        val isOnline = NetworkUtils.isNetworkAvailable(requireContext())
+        binding.offlineIndicator.visibility = if (!isOnline) View.VISIBLE else View.GONE
+    }
+    
+    private fun showErrorWithRetry(message: String, retryAction: () -> Unit) {
+        val snackbar = Snackbar.make(binding.root, message, Snackbar.LENGTH_INDEFINITE)
+        snackbar.setAction(getString(R.string.error_retry)) {
+            retryAction()
+        }
+        snackbar.setActionTextColor(resources.getColor(R.color.nonna_brown_primary, null))
+        snackbar.show()
     }
 
     private fun setupObservers() {
         lifecycleScope.launch {
             viewModel.uiState.collect { state ->
+                binding.swipeRefreshLayout.isRefreshing = false
+                
                 when (state) {
                     is DailyMenuUiState.Loading -> {
-                        binding.progressBar.visibility = View.VISIBLE
-                        binding.menuCardView.visibility = View.GONE
+                        if (!binding.swipeRefreshLayout.isRefreshing) {
+                            binding.progressBar.visibility = View.VISIBLE
+                        }
+                        binding.optionsContainer.visibility = View.GONE
+                        binding.menuDescriptionTextView.visibility = View.GONE
+                        checkNetworkStatus()
                     }
                     is DailyMenuUiState.Success -> {
                         binding.progressBar.visibility = View.GONE
-                        binding.menuCardView.visibility = View.VISIBLE
-
+                        binding.optionsContainer.visibility = View.VISIBLE
+                        binding.menuDescriptionTextView.visibility = View.VISIBLE
+                        binding.offlineIndicator.visibility = View.GONE
+                        
                         updateUI(state)
                     }
                     is DailyMenuUiState.Error -> {
                         binding.progressBar.visibility = View.GONE
-                        Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                        checkNetworkStatus()
+                        
+                        val errorMessage = when {
+                            !NetworkUtils.isNetworkAvailable(requireContext()) -> getString(R.string.error_no_connection)
+                            state.message.contains("sesión", ignoreCase = true) || state.message.contains("session", ignoreCase = true) -> getString(R.string.error_session_expired)
+                            else -> state.message
+                        }
+                        
+                        showErrorWithRetry(errorMessage) {
+                            val currentDate = viewModel.getCurrentDate()
+                            viewModel.loadMenuForDate(currentDate)
+                        }
                     }
                 }
             }
@@ -89,36 +153,26 @@ class DailyMenuFragment : Fragment() {
         }
         binding.dateTextView.text = dateFormat.format(menuDate)
 
-        // Horario - extraer hora de ISO 8601
-        val startTime = try {
-            menu.start_time.split("T")[1].substring(0, 5) // HH:mm
-        } catch (e: Exception) {
-            "08:00"
-        }
-        val endTime = try {
-            menu.end_time.split("T")[1].substring(0, 5) // HH:mm
-        } catch (e: Exception) {
-            "11:00"
-        }
-        
+        // Horario fijo: 08:00 - 11:00
         binding.timeRangeTextView.text = getString(
             R.string.selection_time,
-            startTime,
-            endTime
+            "08:00",
+            "11:00"
         )
 
-        // Estado
-        val statusText = when (menu.status) {
-            "open" -> getString(R.string.open)
-            "closed" -> getString(R.string.closed)
-            else -> menu.status
+        // Estado - validar si realmente está abierto según el horario (08:00 - 11:00)
+        val isActuallyOpen = menu.status == "open" && state.isWithinTime
+        val statusText = when {
+            isActuallyOpen -> getString(R.string.open)
+            menu.status == "closed" -> getString(R.string.closed)
+            else -> getString(R.string.closed) // Si pasó el horario, mostrar cerrado
         }
         binding.statusTextView.text = statusText
         binding.statusTextView.setBackgroundResource(
-            if (menu.status == "open") {
-                R.drawable.status_badge_green
+            if (isActuallyOpen) {
+                R.drawable.badge_success_modern
             } else {
-                R.drawable.status_badge_red
+                R.drawable.badge_error_modern
             }
         )
 
@@ -132,8 +186,8 @@ class DailyMenuFragment : Fragment() {
         // Descripción del menú
         binding.menuDescriptionTextView.text = menu.description
         
-        // Mostrar todas las opciones del menú
-        displayMenuOptions(menu, state.userVote, state.isWithinTime, state.menu.status == "open")
+        // Mostrar todas las opciones del menú (reutilizar isActuallyOpen ya calculado arriba)
+        displayMenuOptions(menu, state.userVote, state.isWithinTime, isActuallyOpen)
     }
 
     private fun displayMenuOptions(
@@ -184,13 +238,15 @@ class DailyMenuFragment : Fragment() {
                 optionButton.setBackgroundResource(R.drawable.button_red)
                 selectedIndicator.visibility = View.VISIBLE
                 optionButton.setOnClickListener {
-                    viewModel.deleteVote()
+                    showConfirmDeleteVoteDialog {
+                        viewModel.deleteVote()
+                    }
                 }
             } else {
                 // Opción no seleccionada
                 optionButton.text = getString(R.string.choose_option)
                 optionButton.setIconResource(android.R.drawable.ic_menu_add)
-                optionButton.setBackgroundResource(R.drawable.button_gradient_pressed)
+                optionButton.setBackgroundResource(R.drawable.button_primary_solid)
                 selectedIndicator.visibility = View.GONE
                 optionButton.isEnabled = isWithinTime && isMenuOpen
                 optionButton.setOnClickListener {
@@ -209,15 +265,16 @@ class DailyMenuFragment : Fragment() {
             binding.optionsContainer.addView(optionView)
         }
     }
-    
-    private fun setupListeners() {
-        binding.previousButton.setOnClickListener {
-            viewModel.navigateToPreviousDay()
-        }
 
-        binding.nextButton.setOnClickListener {
-            viewModel.navigateToNextDay()
-        }
+    private fun showConfirmDeleteVoteDialog(onConfirm: () -> Unit) {
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.confirm_remove_vote_title))
+            .setMessage(getString(R.string.confirm_remove_vote_message))
+            .setPositiveButton(getString(R.string.confirm)) { _, _ ->
+                onConfirm()
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
     }
 
     override fun onDestroyView() {

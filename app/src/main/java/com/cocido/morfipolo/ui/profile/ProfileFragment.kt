@@ -7,7 +7,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -92,14 +91,6 @@ class ProfileFragment : Fragment() {
     private fun setupListeners() {
         binding.changePasswordButton.setOnClickListener {
             showChangePasswordDialog()
-        }
-
-        binding.darkModeSwitch.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-            } else {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-            }
         }
 
         binding.logoutButton.setOnClickListener {

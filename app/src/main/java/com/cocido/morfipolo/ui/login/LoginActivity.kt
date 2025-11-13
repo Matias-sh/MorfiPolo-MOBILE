@@ -11,6 +11,7 @@ import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.R
 import com.cocido.morfipolo.databinding.ActivityLoginBinding
 import com.cocido.morfipolo.ui.main.MainActivity
+import com.cocido.morfipolo.util.ValidationUtils
 import com.cocido.morfipolo.util.widget.MenuWidgetProvider
 import kotlinx.coroutines.launch
 
@@ -23,6 +24,15 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Configurar status bar transparente para que se integre con el fondo
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+        }
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -80,7 +90,21 @@ class LoginActivity : AppCompatActivity() {
         binding.loginButton.setOnClickListener {
             val dni = binding.dniEditText.text.toString().trim()
             val password = binding.passwordEditText.text.toString().trim()
+            
+            // Validar formato de DNI
+            if (!ValidationUtils.isValidDni(dni)) {
+                binding.dniEditText.error = getString(R.string.dni_invalid_format)
+                return@setOnClickListener
+            }
+            
             viewModel.login(dni, password)
+        }
+        
+        // Limpiar error cuando el usuario empieza a escribir
+        binding.dniEditText.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                binding.dniEditText.error = null
+            }
         }
     }
 

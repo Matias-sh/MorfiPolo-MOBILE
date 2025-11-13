@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/nonna_beige_primary"
     tools:context=".ui.main.MainActivity">
 
     <androidx.fragment.app.FragmentContainerView
@@ -22,11 +23,11 @@
         android:id="@+id/nav_view"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="@color/background_card"
+        android:background="@color/nonna_white_card"
         android:elevation="8dp"
         app:itemIconTint="@color/bottom_nav_item_color"
         app:itemTextColor="@color/bottom_nav_item_color"
-        app:itemRippleColor="@color/primary_green_light"
+        app:itemRippleColor="@color/nonna_beige_dark"
         app:labelVisibilityMode="labeled"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"

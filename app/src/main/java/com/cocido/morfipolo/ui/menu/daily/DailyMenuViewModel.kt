@@ -139,51 +139,33 @@ class DailyMenuViewModel(
         }
         loadMenuForDate(newDate.time)
     }
+    
+    fun getCurrentDate(): Date {
+        return currentDate.time
+    }
 
     private fun isWithinSelectionTime(menu: Menu): Boolean {
         if (menu.status != "open") return false
 
         try {
-            // Parsear start_time y end_time (formato ISO 8601)
-            val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).apply {
-                timeZone = TimeZone.getTimeZone("UTC")
-            }
-            
-            val startTime = isoFormat.parse(menu.start_time)
-            val endTime = isoFormat.parse(menu.end_time)
-            val now = Date()
+            // Horario fijo: 08:00 - 11:00
+            val now = Calendar.getInstance()
+            val currentHour = now.get(Calendar.HOUR_OF_DAY)
+            val currentMinute = now.get(Calendar.MINUTE)
 
-            if (startTime != null && endTime != null) {
-                return now.after(startTime) && now.before(endTime)
-            }
+            val startHour = 8
+            val startMin = 0
+            val endHour = 11
+            val endMin = 0
+
+            val currentTimeInMinutes = currentHour * 60 + currentMinute
+            val startTimeInMinutes = startHour * 60 + startMin
+            val endTimeInMinutes = endHour * 60 + endMin
+
+            return currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes
         } catch (e: Exception) {
-            // Si falla el parsing, intentar formato simple
-            try {
-                val simpleFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-                val now = Calendar.getInstance()
-                val currentHour = now.get(Calendar.HOUR_OF_DAY)
-                val currentMinute = now.get(Calendar.MINUTE)
-
-                // Extraer hora y minuto de start_time y end_time
-                val startTimeParts = menu.start_time.split("T")[1].split(":")
-                val endTimeParts = menu.end_time.split("T")[1].split(":")
-
-                val startHour = startTimeParts[0].toInt()
-                val startMin = startTimeParts[1].toInt()
-                val endHour = endTimeParts[0].toInt()
-                val endMin = endTimeParts[1].toInt()
-
-                val currentTimeInMinutes = currentHour * 60 + currentMinute
-                val startTimeInMinutes = startHour * 60 + startMin
-                val endTimeInMinutes = endHour * 60 + endMin
-
-                return currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes
-            } catch (e2: Exception) {
-                return false
-            }
+            return false
         }
-
-        return false
     }
 }
 

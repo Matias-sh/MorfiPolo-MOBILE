@@ -34,12 +34,12 @@ class MenuWidgetProvider : AppWidgetProvider() {
 
     companion object {
         private const val TAG = "MenuWidgetProvider"
-        private const val ACTION_SELECT_OPTION = "com.cocido.morfipolo.SELECT_OPTION"
-        private const val ACTION_DELETE_VOTE = "com.cocido.morfipolo.DELETE_VOTE"
-        private const val EXTRA_MENU_ID = "menu_id"
-        private const val EXTRA_OPTION_ID = "option_id"
-        private const val EXTRA_VOTE_ID = "vote_id"
-        private const val EXTRA_OPTION_INDEX = "option_index"
+        const val ACTION_SELECT_OPTION = "com.cocido.morfipolo.SELECT_OPTION"
+        const val ACTION_DELETE_VOTE = "com.cocido.morfipolo.DELETE_VOTE"
+        const val EXTRA_MENU_ID = "menu_id"
+        const val EXTRA_OPTION_ID = "option_id"
+        const val EXTRA_VOTE_ID = "vote_id"
+        const val EXTRA_OPTION_INDEX = "option_index"
     }
 
     private val widgetScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -69,8 +69,6 @@ class MenuWidgetProvider : AppWidgetProvider() {
                     initialViews.setTextViewText(R.id.widgetDateTextView, "Menú del Día - Cargando...")
                     initialViews.setTextViewText(R.id.widgetMenuDescriptionTextView, "")
                     initialViews.setViewVisibility(R.id.widgetStatusTextView, View.GONE)
-                    initialViews.setViewVisibility(R.id.widgetOption1Container, View.GONE)
-                    initialViews.setViewVisibility(R.id.widgetOption2Container, View.GONE)
                     initialViews.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
                     android.util.Log.d(TAG, "onUpdate: Estado inicial configurado")
                 } catch (e: Exception) {
@@ -96,8 +94,6 @@ class MenuWidgetProvider : AppWidgetProvider() {
                     errorViews.setTextViewText(R.id.widgetDateTextView, "Error al cargar")
                     errorViews.setViewVisibility(R.id.widgetMenuDescriptionTextView, View.GONE)
                     errorViews.setViewVisibility(R.id.widgetStatusTextView, View.GONE)
-                    errorViews.setViewVisibility(R.id.widgetOption1Container, View.GONE)
-                    errorViews.setViewVisibility(R.id.widgetOption2Container, View.GONE)
                     errorViews.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
                     appWidgetManager.updateAppWidget(appWidgetId, errorViews)
                 } catch (e2: Exception) {
@@ -314,8 +310,6 @@ class MenuWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widgetDateTextView, "No hay menú disponible")
             views.setTextViewText(R.id.widgetMenuDescriptionTextView, "")
             views.setViewVisibility(R.id.widgetStatusTextView, View.GONE)
-            views.setViewVisibility(R.id.widgetOption1Container, View.GONE)
-            views.setViewVisibility(R.id.widgetOption2Container, View.GONE)
             views.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
             appWidgetManager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
@@ -338,8 +332,6 @@ class MenuWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widgetDateTextView, "${formatDate(menu.date)} - Sin opciones")
             views.setTextViewText(R.id.widgetMenuDescriptionTextView, menu.description)
             views.setViewVisibility(R.id.widgetStatusTextView, View.GONE)
-            views.setViewVisibility(R.id.widgetOption1Container, View.GONE)
-            views.setViewVisibility(R.id.widgetOption2Container, View.GONE)
             views.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
             appWidgetManager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
@@ -362,8 +354,6 @@ class MenuWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widgetDateTextView, "Error: $errorMessage")
             views.setTextViewText(R.id.widgetMenuDescriptionTextView, "")
             views.setViewVisibility(R.id.widgetStatusTextView, View.GONE)
-            views.setViewVisibility(R.id.widgetOption1Container, View.GONE)
-            views.setViewVisibility(R.id.widgetOption2Container, View.GONE)
             views.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
             appWidgetManager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
@@ -394,20 +384,22 @@ class MenuWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widgetMenuDescriptionTextView, menu.description)
             android.util.Log.d(TAG, "showMenuState: Textos principales configurados")
             
-            // Configurar estado del menú
-            val statusText = when (menu.status) {
-                "open" -> "Abierto"
-                "closed" -> "Cerrado"
-                else -> menu.status
+            // Configurar estado del menú - validar si realmente está abierto según el horario (08:00 - 11:00)
+            val isWithinTime = isWithinSelectionTime(menu)
+            val isActuallyOpen = menu.status == "open" && isWithinTime
+            val statusText = when {
+                isActuallyOpen -> "Abierto"
+                menu.status == "closed" -> "Cerrado"
+                else -> "Cerrado" // Si pasó el horario, mostrar cerrado
             }
             // Usar color sólido en lugar de drawable para evitar problemas de recursos
             views.setViewVisibility(R.id.widgetStatusTextView, View.VISIBLE)
             views.setTextViewText(R.id.widgetStatusTextView, statusText)
             try {
-                val statusColor = if (menu.status == "open") {
-                    0xFF66BB6A.toInt() // Verde
+                val statusColor = if (isActuallyOpen) {
+                    0xFF6B8E23.toInt() // Verde Nonna
                 } else {
-                    0xFFEF5350.toInt() // Rojo
+                    0xFFC85A5A.toInt() // Rojo Nonna
                 }
                 views.setInt(R.id.widgetStatusTextView, "setBackgroundColor", statusColor)
                 android.util.Log.d(TAG, "showMenuState: Estado del menú configurado: $statusText")
@@ -421,44 +413,31 @@ class MenuWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widgetNoMenuTextView, "") // Limpiar texto
             android.util.Log.d(TAG, "showMenuState: Mensaje de error oculto")
             
-            // Verificar si está dentro del tiempo de selección
-            val isWithinTime = isWithinSelectionTime(menu)
-            val isMenuOpen = menu.status == "open"
-            val canVote = isWithinTime && isMenuOpen
-            android.util.Log.d(TAG, "showMenuState: canVote=$canVote (isWithinTime=$isWithinTime, isMenuOpen=$isMenuOpen)")
+            // Configurar ListView con RemoteViewsService para lista dinámica
+            try {
+                val serviceIntent = Intent(context, MenuWidgetService::class.java)
+                serviceIntent.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                serviceIntent.data = android.net.Uri.parse(serviceIntent.toUri(Intent.URI_INTENT_SCHEME))
+                
+                views.setRemoteAdapter(R.id.widgetOptionsList, serviceIntent)
+                android.util.Log.d(TAG, "showMenuState: ListView configurado con RemoteViewsService")
+                
+                // Configurar template para clicks vacíos (el click se maneja en cada item)
+                val emptyViewIntent = Intent(context, MainActivity::class.java)
+                val emptyViewPendingIntent = PendingIntent.getActivity(
+                    context,
+                    0,
+                    emptyViewIntent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                )
+                views.setPendingIntentTemplate(R.id.widgetOptionsList, emptyViewPendingIntent)
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "showMenuState: Error al configurar ListView", e)
+                e.printStackTrace()
+            }
             
-            // Configurar opciones
-            // Nota: widget_menu_simple no tiene indicadores de selección, así que pasamos 0
-            configureOption(
-                context = context,
-                views = views,
-                optionContainerId = R.id.widgetOption1Container,
-                optionNameId = R.id.widgetOption1Name,
-                optionButtonId = R.id.widgetOption1Button,
-                optionSelectedIndicatorId = 0, // No existe en widget_menu_simple
-                option = options.getOrNull(0),
-                optionIndex = 0,
-                menuId = menu.id,
-                userVote = userVote,
-                canVote = canVote,
-                totalOptions = options.size
-            )
-            
-            configureOption(
-                context = context,
-                views = views,
-                optionContainerId = R.id.widgetOption2Container,
-                optionNameId = R.id.widgetOption2Name,
-                optionButtonId = R.id.widgetOption2Button,
-                optionSelectedIndicatorId = 0, // No existe en widget_menu_simple
-                option = options.getOrNull(1),
-                optionIndex = 1,
-                menuId = menu.id,
-                userVote = userVote,
-                canVote = canVote,
-                totalOptions = options.size
-            )
-            android.util.Log.d(TAG, "showMenuState: Opciones configuradas")
+            // Notificar cambios en la lista
+            appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.widgetOptionsList)
             
             configureClickIntent(context, views)
             android.util.Log.d(TAG, "showMenuState: Llamando updateAppWidget...")
@@ -520,15 +499,21 @@ class MenuWidgetProvider : AppWidgetProvider() {
             android.util.Log.d(TAG, "configureOption: Indicador de selección no disponible (esto es normal en widget_menu_simple)")
         }
         
-        // Configurar botón (TextView) - usar colores sólidos en lugar de drawables
+        // Configurar botón (TextView) - usar drawables para compatibilidad con RemoteViews
         try {
             if (isSelected && userVote != null) {
                 // Botón para quitar selección
                 views.setTextViewText(optionButtonId, "Quitar selección")
                 try {
-                    views.setInt(optionButtonId, "setBackgroundColor", 0xFFEF5350.toInt()) // Rojo
+                    // Usar drawable rojo para el botón
+                    views.setInt(optionButtonId, "setBackgroundResource", R.drawable.button_red)
                 } catch (e: Exception) {
-                    android.util.Log.e(TAG, "configureOption: Error al configurar color de botón rojo", e)
+                    android.util.Log.d(TAG, "configureOption: Error al configurar drawable de botón rojo, usando color sólido")
+                    try {
+                        views.setInt(optionButtonId, "setBackgroundColor", 0xFFC85A5A.toInt()) // Rojo Nonna
+                    } catch (e2: Exception) {
+                        android.util.Log.e(TAG, "configureOption: Error al configurar color de botón rojo", e2)
+                    }
                 }
                 try {
                     val pendingIntent = createPendingIntent(
@@ -546,9 +531,21 @@ class MenuWidgetProvider : AppWidgetProvider() {
                 // Botón para seleccionar
                 views.setTextViewText(optionButtonId, if (canVote) "Elegir esta opción" else "No disponible")
                 try {
-                    views.setInt(optionButtonId, "setBackgroundColor", if (canVote) 0xFF42A5F5.toInt() else 0xFF9E9E9E.toInt()) // Azul o Gris
+                    if (canVote) {
+                        // Usar drawable del botón primario
+                        views.setInt(optionButtonId, "setBackgroundResource", R.drawable.button_primary_solid)
+                    } else {
+                        // Usar color gris cuando no se puede votar
+                        views.setInt(optionButtonId, "setBackgroundColor", 0xFFA1887F.toInt()) // Gris Nonna
+                    }
                 } catch (e: Exception) {
-                    android.util.Log.e(TAG, "configureOption: Error al configurar color de botón", e)
+                    android.util.Log.d(TAG, "configureOption: Error al configurar drawable de botón, usando color sólido")
+                    try {
+                        val buttonColor = if (canVote) 0xFF8B6F47.toInt() else 0xFFA1887F.toInt() // Marrón Nonna o Gris
+                        views.setInt(optionButtonId, "setBackgroundColor", buttonColor)
+                    } catch (e2: Exception) {
+                        android.util.Log.e(TAG, "configureOption: Error al configurar color de botón", e2)
+                    }
                 }
                 if (canVote) {
                     try {
@@ -708,6 +705,11 @@ class MenuWidgetProvider : AppWidgetProvider() {
             val appWidgetIds = appWidgetManager.getAppWidgetIds(
                 android.content.ComponentName(context, MenuWidgetProvider::class.java)
             )
+            // Notificar cambios en las listas de todos los widgets
+            appWidgetIds.forEach { appWidgetId ->
+                appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.widgetOptionsList)
+            }
+            // Actualizar todos los widgets
             appWidgetIds.forEach { updateWidget(context, appWidgetManager, it) }
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error al actualizar widgets", e)
@@ -730,26 +732,27 @@ class MenuWidgetProvider : AppWidgetProvider() {
 
     /**
      * Verifica si la hora actual está dentro del tiempo de selección del menú.
+     * Horario fijo: 08:00 - 11:00
      */
     private fun isWithinSelectionTime(menu: com.cocido.morfipolo.domain.model.Menu): Boolean {
         if (menu.status != "open") return false
         
         return try {
-            if (menu.start_time.isBlank() || menu.end_time.isBlank()) return false
-            
-            val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).apply {
-                timeZone = TimeZone.getTimeZone("UTC")
-            }
-            
-            val startTime = isoFormat.parse(menu.start_time)
-            val endTime = isoFormat.parse(menu.end_time)
-            val now = Date()
-            
-            if (startTime != null && endTime != null) {
-                now.after(startTime) && now.before(endTime)
-            } else {
-                false
-            }
+            // Horario fijo: 08:00 - 11:00
+            val now = Calendar.getInstance()
+            val currentHour = now.get(Calendar.HOUR_OF_DAY)
+            val currentMinute = now.get(Calendar.MINUTE)
+
+            val startHour = 8
+            val startMin = 0
+            val endHour = 11
+            val endMin = 0
+
+            val currentTimeInMinutes = currentHour * 60 + currentMinute
+            val startTimeInMinutes = startHour * 60 + startMin
+            val endTimeInMinutes = endHour * 60 + endMin
+
+            currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes
         } catch (e: Exception) {
             false
         }

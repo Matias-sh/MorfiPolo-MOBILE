@@ -4,35 +4,37 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="12dp"
-    app:cardBackgroundColor="@color/background_card"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="2dp"
+    app:cardBackgroundColor="@color/nonna_white_card"
+    app:cardCornerRadius="18dp"
+    app:cardElevation="4dp"
     app:strokeWidth="1dp"
     app:strokeColor="@color/divider_light">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp">
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp">
 
         <LinearLayout
             android:id="@+id/optionNameLayout"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            app:layout_constraintEnd_toStartOf="@id/optionButton"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            android:layout_marginBottom="12dp">
 
             <ImageView
                 android:id="@+id/selectedIndicator"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginEnd="8dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginEnd="12dp"
                 android:src="@android:drawable/checkbox_on_background"
                 android:contentDescription="Seleccionado"
-                android:tint="@color/primary_green"
+                android:tint="@color/nonna_success"
                 android:visibility="gone" />
 
             <TextView
@@ -41,30 +43,33 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Opción 1: Hamburguesas con arroz"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/nonna_text_primary"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:lineSpacingExtra="4dp" />
+                android:lineSpacingExtra="4dp"
+                android:maxLines="3"
+                android:ellipsize="end" />
         </LinearLayout>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/optionButton"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minWidth="120dp"
+            android:minHeight="48dp"
             android:text="@string/choose_option"
-            android:textColor="@color/white"
+            android:textColor="@color/nonna_text_white"
             android:textSize="14sp"
             android:textStyle="bold"
-            android:background="@drawable/button_gradient_pressed"
+            android:background="@drawable/button_primary_solid"
+            android:maxLines="1"
+            android:ellipsize="end"
             app:cornerRadius="12dp"
             app:icon="@android:drawable/ic_menu_add"
             app:iconGravity="textStart"
-            app:iconTint="@color/white"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:iconTint="@color/nonna_text_white"
+            app:iconPadding="6dp"
+            app:iconSize="18dp" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>
-
