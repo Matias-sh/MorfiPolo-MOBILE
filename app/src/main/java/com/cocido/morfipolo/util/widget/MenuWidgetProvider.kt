@@ -122,16 +122,93 @@ class MenuWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        super.onReceive(context, intent)
-
+        // CRÍTICO: Este log debe aparecer SIEMPRE que se reciba cualquier intent
+        android.util.Log.d(TAG, "═══════════════════════════════════════════════════════════")
+        android.util.Log.d(TAG, "onReceive: ⚡ INTENT RECIBIDO - SIEMPRE DEBE APARECER ESTE LOG")
+        android.util.Log.d(TAG, "onReceive: Action: ${intent.action}")
+        android.util.Log.d(TAG, "onReceive: Data URI: ${intent.data}")
+        android.util.Log.d(TAG, "onReceive: Component: ${intent.component}")
+        android.util.Log.d(TAG, "onReceive: Intent completo: $intent")
+        android.util.Log.d(TAG, "onReceive: Intent extras count: ${intent.extras?.size() ?: 0}")
+        
+        // IMPORTANTE: Cuando usamos FillInIntent con template, el intent siempre tiene ACTION_APPWIDGET_UPDATE
+        // Los extras del FillInIntent (action, menu_id, option_id, vote_id) se fusionan con el template intent
+        if (intent.action == android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
+            // Verificar si tiene extras de FillInIntent (viene de un click en un item)
+            val actionFromExtras = intent.getStringExtra("action")
+            val hasFillInIntentExtras = actionFromExtras != null || 
+                intent.hasExtra(EXTRA_MENU_ID) || 
+                intent.hasExtra(EXTRA_VOTE_ID) || 
+                intent.hasExtra(EXTRA_OPTION_ID)
+            
+            android.util.Log.d(TAG, "onReceive: Verificando extras de FillInIntent:")
+            android.util.Log.d(TAG, "onReceive:   -> actionFromExtras: '$actionFromExtras'")
+            android.util.Log.d(TAG, "onReceive:   -> hasExtra(${EXTRA_MENU_ID}): ${intent.hasExtra(EXTRA_MENU_ID)}")
+            android.util.Log.d(TAG, "onReceive:   -> hasExtra(${EXTRA_VOTE_ID}): ${intent.hasExtra(EXTRA_VOTE_ID)}")
+            android.util.Log.d(TAG, "onReceive:   -> hasExtra(${EXTRA_OPTION_ID}): ${intent.hasExtra(EXTRA_OPTION_ID)}")
+            android.util.Log.d(TAG, "onReceive:   -> hasFillInIntentExtras: $hasFillInIntentExtras")
+            
+            // Log de todos los extras disponibles
+            val allExtras = intent.extras?.keySet()?.joinToString(", ") ?: "ninguno"
+            android.util.Log.d(TAG, "onReceive:   -> Todos los extras: $allExtras")
+            
+            // Log detallado de cada extra
+            intent.extras?.keySet()?.forEach { key ->
+                val value = intent.extras?.get(key)
+                android.util.Log.d(TAG, "onReceive:   -> Extra '$key': $value (tipo: ${value?.javaClass?.simpleName})")
+            }
+            
+            if (hasFillInIntentExtras && actionFromExtras != null) {
+                // Es un click de un item de la lista - procesar según la action en los extras
+                android.util.Log.d(TAG, "onReceive: ✅ CLICK DE ITEM DETECTADO")
+                when (actionFromExtras) {
+                    ACTION_SELECT_OPTION -> {
+                        android.util.Log.d(TAG, "onReceive: 🎯 PROCESANDO ACTION_SELECT_OPTION desde FillInIntent")
+                        android.util.Log.d(TAG, "onReceive:   -> menuId: ${intent.getStringExtra(EXTRA_MENU_ID)}")
+                        android.util.Log.d(TAG, "onReceive:   -> optionId: ${intent.getStringExtra(EXTRA_OPTION_ID)}")
+                        android.util.Log.d(TAG, "onReceive:   -> optionIndex: ${intent.getIntExtra(EXTRA_OPTION_INDEX, -1)}")
+                        handleSelectOption(context, intent)
+                        android.util.Log.d(TAG, "onReceive: ✅ handleSelectOption llamado")
+                    }
+                    ACTION_DELETE_VOTE -> {
+                        android.util.Log.d(TAG, "onReceive: 🗑️ PROCESANDO ACTION_DELETE_VOTE desde FillInIntent")
+                        android.util.Log.d(TAG, "onReceive:   -> voteId: ${intent.getStringExtra(EXTRA_VOTE_ID)}")
+                        android.util.Log.d(TAG, "onReceive:   -> optionIndex: ${intent.getIntExtra(EXTRA_OPTION_INDEX, -1)}")
+                        handleDeleteVote(context, intent)
+                        android.util.Log.d(TAG, "onReceive: ✅ handleDeleteVote llamado")
+                    }
+                    else -> {
+                        android.util.Log.w(TAG, "onReceive: ⚠️ Action desconocida en extras: '$actionFromExtras'")
+                        super.onReceive(context, intent)
+                    }
+                }
+                android.util.Log.d(TAG, "═══════════════════════════════════════════════════════════")
+                return
+            } else {
+                // Es una actualización normal del widget
+                android.util.Log.d(TAG, "onReceive: 📋 ACTUALIZACIÓN NORMAL DEL WIDGET")
+                super.onReceive(context, intent)
+                android.util.Log.d(TAG, "═══════════════════════════════════════════════════════════")
+                return
+            }
+        }
+        
+        // Para actions directas (por si acaso)
         when (intent.action) {
             ACTION_SELECT_OPTION -> {
+                android.util.Log.d(TAG, "onReceive: 🎯 PROCESANDO ACTION_SELECT_OPTION DIRECTA")
                 handleSelectOption(context, intent)
             }
             ACTION_DELETE_VOTE -> {
+                android.util.Log.d(TAG, "onReceive: 🗑️ PROCESANDO ACTION_DELETE_VOTE DIRECTA")
                 handleDeleteVote(context, intent)
             }
+            else -> {
+                android.util.Log.d(TAG, "onReceive: ⚠️ Action desconocida: '${intent.action}'")
+                super.onReceive(context, intent)
+            }
         }
+        android.util.Log.d(TAG, "═══════════════════════════════════════════════════════════")
     }
 
     /**
@@ -415,29 +492,53 @@ class MenuWidgetProvider : AppWidgetProvider() {
             
             // Configurar ListView con RemoteViewsService para lista dinámica
             try {
-                val serviceIntent = Intent(context, MenuWidgetService::class.java)
-                serviceIntent.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-                serviceIntent.data = android.net.Uri.parse(serviceIntent.toUri(Intent.URI_INTENT_SCHEME))
+                // CRÍTICO: Usar un URI de datos único con timestamp para forzar recreación del Factory
+                // Esto asegura que Android cree una nueva instancia del RemoteViewsService
+                // cuando los datos cambian, forzando que onDataSetChanged() se llame
+                val timestamp = System.currentTimeMillis()
+                val serviceIntent = Intent(context, MenuWidgetService::class.java).apply {
+                    putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                    // Usar un URI de datos único con timestamp para forzar recreación del Factory
+                    data = android.net.Uri.parse("widget://service/${appWidgetId}?t=$timestamp")
+                }
+                android.util.Log.d(TAG, "showMenuState: ServiceIntent con data URI único (timestamp=$timestamp): ${serviceIntent.data}")
+                
+                android.util.Log.d(TAG, "showMenuState: Configurando RemoteViewsService:")
+                android.util.Log.d(TAG, "showMenuState:   -> ServiceIntent action: ${serviceIntent.action}")
+                android.util.Log.d(TAG, "showMenuState:   -> ServiceIntent data URI: ${serviceIntent.data}")
+                android.util.Log.d(TAG, "showMenuState:   -> ServiceIntent extras: ${serviceIntent.extras?.keySet()?.joinToString(", ")}")
                 
                 views.setRemoteAdapter(R.id.widgetOptionsList, serviceIntent)
-                android.util.Log.d(TAG, "showMenuState: ListView configurado con RemoteViewsService")
+                android.util.Log.d(TAG, "showMenuState: ✅ ListView configurado con RemoteViewsService")
                 
-                // Configurar template para clicks vacíos (el click se maneja en cada item)
-                val emptyViewIntent = Intent(context, MainActivity::class.java)
-                val emptyViewPendingIntent = PendingIntent.getActivity(
+                // CRÍTICO: Para listas dinámicas en widgets, DEBEMOS usar setPendingIntentTemplate + setOnClickFillInIntent
+                // No podemos usar setOnClickPendingIntent directamente en items de un ListView dinámico
+                // IMPORTANTE: El template NO debe tener data URI ni extras - solo la action
+                // Los extras se añaden en el FillInIntent y Android los fusiona
+                val clickTemplateIntent = Intent(context, MenuWidgetProvider::class.java).apply {
+                    action = android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    // NO usar data URI ni extras aquí - Android fusionará los extras del FillInIntent
+                    // El data URI puede interferir con la fusión de extras
+                }
+                // CRÍTICO: Usar FLAG_MUTABLE para permitir que Android modifique el intent con los extras del FillInIntent
+                // FLAG_IMMUTABLE puede impedir que Android fusione los extras correctamente
+                val clickTemplatePendingIntent = PendingIntent.getBroadcast(
                     context,
-                    0,
-                    emptyViewIntent,
-                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                    appWidgetId,
+                    clickTemplateIntent,
+                    PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                 )
-                views.setPendingIntentTemplate(R.id.widgetOptionsList, emptyViewPendingIntent)
+                views.setPendingIntentTemplate(R.id.widgetOptionsList, clickTemplatePendingIntent)
+                android.util.Log.d(TAG, "showMenuState: ✅ Template de PendingIntent configurado para ListView (sin data URI ni extras - solo action)")
+                
+                // IMPORTANTE: Notificar al widget que los datos cambiaron para que actualice la lista
+                // Esto fuerza a Android a llamar onDataSetChanged() y getViewAt() en el RemoteViewsFactory
+                appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.widgetOptionsList)
+                android.util.Log.d(TAG, "showMenuState: ✅ Notificando actualización de datos de ListView (appWidgetId=$appWidgetId, viewId=${R.id.widgetOptionsList})")
             } catch (e: Exception) {
-                android.util.Log.e(TAG, "showMenuState: Error al configurar ListView", e)
+                android.util.Log.e(TAG, "showMenuState: ❌ ERROR al configurar ListView", e)
                 e.printStackTrace()
             }
-            
-            // Notificar cambios en la lista
-            appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.widgetOptionsList)
             
             configureClickIntent(context, views)
             android.util.Log.d(TAG, "showMenuState: Llamando updateAppWidget...")
@@ -581,6 +682,8 @@ class MenuWidgetProvider : AppWidgetProvider() {
      */
     private fun configureClickIntent(context: Context, views: RemoteViews) {
         try {
+            // IMPORTANTE: Solo configurar click en el header del widget, NO en todo el contenedor
+            // De esta manera, los clicks en los items de la lista (botones) no abrirán la app
             val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
@@ -590,8 +693,11 @@ class MenuWidgetProvider : AppWidgetProvider() {
                 intent,
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             )
-            views.setOnClickPendingIntent(R.id.widgetContainer, pendingIntent)
-            android.util.Log.d(TAG, "configureClickIntent: Click intent configurado correctamente")
+            // Configurar click solo en el TextView de la fecha (header)
+            // Esto permite que los clicks en los botones de los items no abran la app
+            views.setOnClickPendingIntent(R.id.widgetDateTextView, pendingIntent)
+            views.setOnClickPendingIntent(R.id.widgetMenuDescriptionTextView, pendingIntent)
+            android.util.Log.d(TAG, "configureClickIntent: Click intent configurado solo en header del widget")
         } catch (e: Exception) {
             android.util.Log.e(TAG, "configureClickIntent: ERROR al configurar click intent", e)
             e.printStackTrace()
@@ -651,23 +757,41 @@ class MenuWidgetProvider : AppWidgetProvider() {
         val menuId = intent.getStringExtra(EXTRA_MENU_ID)
         val optionId = intent.getStringExtra(EXTRA_OPTION_ID)
         
-        if (menuId == null || optionId == null) return
+        if (menuId == null || optionId == null) {
+            android.util.Log.w(TAG, "handleSelectOption: ⚠️ menuId o optionId es null")
+            return
+        }
         
         widgetScope.launch {
             try {
                 val app = context.applicationContext as? MorfipoloApplication ?: return@launch
                 val userId = app.sessionManager.getCurrentUserId() ?: return@launch
                 
+                android.util.Log.d(TAG, "handleSelectOption: 🎯 Seleccionando opción $optionId del menú $menuId...")
                 val result = kotlinx.coroutines.withContext(Dispatchers.IO) {
                     app.voteRepository.createVoteOrReplace(optionId, menuId, userId)
                 }
                 
-                if (result.isSuccess) {
-                    // Actualizar todos los widgets
+                android.util.Log.d(TAG, "handleSelectOption: Resultado: ${if (result.isSuccess) "Éxito" else "Error: ${result.exceptionOrNull()?.message}"}")
+                
+                // IMPORTANTE: Actualizar el widget SIEMPRE, incluso si hay un error
+                // Esto asegura que el widget refleje el estado actual después de la acción
+                android.util.Log.d(TAG, "handleSelectOption: 🔄 Forzando actualización del widget...")
+                
+                // CRÍTICO: Esperar más tiempo para asegurar que los datos del repositorio se hayan actualizado
+                // El repositorio siempre hace petición HTTP fresca, pero necesitamos tiempo para que el servidor procese
+                kotlinx.coroutines.delay(800)
+                
+                // CRÍTICO: Actualizar todos los widgets - esto forzará una recarga completa
+                // updateAllWidgets ya llama a notifyAppWidgetViewDataChanged y updateWidget
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
                     updateAllWidgets(context)
                 }
+                android.util.Log.d(TAG, "handleSelectOption: ✅ Widget actualizado")
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "Error al seleccionar opción", e)
+                // Aún así intentar actualizar el widget
+                updateAllWidgets(context)
             }
         }
     }
@@ -682,16 +806,32 @@ class MenuWidgetProvider : AppWidgetProvider() {
             try {
                 val app = context.applicationContext as? MorfipoloApplication ?: return@launch
                 
+                android.util.Log.d(TAG, "handleDeleteVote: 🗑️ Eliminando voto $voteId...")
                 val result = kotlinx.coroutines.withContext(Dispatchers.IO) {
                     app.voteRepository.deleteVote(voteId)
                 }
                 
-                if (result.isSuccess) {
-                    // Actualizar todos los widgets
+                android.util.Log.d(TAG, "handleDeleteVote: Resultado: ${if (result.isSuccess) "Éxito" else "Error: ${result.exceptionOrNull()?.message}"}")
+                
+                // IMPORTANTE: Actualizar el widget SIEMPRE, incluso si el servidor devuelve 404
+                // El voto puede ya estar eliminado en el servidor pero aún mostrarse en el widget
+                // Forzar actualización para recargar los datos y reflejar el estado actual
+                android.util.Log.d(TAG, "handleDeleteVote: 🔄 Forzando actualización del widget...")
+                
+                // CRÍTICO: Esperar más tiempo para asegurar que los datos del repositorio se hayan actualizado
+                // El repositorio siempre hace petición HTTP fresca, pero necesitamos tiempo para que el servidor procese
+                kotlinx.coroutines.delay(800)
+                
+                // CRÍTICO: Actualizar todos los widgets - esto forzará una recarga completa
+                // updateAllWidgets ya llama a notifyAppWidgetViewDataChanged y updateWidget
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
                     updateAllWidgets(context)
                 }
+                android.util.Log.d(TAG, "handleDeleteVote: ✅ Widget actualizado")
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "Error al eliminar voto", e)
+                // Aún así intentar actualizar el widget
+                updateAllWidgets(context)
             }
         }
     }
@@ -701,18 +841,24 @@ class MenuWidgetProvider : AppWidgetProvider() {
      */
     private fun updateAllWidgets(context: Context) {
         try {
+            android.util.Log.d(TAG, "updateAllWidgets: 🔄 Iniciando actualización de todos los widgets...")
             val appWidgetManager = AppWidgetManager.getInstance(context)
             val appWidgetIds = appWidgetManager.getAppWidgetIds(
                 android.content.ComponentName(context, MenuWidgetProvider::class.java)
             )
-            // Notificar cambios en las listas de todos los widgets
+            android.util.Log.d(TAG, "updateAllWidgets: Encontrados ${appWidgetIds.size} widgets")
+            
+            // CRÍTICO: Actualizar todos los widgets - el cambio de data URI forzará recreación del Factory
+            // No necesitamos notifyAppWidgetViewDataChanged() porque updateWidget ya recrea el servicio
             appWidgetIds.forEach { appWidgetId ->
-                appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.widgetOptionsList)
+                android.util.Log.d(TAG, "updateAllWidgets: 🔄 Actualizando widget $appWidgetId")
+                updateWidget(context, appWidgetManager, appWidgetId)
             }
-            // Actualizar todos los widgets
-            appWidgetIds.forEach { updateWidget(context, appWidgetManager, it) }
+            
+            android.util.Log.d(TAG, "updateAllWidgets: ✅ Todos los widgets actualizados")
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error al actualizar widgets", e)
+            e.printStackTrace()
         }
     }
 

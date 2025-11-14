@@ -81,6 +81,36 @@ class WeeklyMenuFragment : Fragment() {
                         ).show()
                     }
                 }
+            },
+            onSelectOption = { menuId, optionId ->
+                // Seleccionar opción y recargar menús
+                lifecycleScope.launch {
+                    try {
+                        val app = requireActivity().application as MorfipoloApplication
+                        val userId = app.sessionManager.getCurrentUserId()
+                        if (userId != null) {
+                            val result = app.voteRepository.createVoteOrReplace(optionId, menuId, userId)
+                            if (result.isSuccess) {
+                                android.util.Log.d("WeeklyMenuFragment", "Opción seleccionada exitosamente")
+                                viewModel.loadWeeklyMenus()
+                            } else {
+                                android.util.Log.e("WeeklyMenuFragment", "Error al seleccionar opción")
+                                android.widget.Toast.makeText(
+                                    requireContext(),
+                                    "Error al seleccionar opción",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("WeeklyMenuFragment", "Error al seleccionar opción", e)
+                        android.widget.Toast.makeText(
+                            requireContext(),
+                            "Error al seleccionar opción: ${e.message}",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
             }
         )
         binding.menusRecyclerView.layoutManager = LinearLayoutManager(requireContext())

@@ -40,6 +40,15 @@ class TokenManager(
     }
     
     /**
+     * Fuerza el refresh del access token (útil cuando se recibe un 401)
+     */
+    suspend fun forceRefreshAccessToken(): String? {
+        mutex.withLock {
+            return refreshAccessToken()
+        }
+    }
+    
+    /**
      * Verifica si el token debe ser refrescado
      */
     private fun shouldRefreshToken(token: String): Boolean {
@@ -87,6 +96,12 @@ class TokenManager(
                 return null
             }
             
+            // Verificar si el refresh token está expirado antes de intentar usarlo
+            if (isTokenExpired(refreshToken)) {
+                Log.w(TAG, "Refresh token expirado, requiere login")
+                return null
+            }
+            
             // Nota: Según la colección de Postman, el refresh-token requiere dni y password
             // Esto es inusual, pero seguimos el formato del API
             // Si el backend cambia esto, se debe actualizar
@@ -95,6 +110,8 @@ class TokenManager(
                 Log.w(TAG, "No hay password guardado para refresh token")
                 return null
             }
+            
+            Log.d(TAG, "Intentando refrescar access token...")
             
             // Usar el servicio temporal para refresh (sin interceptor de auth)
             val refreshApiService = apiServiceProvider(dni, password)
@@ -110,6 +127,8 @@ class TokenManager(
                     )
                     Log.d(TAG, "Token refrescado exitosamente")
                     return loginResponse.accessToken
+                } else {
+                    Log.e(TAG, "Respuesta de refresh exitosa pero body es null")
                 }
             } else {
                 val errorBody = response.errorBody()?.string()
@@ -117,7 +136,8 @@ class TokenManager(
                 
                 // Si el error es 401, el refresh token expiró
                 if (response.code() == 401) {
-                    Log.w(TAG, "Refresh token expirado o inválido")
+                    Log.w(TAG, "Refresh token expirado o inválido (401)")
+                    // No limpiar la sesión aquí, lo hará AuthManager si es necesario
                 }
             }
             

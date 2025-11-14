@@ -36,6 +36,8 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.cocido.morfipolo.SELECT_OPTION" />
+                <action android:name="com.cocido.morfipolo.DELETE_VOTE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

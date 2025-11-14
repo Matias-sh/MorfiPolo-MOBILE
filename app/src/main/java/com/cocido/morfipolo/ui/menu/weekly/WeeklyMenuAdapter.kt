@@ -16,7 +16,8 @@ import java.util.*
 
 class WeeklyMenuAdapter(
     private val onMenuClick: (WeeklyMenuItem) -> Unit = {},
-    private val onRemoveVote: (String) -> Unit = {} // voteId
+    private val onRemoveVote: (String) -> Unit = {}, // voteId
+    private val onSelectOption: (String, String) -> Unit = { _, _ -> } // menuId, optionId
 ) : ListAdapter<WeeklyMenuItem, WeeklyMenuAdapter.MenuViewHolder>(MenuDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MenuViewHolder {
@@ -25,7 +26,7 @@ class WeeklyMenuAdapter(
             parent,
             false
         )
-        return MenuViewHolder(binding, onMenuClick, onRemoveVote)
+        return MenuViewHolder(binding, onMenuClick, onRemoveVote, onSelectOption)
     }
 
     override fun onBindViewHolder(holder: MenuViewHolder, position: Int) {
@@ -35,7 +36,8 @@ class WeeklyMenuAdapter(
     class MenuViewHolder(
         private val binding: ItemWeeklyMenuBinding,
         private val onMenuClick: (WeeklyMenuItem) -> Unit,
-        private val onRemoveVote: (String) -> Unit
+        private val onRemoveVote: (String) -> Unit,
+        private val onSelectOption: (String, String) -> Unit
     ) : RecyclerView.ViewHolder(binding.root) {
 
         private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -67,6 +69,31 @@ class WeeklyMenuAdapter(
                 false
             }
         }
+        
+        private fun isMenuToday(menu: Menu): Boolean {
+            return try {
+                val today = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val menuDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(menu.date)
+                
+                menuDate?.let {
+                    val menuCalendar = Calendar.getInstance().apply {
+                        time = it
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }
+                    menuCalendar.timeInMillis == today.timeInMillis
+                } ?: false
+            } catch (e: Exception) {
+                false
+            }
+        }
 
         fun bind(item: WeeklyMenuItem) {
             val menu = item.menu
@@ -90,13 +117,14 @@ class WeeklyMenuAdapter(
             )
             binding.timeRangeTextView.visibility = View.VISIBLE
             
-            // Configurar estado - validar si realmente está abierto según el horario (08:00 - 11:00)
+            // Configurar estado - validar si realmente está abierto según el horario (08:00 - 11:00) y si es el menú de hoy
+            val isToday = isMenuToday(menu)
             val isWithinTime = isWithinSelectionTime(menu)
-            val isActuallyOpen = menu.status == "open" && isWithinTime
+            val isActuallyOpen = menu.status == "open" && isWithinTime && isToday
             val statusText = when {
                 isActuallyOpen -> binding.root.context.getString(R.string.open)
                 menu.status == "closed" -> binding.root.context.getString(R.string.closed)
-                else -> binding.root.context.getString(R.string.closed) // Si pasó el horario, mostrar cerrado
+                else -> binding.root.context.getString(R.string.closed) // Si pasó el horario o no es hoy, mostrar cerrado
             }
             binding.statusTextView.text = statusText
             binding.statusTextView.setBackgroundResource(
@@ -114,29 +142,75 @@ class WeeklyMenuAdapter(
                 View.GONE
             }
             
-            // Mostrar opciones del menú (no la descripción)
+            // Mostrar opciones del menú con botones de selección
             val options = menu.getOptionsOrEmpty()
+            val optionsContainer = binding.root.findViewById<android.widget.LinearLayout>(R.id.optionsContainer)
+            
             if (options.isNotEmpty()) {
-                // Mostrar todas las opciones separadas por comas, o solo la primera si hay una
-                val optionsText = if (options.size == 1) {
-                    options[0].name
-                } else {
-                    options.joinToString(", ") { it.name }
+                // Limpiar opciones anteriores
+                optionsContainer?.removeAllViews()
+                optionsContainer?.visibility = View.VISIBLE
+                
+                // Mostrar descripción del menú
+                binding.menuDescriptionTextView.text = menu.description
+                
+                // Agregar opciones con botones
+                options.forEachIndexed { index, option ->
+                    val optionView = LayoutInflater.from(binding.root.context)
+                        .inflate(R.layout.item_menu_option, optionsContainer, false)
+                    
+                    val optionNameTextView = optionView.findViewById<TextView>(R.id.optionNameTextView)
+                    val optionButton = optionView.findViewById<com.google.android.material.button.MaterialButton>(R.id.optionButton)
+                    val selectedIndicator = optionView.findViewById<android.widget.ImageView>(R.id.selectedIndicator)
+                    
+                    // Nombre de la opción
+                    optionNameTextView.text = if (options.size > 1) {
+                        "Opción ${index + 1}: ${option.name}"
+                    } else {
+                        option.name
+                    }
+                    
+                    // Verificar si esta opción está seleccionada
+                    val isSelected = userVote?.option?.id == option.id
+                    
+                    if (isSelected) {
+                        // Opción seleccionada
+                        optionButton.text = binding.root.context.getString(R.string.remove_selection)
+                        optionButton.setIconResource(android.R.drawable.ic_menu_delete)
+                        optionButton.setBackgroundResource(R.drawable.button_red)
+                        selectedIndicator.visibility = View.VISIBLE
+                        optionButton.setOnClickListener {
+                            onRemoveVote(userVote.id)
+                        }
+                    } else {
+                        // Opción no seleccionada
+                        optionButton.text = binding.root.context.getString(R.string.choose_option)
+                        optionButton.setIconResource(android.R.drawable.ic_menu_add)
+                        optionButton.setBackgroundResource(R.drawable.button_primary_solid)
+                        selectedIndicator.visibility = View.GONE
+                        optionButton.isEnabled = isActuallyOpen
+                        optionButton.setOnClickListener {
+                            if (isActuallyOpen) {
+                                onSelectOption(menu.id, option.id)
+                            } else {
+                                android.widget.Toast.makeText(
+                                    binding.root.context,
+                                    binding.root.context.getString(R.string.time_expired),
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    }
+                    
+                    optionsContainer?.addView(optionView)
                 }
-                binding.menuDescriptionTextView.text = optionsText
             } else {
                 binding.menuDescriptionTextView.text = binding.root.context.getString(R.string.no_menu_available)
+                optionsContainer?.visibility = View.GONE
             }
             
-            // Configurar botón "Quitar elección" si hay voto y el menú está realmente abierto
-            if (userVote != null && isActuallyOpen) {
-                binding.removeVoteButton.visibility = View.VISIBLE
-                binding.removeVoteButton.setOnClickListener {
-                    onRemoveVote(userVote.id)
-                }
-            } else {
-                binding.removeVoteButton.visibility = View.GONE
-            }
+            // Ocultar botón "Quitar elección" antiguo (ya no se usa, se maneja en cada opción)
+            binding.removeVoteButton.visibility = View.GONE
             
             // Configurar click listener
             binding.root.setOnClickListener {

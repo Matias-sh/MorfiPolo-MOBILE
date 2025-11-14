@@ -160,12 +160,12 @@ class DailyMenuFragment : Fragment() {
             "11:00"
         )
 
-        // Estado - validar si realmente está abierto según el horario (08:00 - 11:00)
-        val isActuallyOpen = menu.status == "open" && state.isWithinTime
+        // Estado - usar el valor calculado en el ViewModel
+        val isActuallyOpen = state.isActuallyOpen
         val statusText = when {
             isActuallyOpen -> getString(R.string.open)
             menu.status == "closed" -> getString(R.string.closed)
-            else -> getString(R.string.closed) // Si pasó el horario, mostrar cerrado
+            else -> getString(R.string.closed) // Si pasó el horario o no es hoy, mostrar cerrado
         }
         binding.statusTextView.text = statusText
         binding.statusTextView.setBackgroundResource(
@@ -238,9 +238,7 @@ class DailyMenuFragment : Fragment() {
                 optionButton.setBackgroundResource(R.drawable.button_red)
                 selectedIndicator.visibility = View.VISIBLE
                 optionButton.setOnClickListener {
-                    showConfirmDeleteVoteDialog {
-                        viewModel.deleteVote()
-                    }
+                    viewModel.deleteVote()
                 }
             } else {
                 // Opción no seleccionada
@@ -266,16 +264,6 @@ class DailyMenuFragment : Fragment() {
         }
     }
 
-    private fun showConfirmDeleteVoteDialog(onConfirm: () -> Unit) {
-        android.app.AlertDialog.Builder(requireContext())
-            .setTitle(getString(R.string.confirm_remove_vote_title))
-            .setMessage(getString(R.string.confirm_remove_vote_message))
-            .setPositiveButton(getString(R.string.confirm)) { _, _ ->
-                onConfirm()
-            }
-            .setNegativeButton(getString(R.string.cancel), null)
-            .show()
-    }
 
     override fun onDestroyView() {
         super.onDestroyView()

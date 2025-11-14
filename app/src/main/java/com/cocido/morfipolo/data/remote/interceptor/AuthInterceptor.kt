@@ -13,6 +13,7 @@ class AuthInterceptor(
     
     companion object {
         private const val TAG = "AuthInterceptor"
+        private const val MAX_RETRY_ATTEMPTS = 1 // Solo reintentar una vez después de 401
     }
     
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -30,40 +31,55 @@ class AuthInterceptor(
         }
         
         if (accessToken == null) {
-            Log.w(TAG, "No hay access token disponible")
+            Log.w(TAG, "No hay access token disponible, enviando request sin token")
             return chain.proceed(originalRequest)
         }
         
         // Agregar token al header
-        val authenticatedRequest = originalRequest.newBuilder()
+        var authenticatedRequest = originalRequest.newBuilder()
             .header("Authorization", "Bearer $accessToken")
             .build()
         
-        val response = chain.proceed(authenticatedRequest)
+        var response = chain.proceed(authenticatedRequest)
         
-        // Si recibimos 401, intentar refrescar token y reintentar
-        if (response.code == 401) {
-            response.close()
+        // Si recibimos 401, intentar refrescar token y reintentar SOLO UNA VEZ
+        if (response.code == 401 && !originalRequest.url.toString().contains("/auth/")) {
+            Log.w(TAG, "Recibido 401, intentando refrescar token...")
             
+            // Forzar refresh del token (sin cerrar la respuesta aún)
             val newToken = runBlocking {
-                tokenManager.getValidAccessToken()
+                tokenManager.forceRefreshAccessToken()
             }
             
             if (newToken != null && newToken != accessToken) {
-                // Token fue refrescado, reintentar request
-                val retryRequest = originalRequest.newBuilder()
+                // Token fue refrescado exitosamente, cerrar respuesta anterior y reintentar
+                response.close()
+                
+                Log.d(TAG, "Token refrescado exitosamente, reintentando request...")
+                authenticatedRequest = originalRequest.newBuilder()
                     .header("Authorization", "Bearer $newToken")
                     .build()
-                return chain.proceed(retryRequest)
+                
+                response = chain.proceed(authenticatedRequest)
+                
+                // Si el reintento también falla con 401, significa que el refresh token expiró o hay otro problema
+                if (response.code == 401) {
+                    Log.e(TAG, "Reintento falló con 401 después de refresh. Refresh token probablemente expirado o error del servidor")
+                } else {
+                    Log.d(TAG, "Reintento exitoso con código ${response.code}")
+                }
             } else {
-                // No se pudo refrescar, retornar error 401
-                Log.e(TAG, "No se pudo refrescar el token después de 401")
+                // No se pudo refrescar el token (refresh token expirado o error de conexión)
+                // Devolver la respuesta 401 original sin cerrarla
+                Log.e(TAG, "No se pudo refrescar el token después de 401. Refresh token expirado o error de conexión")
+                // La respuesta 401 original se devuelve sin cerrar para que el error se propague correctamente
             }
         }
         
         return response
     }
 }
+
 
 
 

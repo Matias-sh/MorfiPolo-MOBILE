@@ -56,12 +56,15 @@ class DailyMenuViewModel(
                     // Obtener voto del usuario para este menú
                     val userVote = voteRepository.getUserVoteForMenu(menu.id, userId)
                     android.util.Log.d("DailyMenuViewModel", "Voto del usuario: ${if (userVote != null) "Sí (${userVote.id}, opción: ${userVote.option.id})" else "No"}")
+                    val isToday = isMenuToday(menu)
                     val isWithinTime = isWithinSelectionTime(menu)
+                    val isActuallyOpen = menu.status == "open" && isWithinTime && isToday
                     
                     _uiState.value = DailyMenuUiState.Success(
                         menu = menu,
                         userVote = userVote,
-                        isWithinTime = isWithinTime
+                        isWithinTime = isWithinTime && isToday,
+                        isActuallyOpen = isActuallyOpen
                     )
                 } else {
                     android.util.Log.w("DailyMenuViewModel", "No se encontró menú para la fecha")
@@ -167,6 +170,31 @@ class DailyMenuViewModel(
             return false
         }
     }
+    
+    private fun isMenuToday(menu: Menu): Boolean {
+        return try {
+            val today = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val menuDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(menu.date)
+            
+            menuDate?.let {
+                val menuCalendar = Calendar.getInstance().apply {
+                    time = it
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                menuCalendar.timeInMillis == today.timeInMillis
+            } ?: false
+        } catch (e: Exception) {
+            false
+        }
+    }
 }
 
 sealed class DailyMenuUiState {
@@ -174,7 +202,8 @@ sealed class DailyMenuUiState {
     data class Success(
         val menu: Menu,
         val userVote: com.cocido.morfipolo.domain.model.Vote?,
-        val isWithinTime: Boolean
+        val isWithinTime: Boolean,
+        val isActuallyOpen: Boolean
     ) : DailyMenuUiState()
     data class Error(val message: String) : DailyMenuUiState()
 }
