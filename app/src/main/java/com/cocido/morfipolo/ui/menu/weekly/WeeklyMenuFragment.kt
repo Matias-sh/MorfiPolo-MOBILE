@@ -1,5 +1,9 @@
 package com.cocido.morfipolo.ui.menu.weekly
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -21,6 +25,19 @@ class WeeklyMenuFragment : Fragment() {
 
     private var _binding: FragmentWeeklyMenuBinding? = null
     private val binding get() = _binding!!
+
+    private var infoBannerHideJob: kotlinx.coroutines.Job? = null
+    
+    // BroadcastReceiver para escuchar actualizaciones del menú
+    private val menuUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.cocido.morfipolo.MENU_UPDATED") {
+                android.util.Log.d("WeeklyMenuFragment", "📱 Recibido broadcast de actualización de menú")
+                // Recargar menús semanales
+                viewModel.loadWeeklyMenus()
+            }
+        }
+    }
 
     private val viewModel: WeeklyMenuViewModel by viewModels {
         val app = requireActivity().application as MorfipoloApplication
@@ -55,7 +72,7 @@ class WeeklyMenuFragment : Fragment() {
                 }
                 findNavController().navigate(R.id.action_weeklyMenuFragment_to_dailyMenuFragment, bundle)
             },
-            onRemoveVote = { voteId ->
+            onRemoveVote = { voteId, errorMessage ->
                 // Eliminar voto y recargar menús
                 lifecycleScope.launch {
                     try {
@@ -66,23 +83,36 @@ class WeeklyMenuFragment : Fragment() {
                             viewModel.loadWeeklyMenus()
                         } else {
                             android.util.Log.e("WeeklyMenuFragment", "Error al eliminar voto")
-                            android.widget.Toast.makeText(
-                                requireContext(),
-                                "Error al eliminar voto",
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
+                            val exception = result.exceptionOrNull()
+                            val message = exception?.message ?: ""
+                            
+                            // Verificar si es un error de horario cerrado
+                            if (message.contains("cerrado", ignoreCase = true) || 
+                                message.contains("horario", ignoreCase = true) || 
+                                message.contains("time", ignoreCase = true) || 
+                                message.contains("expired", ignoreCase = true) ||
+                                errorMessage != null) {
+                                val infoMessage = errorMessage ?: "El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00)."
+                                showInfoBanner(infoMessage)
+                            } else {
+                                showInfoBanner("Error al eliminar voto")
+                            }
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("WeeklyMenuFragment", "Error al eliminar voto", e)
-                        android.widget.Toast.makeText(
-                            requireContext(),
-                            "Error al eliminar voto: ${e.message}",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
+                        val message = e.message ?: ""
+                        if (message.contains("cerrado", ignoreCase = true) || 
+                            message.contains("horario", ignoreCase = true) || 
+                            message.contains("time", ignoreCase = true) || 
+                            message.contains("expired", ignoreCase = true)) {
+                            showInfoBanner("El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00).")
+                        } else {
+                            showInfoBanner("Error al eliminar voto: ${e.message}")
+                        }
                     }
                 }
             },
-            onSelectOption = { menuId, optionId ->
+            onSelectOption = { menuId, optionId, errorMessage ->
                 // Seleccionar opción y recargar menús
                 lifecycleScope.launch {
                     try {
@@ -95,20 +125,33 @@ class WeeklyMenuFragment : Fragment() {
                                 viewModel.loadWeeklyMenus()
                             } else {
                                 android.util.Log.e("WeeklyMenuFragment", "Error al seleccionar opción")
-                                android.widget.Toast.makeText(
-                                    requireContext(),
-                                    "Error al seleccionar opción",
-                                    android.widget.Toast.LENGTH_SHORT
-                                ).show()
+                                val exception = result.exceptionOrNull()
+                                val message = exception?.message ?: ""
+                                
+                                // Verificar si es un error de horario cerrado
+                                if (message.contains("cerrado", ignoreCase = true) || 
+                                    message.contains("horario", ignoreCase = true) || 
+                                    message.contains("time", ignoreCase = true) || 
+                                    message.contains("expired", ignoreCase = true) ||
+                                    errorMessage != null) {
+                                    val infoMessage = errorMessage ?: "El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00)."
+                                    showInfoBanner(infoMessage)
+                                } else {
+                                    showInfoBanner("Error al seleccionar opción")
+                                }
                             }
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("WeeklyMenuFragment", "Error al seleccionar opción", e)
-                        android.widget.Toast.makeText(
-                            requireContext(),
-                            "Error al seleccionar opción: ${e.message}",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
+                        val message = e.message ?: ""
+                        if (message.contains("cerrado", ignoreCase = true) || 
+                            message.contains("horario", ignoreCase = true) || 
+                            message.contains("time", ignoreCase = true) || 
+                            message.contains("expired", ignoreCase = true)) {
+                            showInfoBanner("El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00).")
+                        } else {
+                            showInfoBanner("Error al seleccionar opción: ${e.message}")
+                        }
                     }
                 }
             }
@@ -119,6 +162,22 @@ class WeeklyMenuFragment : Fragment() {
         setupPullToRefresh()
         setupObservers()
         checkNetworkStatus()
+        
+        // Registrar BroadcastReceiver para escuchar actualizaciones del menú
+        // RECEIVER_NOT_EXPORTED porque solo escuchamos broadcasts internos de nuestra app
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            requireContext().registerReceiver(
+                menuUpdateReceiver,
+                IntentFilter("com.cocido.morfipolo.MENU_UPDATED"),
+                Context.RECEIVER_NOT_EXPORTED
+            )
+        } else {
+            requireContext().registerReceiver(
+                menuUpdateReceiver,
+                IntentFilter("com.cocido.morfipolo.MENU_UPDATED")
+            )
+        }
+        
         viewModel.loadWeeklyMenus()
     }
     
@@ -201,8 +260,58 @@ class WeeklyMenuFragment : Fragment() {
         }
     }
 
+    private fun showInfoBanner(message: String) {
+        // Cancelar trabajo anterior si existe
+        infoBannerHideJob?.cancel()
+        
+        binding.infoBannerText.text = message
+        binding.infoBannerIcon.setImageResource(android.R.drawable.ic_dialog_info)
+        binding.infoBanner.setCardBackgroundColor(resources.getColor(R.color.nonna_accent_warm, null))
+        
+        // Mostrar con animación suave
+        if (binding.infoBanner.visibility != View.VISIBLE) {
+            binding.infoBanner.alpha = 0f
+            binding.infoBanner.visibility = View.VISIBLE
+            binding.infoBanner.animate()
+                .alpha(1f)
+                .setDuration(300)
+                .start()
+        }
+        
+        // Ocultar automáticamente después de 5 segundos
+        infoBannerHideJob = lifecycleScope.launch {
+            kotlinx.coroutines.delay(5000) // 5 segundos
+            hideInfoBanner()
+        }
+    }
+    
+    private fun hideInfoBanner() {
+        // Cancelar trabajo de ocultación si existe
+        infoBannerHideJob?.cancel()
+        infoBannerHideJob = null
+        
+        if (binding.infoBanner.visibility == View.VISIBLE) {
+            binding.infoBanner.animate()
+                .alpha(0f)
+                .setDuration(300)
+                .withEndAction {
+                    binding.infoBanner.visibility = View.GONE
+                }
+                .start()
+        }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
+        // Desregistrar BroadcastReceiver
+        try {
+            requireContext().unregisterReceiver(menuUpdateReceiver)
+        } catch (e: Exception) {
+            // El receiver puede no estar registrado, ignorar
+        }
+        // Cancelar trabajo de ocultación del banner
+        infoBannerHideJob?.cancel()
+        infoBannerHideJob = null
         _binding = null
     }
 }

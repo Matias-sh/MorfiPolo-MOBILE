@@ -140,6 +140,42 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Footer con información de desarrollo -->
+            <LinearLayout
+                android:id="@+id/developmentFooter"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:orientation="horizontal"
+                android:gravity="center"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/optionsCardView"
+                app:layout_constraintBottom_toBottomOf="parent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Desarrollado por la Dirección de Ingeniería"
+                    android:textColor="@color/nonna_text_secondary"
+                    android:textSize="14sp"
+                    android:layout_marginEnd="12dp"
+                    android:gravity="center_vertical" />
+
+                <FrameLayout
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:gravity="center">
+
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:src="@drawable/di_logo"
+                        android:scaleType="fitCenter"
+                        android:contentDescription="Logo Dirección de Ingeniería" />
+                </FrameLayout>
+            </LinearLayout>
+
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
 

@@ -41,20 +41,17 @@ class MainActivity : AppCompatActivity() {
             when (authResult) {
                 is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.Authenticated -> {
                     // Usuario autenticado correctamente, continuar con la app
-                    android.util.Log.d("MainActivity", "Sesión válida")
                     setupNavigation()
                     updateWidget()
                 }
                 is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.RefreshFailed -> {
                     // Si el refresh falló, intentar continuar de todas formas
                     // El SessionRefreshWorker intentará refrescar en segundo plano
-                    android.util.Log.w("MainActivity", "Refresh falló, pero continuando (el worker refrescará automáticamente)")
                     setupNavigation()
                     updateWidget()
                 }
                 is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.NotLoggedIn -> {
                     // Solo redirigir a login si realmente no hay sesión guardada
-                    android.util.Log.d("MainActivity", "No hay sesión guardada, redirigiendo a login")
                     navigateToLogin()
                 }
             }
@@ -74,7 +71,6 @@ class MainActivity : AppCompatActivity() {
                 android.content.ComponentName(this, MenuWidgetProvider::class.java)
             )
             if (appWidgetIds.isNotEmpty()) {
-                android.util.Log.d("MainActivity", "Actualizando ${appWidgetIds.size} widgets")
                 val updateIntent = Intent(this, MenuWidgetProvider::class.java).apply {
                     action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
@@ -82,7 +78,7 @@ class MainActivity : AppCompatActivity() {
                 sendBroadcast(updateIntent)
             }
         } catch (e: Exception) {
-            android.util.Log.e("MainActivity", "Error al actualizar widget", e)
+            // Error silencioso - no crítico
         }
     }
     

@@ -35,20 +35,14 @@ class MenuRepository(
                 menu?.let {
                     // Filtrar menús "draft" - no mostrar borradores
                     if (it.status == "draft") {
-                        android.util.Log.d("MenuRepository", "Menú encontrado pero es draft, no se muestra: ${it.id}")
                         return null
                     }
-                    android.util.Log.d("MenuRepository", "Menú encontrado: ${it.id}, opciones: ${it.getOptionsOrEmpty().size}")
                     // Guardar en base de datos local si es necesario
                     val menuEntity = menuToEntity(it)
                     menuDao.insertMenu(menuEntity)
                     it
-                } ?: run {
-                    android.util.Log.w("MenuRepository", "No se encontró menú para la fecha: $dateString")
-                    null
-                }
+                } ?: null
             } else {
-                android.util.Log.e("MenuRepository", "Error en respuesta API: ${response.code()}")
                 // Si falla, intentar desde base de datos local
                 val timestamp = date.time
                 val menuEntity = menuDao.getMenuByDate(timestamp)
@@ -102,18 +96,14 @@ class MenuRepository(
 
     suspend fun getWeeklyMenus(): List<Menu> {
         return try {
-            android.util.Log.d("MenuRepository", "Obteniendo menús semanales desde API...")
             val response = apiService.getMenus()
             
             if (response.isSuccessful) {
                 val menusResponse = response.body()
                 val menus = menusResponse?.data ?: emptyList()
                 
-                android.util.Log.d("MenuRepository", "Menús obtenidos desde API: ${menus.size}")
-                
                 // Filtrar menús "draft" (borradores) - solo mostrar menús publicados
                 val publishedMenus = menus.filter { it.status != "draft" }
-                android.util.Log.d("MenuRepository", "Menús publicados (sin draft): ${publishedMenus.size}")
                 
                 // Ordenar menús por fecha (más recientes primero)
                 val sortedMenus = publishedMenus.sortedByDescending { menu ->
@@ -124,38 +114,28 @@ class MenuRepository(
                     }
                 }
                 
-                android.util.Log.d("MenuRepository", "Menús ordenados: ${sortedMenus.size}")
-                
                 // Guardar en base de datos local
                 val menuEntities = sortedMenus.map { menuToEntity(it) }
                 menuDao.insertMenus(menuEntities)
                 
-                android.util.Log.d("MenuRepository", "Menús guardados en BD local")
-                
                 sortedMenus
             } else {
-                android.util.Log.w("MenuRepository", "Error en respuesta API: ${response.code()}, obteniendo desde BD local")
                 // Si falla, obtener desde base de datos local
                 getWeeklyMenusFromLocal()
             }
         } catch (e: Exception) {
-            android.util.Log.e("MenuRepository", "Error al obtener menús semanales", e)
             // Si falla, obtener desde base de datos local
             getWeeklyMenusFromLocal()
         }
     }
     
     private suspend fun getWeeklyMenusFromLocal(): List<Menu> {
-        android.util.Log.d("MenuRepository", "Obteniendo menús desde BD local...")
-        
         // Obtener todos los menús de la BD local (ya están ordenados por fecha DESC en el query)
         val menuEntities = menuDao.getAllMenusSync()
         val menus = menuEntities.map { entityToMenu(it) }
         
         // Filtrar menús "draft" - no mostrar borradores
         val publishedMenus = menus.filter { it.status != "draft" }
-        
-        android.util.Log.d("MenuRepository", "Menús obtenidos desde BD local: ${menus.size}, publicados: ${publishedMenus.size}")
         
         return publishedMenus
     }

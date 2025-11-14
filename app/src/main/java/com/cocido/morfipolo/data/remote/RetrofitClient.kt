@@ -23,8 +23,10 @@ object RetrofitClient {
     
     private fun createOkHttpClient(sessionManager: SessionManager, tokenManager: TokenManager): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            // En producción, cambiar a Level.NONE
-            level = HttpLoggingInterceptor.Level.BODY
+            // En release, ProGuard eliminará estos logs automáticamente
+            // En producción, los logs están desactivados (Level.NONE)
+            // ProGuard ya está configurado para eliminar logs de debug/info/verbose
+            level = HttpLoggingInterceptor.Level.NONE
         }
         
         return OkHttpClient.Builder()
@@ -58,8 +60,10 @@ object RetrofitClient {
     
     private fun createOkHttpClientWithoutAuth(): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            // En producción, cambiar a Level.NONE
-            level = HttpLoggingInterceptor.Level.BODY
+            // En release, ProGuard eliminará estos logs automáticamente
+            // En producción, los logs están desactivados (Level.NONE)
+            // ProGuard ya está configurado para eliminar logs de debug/info/verbose
+            level = HttpLoggingInterceptor.Level.NONE
         }
         
         return OkHttpClient.Builder()

@@ -6,6 +6,24 @@ plugins {
     id("androidx.navigation.safeargs.kotlin")
 }
 
+// Función auxiliar para cargar propiedades del keystore
+fun loadKeystoreProperties(): Map<String, String>? {
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    if (!keystorePropertiesFile.exists()) {
+        return null
+    }
+    val props = mutableMapOf<String, String>()
+    keystorePropertiesFile.readLines().forEach { line ->
+        if (line.isNotBlank() && !line.trimStart().startsWith("#")) {
+            val parts = line.split("=", limit = 2)
+            if (parts.size == 2) {
+                props[parts[0].trim()] = parts[1].trim()
+            }
+        }
+    }
+    return if (props.isEmpty()) null else props
+}
+
 android {
     namespace = "com.cocido.morfipolo"
     compileSdk = 36
@@ -20,13 +38,31 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            loadKeystoreProperties()?.let { props ->
+                keyAlias = props["keyAlias"] ?: ""
+                keyPassword = props["keyPassword"] ?: ""
+                // El archivo está en la raíz del proyecto, no en app/
+                storeFile = rootProject.file(props["storeFile"] ?: "")
+                storePassword = props["storePassword"] ?: ""
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            isMinifyEnabled = false
+            applicationIdSuffix = ".debug"
         }
     }
     compileOptions {

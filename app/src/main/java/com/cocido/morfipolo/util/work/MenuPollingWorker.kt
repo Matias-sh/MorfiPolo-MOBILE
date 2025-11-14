@@ -2,7 +2,11 @@ package com.cocido.morfipolo.util.work
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.data.repository.MenuRepository
@@ -10,6 +14,7 @@ import com.cocido.morfipolo.util.notifications.NotificationHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
+import java.util.concurrent.TimeUnit
 import java.util.*
 
 class MenuPollingWorker(
@@ -23,6 +28,8 @@ class MenuPollingWorker(
         private const val KEY_LAST_MENU_CREATED_AT = "last_menu_created_at"
         private const val KEY_LAST_MENU_UPDATED_AT = "last_menu_updated_at"
         private const val KEY_LAST_MENU_STATUS = "last_menu_status"
+        private const val KEY_LAST_NOTIFIED_DATE = "last_notified_date" // Fecha del último menú notificado
+        private const val KEY_LAST_NOTIFIED_MENU_ID = "last_notified_menu_id" // ID del último menú notificado
     }
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -72,37 +79,51 @@ class MenuPollingWorker(
             // Filtrar menús "draft" - no notificar sobre borradores
             if (menu != null && menu.status != "draft") {
                 val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val todayString = dateFormat.format(today.time)
+                
                 val lastMenuId = prefs.getString(KEY_LAST_MENU_ID, null)
                 val lastMenuCreatedAt = prefs.getString(KEY_LAST_MENU_CREATED_AT, null)
                 val lastMenuUpdatedAt = prefs.getString(KEY_LAST_MENU_UPDATED_AT, null)
                 val lastMenuStatus = prefs.getString(KEY_LAST_MENU_STATUS, null)
+                val lastNotifiedDate = prefs.getString(KEY_LAST_NOTIFIED_DATE, null)
+                val lastNotifiedMenuId = prefs.getString(KEY_LAST_NOTIFIED_MENU_ID, null)
 
-                // Verificar si es un menú nuevo o actualizado
-                val isNewMenu = lastMenuId == null || lastMenuId != menu.id
-                val isUpdatedMenu = !isNewMenu && (
-                    (lastMenuUpdatedAt != null && menu.updated_at > lastMenuUpdatedAt) ||
-                    (lastMenuStatus != null && lastMenuStatus != menu.status && menu.status == "open")
-                )
+                // CRÍTICO: Detectar si es un menú nuevo del día de hoy
+                // Notificar si:
+                // 1. Es un menú completamente nuevo (nuevo ID)
+                // 2. Es el menú del día de hoy y NO se notificó antes para este día
+                // 3. Es el mismo menú pero cambió de status a "open" (de draft a open)
+                // 4. El menú tiene opciones disponibles Y está abierto
+                val isNewMenuForToday = menu.date == todayString && 
+                    (lastNotifiedDate != todayString || lastNotifiedMenuId != menu.id)
                 
-                // Notificar solo si:
-                // 1. Es un menú nuevo Y está en "open"
-                // 2. Es un menú actualizado Y cambió a "open" (de draft a open)
-                // 3. Es un menú actualizado Y tiene opciones nuevas
-                val shouldNotify = (isNewMenu && menu.status == "open") ||
-                    (isUpdatedMenu && menu.status == "open" && lastMenuStatus != "open") ||
-                    (isUpdatedMenu && menu.status == "open" && menu.getOptionsOrEmpty().isNotEmpty())
+                val isMenuNewlyOpened = menu.status == "open" && 
+                    (lastMenuStatus == null || lastMenuStatus != "open" || lastMenuStatus == "draft")
+                
+                val hasNewOptions = menu.getOptionsOrEmpty().isNotEmpty() && 
+                    (lastMenuId == null || lastMenuId != menu.id || isMenuNewlyOpened)
+
+                val shouldNotify = menu.status == "open" && (
+                    isNewMenuForToday || // Menú nuevo del día
+                    isMenuNewlyOpened || // Menú que se acaba de abrir
+                    hasNewOptions // Menú con opciones nuevas
+                )
 
                 if (shouldNotify) {
-                    android.util.Log.d("MenuPollingWorker", "🆕 Nuevo/Actualizado menú detectado: ${menu.id}, status: ${menu.status}")
+                    android.util.Log.d("MenuPollingWorker", "🆕 Nuevo menú del día detectado: ${menu.id}, fecha: ${menu.date}, status: ${menu.status}")
                     
-                    // Notificar sobre el nuevo menú
+                    // Construir mensaje descriptivo
                     val optionsText = if (menu.getOptionsOrEmpty().isNotEmpty()) {
-                        menu.getOptionsOrEmpty().joinToString(", ") { it.name }
+                        val optionsList = menu.getOptionsOrEmpty().mapIndexed { index, option ->
+                            "${index + 1}. ${option.name}"
+                        }
+                        optionsList.joinToString("\n")
                     } else {
-                        menu.description
+                        null
                     }
                     
-                    android.util.Log.d("MenuPollingWorker", "Enviando notificación: ${menu.description}")
+                    android.util.Log.d("MenuPollingWorker", "📢 Enviando notificación de nuevo menú del día...")
                     notificationHelper.showMenuLoadedNotification(
                         menu.description,
                         optionsText
@@ -114,10 +135,12 @@ class MenuPollingWorker(
                         putString(KEY_LAST_MENU_CREATED_AT, menu.created_at)
                         putString(KEY_LAST_MENU_UPDATED_AT, menu.updated_at)
                         putString(KEY_LAST_MENU_STATUS, menu.status)
+                        putString(KEY_LAST_NOTIFIED_DATE, todayString) // Guardar fecha notificada
+                        putString(KEY_LAST_NOTIFIED_MENU_ID, menu.id) // Guardar ID del menú notificado
                         apply()
                     }
                     
-                    android.util.Log.d("MenuPollingWorker", "✅ Notificación enviada exitosamente")
+                    android.util.Log.d("MenuPollingWorker", "✅ Notificación enviada exitosamente para el menú del día")
                 } else {
                     // Actualizar información del menú aunque no se notifique
                     prefs.edit().apply {
@@ -127,18 +150,56 @@ class MenuPollingWorker(
                         putString(KEY_LAST_MENU_STATUS, menu.status)
                         apply()
                     }
-                    android.util.Log.d("MenuPollingWorker", "Menú ya conocido o no está abierto, no se envía notificación")
+                    android.util.Log.d("MenuPollingWorker", "Menú ya conocido o ya notificado hoy, no se envía notificación")
                 }
             } else {
-                android.util.Log.d("MenuPollingWorker", "No hay menú disponible para el día de hoy")
+                android.util.Log.d("MenuPollingWorker", "No hay menú disponible para el día de hoy o es un borrador")
             }
 
             android.util.Log.d("MenuPollingWorker", "✅ Verificación de menú completada")
+            
+            // CRÍTICO: Re-programar el trabajo para crear un ciclo continuo
+            // Esto nos permite tener intervalos más cortos que el mínimo de 15 minutos de PeriodicWorkRequest
+            scheduleNextPoll(applicationContext)
+            
             Result.success()
         } catch (e: Exception) {
             android.util.Log.e("MenuPollingWorker", "❌ Error al verificar menú", e)
+            
+            // Aún así intentar re-programar, pero con un delay más largo en caso de error
+            scheduleNextPoll(applicationContext, delayMinutes = 10)
+            
             // En caso de error, retry con backoff
             Result.retry()
+        }
+    }
+    
+    /**
+     * Programa el próximo trabajo de polling
+     * @param context Contexto de la aplicación
+     * @param delayMinutes Minutos de espera antes del próximo polling (default: 5 minutos)
+     */
+    private fun scheduleNextPoll(context: Context, delayMinutes: Long = 5) {
+        try {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+            
+            val nextWork = OneTimeWorkRequestBuilder<MenuPollingWorker>()
+                .setConstraints(constraints)
+                .setInitialDelay(delayMinutes, TimeUnit.MINUTES)
+                .addTag("menu_polling")
+                .build()
+            
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                "menu_polling_work",
+                androidx.work.ExistingWorkPolicy.REPLACE,
+                nextWork
+            )
+            
+            android.util.Log.d("MenuPollingWorker", "✅ Próximo polling programado en $delayMinutes minutos")
+        } catch (e: Exception) {
+            android.util.Log.e("MenuPollingWorker", "Error al programar próximo polling", e)
         }
     }
 }

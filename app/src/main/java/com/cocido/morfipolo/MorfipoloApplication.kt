@@ -5,7 +5,9 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.room.Room
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.cocido.morfipolo.data.local.database.AppDatabase
@@ -91,20 +93,34 @@ class MorfipoloApplication : Application() {
         )
 
         // Configurar worker para verificar nuevos menús y enviar notificaciones
-        // Se ejecuta cada 15 minutos para detectar cuando se carga un nuevo menú
+        // IMPORTANTE: Usamos OneTimeWorkRequest con re-programación para poder tener intervalos más cortos
+        // PeriodicWorkRequest tiene un mínimo de 15 minutos, pero OneTimeWorkRequest permite intervalos más cortos
+        // Sin embargo, Android puede aplicar limitaciones según el estado de la batería y Doze mode
         val menuPollingConstraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val menuPollingWork = PeriodicWorkRequestBuilder<MenuPollingWorker>(
-            15, TimeUnit.MINUTES
-        )
-            .setConstraints(menuPollingConstraints)
+        // Usar OneTimeWorkRequest con intervalo de 5 minutos (más frecuente que el mínimo de 15min de Periodic)
+        scheduleMenuPollingWork(workManager, menuPollingConstraints)
+    }
+
+    /**
+     * Programa el trabajo de polling de menú usando OneTimeWorkRequest
+     * que se re-programa automáticamente para permitir intervalos más cortos
+     * @param workManager Instancia de WorkManager
+     * @param constraints Restricciones para el trabajo (red conectada)
+     */
+    private fun scheduleMenuPollingWork(workManager: WorkManager, constraints: Constraints) {
+        // Crear un OneTimeWorkRequest que se ejecuta inmediatamente la primera vez
+        // El worker se re-programa a sí mismo al finalizar para crear un ciclo continuo
+        val menuPollingWork = OneTimeWorkRequestBuilder<MenuPollingWorker>()
+            .setConstraints(constraints)
+            .addTag("menu_polling") // Tag para poder cancelar si es necesario
             .build()
 
-        workManager.enqueueUniquePeriodicWork(
+        workManager.enqueueUniqueWork(
             "menu_polling_work",
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingWorkPolicy.REPLACE, // Reemplazar si ya existe
             menuPollingWork
         )
     }

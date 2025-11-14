@@ -30,11 +30,15 @@ class NotificationHelper(private val context: Context) {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = context.getString(R.string.notification_channel_description)
-                // Habilitar sonido y vibración
+                // Habilitar sonido y vibración estilo WhatsApp
                 enableVibration(true)
                 enableLights(true)
-                // Usar sonido por defecto del sistema
+                // Usar sonido por defecto del sistema (notification sound)
                 setShowBadge(true)
+                // Configurar sonido de notificación (usar el predeterminado del sistema)
+                setSound(android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION), null)
+                // Vibración personalizada: corta, pausa, corta (estilo WhatsApp)
+                vibrationPattern = longArrayOf(0, 250, 250, 250)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -52,26 +56,35 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        // Construir contenido mejorado
         val contentText = if (optionsText != null && optionsText.isNotEmpty()) {
-            "${context.getString(R.string.menu_loaded_notification_text)}\n\n$menuDescription\n\nOpciones disponibles:\n$optionsText"
+            "${context.getString(R.string.menu_loaded_notification_text)}\n\n📋 $menuDescription\n\n🍽️ Opciones disponibles:\n$optionsText"
         } else {
-            "${context.getString(R.string.menu_loaded_notification_text)}\n\n$menuDescription"
+            "${context.getString(R.string.menu_loaded_notification_text)}\n\n📋 $menuDescription"
         }
 
+        // Usar icono de notificación (si existe) o icono de launcher como fallback
+        // Android requiere un icono blanco para notificaciones, usamos el launcher
+        val smallIcon = R.mipmap.ic_launcher
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification_menu) // Icono de notificación personalizado
+            .setSmallIcon(smallIcon)
             .setContentTitle(context.getString(R.string.menu_loaded_notification_title))
             .setContentText(contentText)
             .setStyle(
                 NotificationCompat.BigTextStyle()
                     .bigText(contentText)
+                    .setSummaryText(context.getString(R.string.menu_loaded_notification_text))
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_ALL) // Sonido, vibración y luz por defecto
+            .setDefaults(NotificationCompat.DEFAULT_ALL) // Sonido, vibración y luz
             .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
+            .setAutoCancel(true) // Auto-ocultar al hacer click
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setWhen(System.currentTimeMillis()) // Timestamp actual
+            .setShowWhen(true) // Mostrar timestamp
+            .setOnlyAlertOnce(false) // Alertar cada vez (como WhatsApp)
             .build()
 
         notificationManager.notify(NOTIFICATION_ID, notification)
@@ -81,24 +94,33 @@ class NotificationHelper(private val context: Context) {
     }
 
     /**
-     * Actualiza el widget cuando se envía una notificación de nuevo menú
+     * Actualiza el widget y la app cuando se envía una notificación de nuevo menú
      */
     private fun updateWidget(context: Context) {
         try {
+            // Actualizar todos los widgets instalados
             val appWidgetManager = AppWidgetManager.getInstance(context)
             val appWidgetIds = appWidgetManager.getAppWidgetIds(
                 ComponentName(context, MenuWidgetProvider::class.java)
             )
             if (appWidgetIds.isNotEmpty()) {
-                android.util.Log.d("NotificationHelper", "Actualizando ${appWidgetIds.size} widgets después de notificación")
+                android.util.Log.d("NotificationHelper", "🔄 Actualizando ${appWidgetIds.size} widget(s) después de notificación")
                 val updateIntent = Intent(context, MenuWidgetProvider::class.java).apply {
                     action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
                 }
                 context.sendBroadcast(updateIntent)
             }
+            
+            // CRÍTICO: También enviar broadcast para actualizar la app si está abierta
+            // Esto permite que los fragments actualicen su contenido automáticamente
+            val appUpdateIntent = Intent("com.cocido.morfipolo.MENU_UPDATED").apply {
+                setPackage(context.packageName)
+            }
+            context.sendBroadcast(appUpdateIntent)
+            android.util.Log.d("NotificationHelper", "📱 Broadcast enviado para actualizar la app")
         } catch (e: Exception) {
-            android.util.Log.e("NotificationHelper", "Error al actualizar widget", e)
+            android.util.Log.e("NotificationHelper", "Error al actualizar widget/app", e)
         }
     }
 
