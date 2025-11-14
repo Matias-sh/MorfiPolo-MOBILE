@@ -54,16 +54,6 @@ class UserRepository(
                         passwordHash = "" // No guardamos password hash del API
                     )
                     userDao.insertUser(userEntity)
-                    android.util.Log.d("UserRepository", "Usuario guardado en BD: ${user.id}, nombre: ${userEntity.nombre}")
-                    
-                    // Verificar que se guardó correctamente
-                    val savedUser = userDao.getUserById(user.id)
-                    if (savedUser == null) {
-                        android.util.Log.e("UserRepository", "ERROR: Usuario no se guardó en BD después de insertar")
-                    } else {
-                        android.util.Log.d("UserRepository", "Usuario verificado en BD: ${savedUser.id}")
-                    }
-                    
                     Result.success(user)
                 } else {
                     Result.failure(Exception("Respuesta vacía del servidor"))
@@ -91,7 +81,6 @@ class UserRepository(
             // Primero intentar desde la base de datos local
             val userEntity = userDao.getUserById(userId)
             if (userEntity != null) {
-                android.util.Log.d("UserRepository", "Usuario encontrado en BD local: ${userEntity.id}")
                 // Construir User desde entity (puede no tener todos los campos)
                 val nameParts = userEntity.nombre.split(" ", limit = 2)
                 User(
@@ -108,23 +97,18 @@ class UserRepository(
                     updatedAt = ""
                 )
             } else {
-                android.util.Log.w("UserRepository", "Usuario no encontrado en BD local para ID: $userId")
                 null
             }
         } catch (e: Exception) {
-            android.util.Log.e("UserRepository", "Error al obtener usuario", e)
             null
         }
     }
 
     suspend fun changePassword(userId: String, oldPassword: String, newPassword: String): Result<Boolean> {
         return try {
-            android.util.Log.d("UserRepository", "Cambiando contraseña para usuario: $userId")
-            
             // CRÍTICO: Asegurar que el token esté actualizado antes de hacer la petición
             val validToken = tokenManager.getValidAccessToken()
             if (validToken == null) {
-                android.util.Log.e("UserRepository", "No hay token válido para cambiar contraseña")
                 return Result.failure(Exception("Sesión expirada. Por favor, inicia sesión nuevamente."))
             }
             
@@ -133,11 +117,9 @@ class UserRepository(
                 newPassword = newPassword
             )
             
-            android.util.Log.d("UserRepository", "Enviando petición de cambio de contraseña...")
             val response = apiService.changePassword(request)
             
             if (response.isSuccessful) {
-                android.util.Log.d("UserRepository", "✅ Contraseña cambiada exitosamente")
                 // Actualizar la contraseña guardada en SessionManager para el refresh token
                 sessionManager.saveSession(
                     userId = userId,
@@ -151,13 +133,9 @@ class UserRepository(
                     401 -> "Contraseña actual incorrecta"
                     400 -> "Datos inválidos"
                     403 -> "No tienes permiso para realizar esta acción"
-                    404 -> {
-                        android.util.Log.e("UserRepository", "⚠️ Endpoint no encontrado. Verifica que el endpoint /user/change-password esté disponible en el servidor.")
-                        "El endpoint de cambio de contraseña no está disponible. Por favor, contacta al administrador."
-                    }
+                    404 -> "El endpoint de cambio de contraseña no está disponible. Por favor, contacta al administrador."
                     else -> "Error al cambiar la contraseña: ${response.code()}"
                 }
-                android.util.Log.e("UserRepository", "Error al cambiar contraseña: ${response.code()} - $errorMessage")
                 Result.failure(Exception(errorMessage))
             }
         } catch (e: HttpException) {
@@ -165,19 +143,13 @@ class UserRepository(
                 401 -> "Contraseña actual incorrecta"
                 400 -> "Datos inválidos"
                 403 -> "No tienes permiso para realizar esta acción"
-                404 -> {
-                    android.util.Log.e("UserRepository", "⚠️ Endpoint no encontrado (404). Verifica que el endpoint /user/change-password esté disponible en el servidor.")
-                    "El endpoint de cambio de contraseña no está disponible. Por favor, contacta al administrador."
-                }
+                404 -> "El endpoint de cambio de contraseña no está disponible. Por favor, contacta al administrador."
                 else -> "Error HTTP: ${e.code()} ${e.message()}"
             }
-            android.util.Log.e("UserRepository", "Error HTTP al cambiar contraseña", e)
             Result.failure(Exception(errorMessage))
         } catch (e: IOException) {
-            android.util.Log.e("UserRepository", "Error de conexión al cambiar contraseña", e)
             Result.failure(Exception("Error de conexión: ${e.message}"))
         } catch (e: Exception) {
-            android.util.Log.e("UserRepository", "Error inesperado al cambiar contraseña", e)
             Result.failure(e)
         }
     }

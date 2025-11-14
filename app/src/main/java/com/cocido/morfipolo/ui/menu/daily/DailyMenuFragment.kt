@@ -1,10 +1,13 @@
 package com.cocido.morfipolo.ui.menu.daily
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -23,6 +26,19 @@ class DailyMenuFragment : Fragment() {
 
     private var _binding: FragmentDailyMenuBinding? = null
     private val binding get() = _binding!!
+
+    private var infoBannerHideJob: kotlinx.coroutines.Job? = null
+    
+    // BroadcastReceiver para escuchar actualizaciones del menú
+    private val menuUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.cocido.morfipolo.MENU_UPDATED") {
+                android.util.Log.d("DailyMenuFragment", "📱 Recibido broadcast de actualización de menú")
+                // Recargar el menú del día actual
+                viewModel.loadMenuForDate(viewModel.getCurrentDate())
+            }
+        }
+    }
 
     private val viewModel: DailyMenuViewModel by viewModels {
         DailyMenuViewModelFactory(
@@ -50,6 +66,21 @@ class DailyMenuFragment : Fragment() {
         setupObservers()
         setupPullToRefresh()
         checkNetworkStatus()
+        
+        // Registrar BroadcastReceiver para escuchar actualizaciones del menú
+        // RECEIVER_NOT_EXPORTED porque solo escuchamos broadcasts internos de nuestra app
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            requireContext().registerReceiver(
+                menuUpdateReceiver,
+                IntentFilter("com.cocido.morfipolo.MENU_UPDATED"),
+                Context.RECEIVER_NOT_EXPORTED
+            )
+        } else {
+            requireContext().registerReceiver(
+                menuUpdateReceiver,
+                IntentFilter("com.cocido.morfipolo.MENU_UPDATED")
+            )
+        }
         
         // Cargar menú: usar fecha del argumento si existe, sino usar hoy
         val menuDateArg = arguments?.getString("menuDate", "") ?: ""
@@ -145,6 +176,13 @@ class DailyMenuFragment : Fragment() {
     private fun updateUI(state: DailyMenuUiState.Success) {
         val menu = state.menu
 
+        // Mostrar/ocultar banner informativo
+        if (state.infoMessage != null) {
+            showInfoBanner(state.infoMessage)
+        } else {
+            hideInfoBanner()
+        }
+
         // Fecha - convertir de String a Date
         val menuDate = try {
             SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(menu.date) ?: Date()
@@ -188,6 +226,47 @@ class DailyMenuFragment : Fragment() {
         
         // Mostrar todas las opciones del menú (reutilizar isActuallyOpen ya calculado arriba)
         displayMenuOptions(menu, state.userVote, state.isWithinTime, isActuallyOpen)
+    }
+    
+    private fun showInfoBanner(message: String) {
+        // Cancelar trabajo anterior si existe
+        infoBannerHideJob?.cancel()
+        
+        binding.infoBannerText.text = message
+        binding.infoBannerIcon.setImageResource(android.R.drawable.ic_dialog_info)
+        binding.infoBanner.setCardBackgroundColor(resources.getColor(R.color.nonna_accent_warm, null))
+        
+        // Mostrar con animación suave
+        if (binding.infoBanner.visibility != View.VISIBLE) {
+            binding.infoBanner.alpha = 0f
+            binding.infoBanner.visibility = View.VISIBLE
+            binding.infoBanner.animate()
+                .alpha(1f)
+                .setDuration(300)
+                .start()
+        }
+        
+        // Ocultar automáticamente después de 5 segundos
+        infoBannerHideJob = lifecycleScope.launch {
+            kotlinx.coroutines.delay(5000) // 5 segundos
+            hideInfoBanner()
+        }
+    }
+    
+    private fun hideInfoBanner() {
+        // Cancelar trabajo de ocultación si existe
+        infoBannerHideJob?.cancel()
+        infoBannerHideJob = null
+        
+        if (binding.infoBanner.visibility == View.VISIBLE) {
+            binding.infoBanner.animate()
+                .alpha(0f)
+                .setDuration(300)
+                .withEndAction {
+                    binding.infoBanner.visibility = View.GONE
+                }
+                .start()
+        }
     }
 
     private fun displayMenuOptions(
@@ -238,7 +317,13 @@ class DailyMenuFragment : Fragment() {
                 optionButton.setBackgroundResource(R.drawable.button_red)
                 selectedIndicator.visibility = View.VISIBLE
                 optionButton.setOnClickListener {
-                    viewModel.deleteVote()
+                    // Validar horario antes de permitir eliminar
+                    if (isWithinTime && isMenuOpen) {
+                        viewModel.deleteVote()
+                    } else {
+                        // Mostrar mensaje informativo en el banner
+                        showInfoBanner("El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00).")
+                    }
                 }
             } else {
                 // Opción no seleccionada
@@ -251,11 +336,8 @@ class DailyMenuFragment : Fragment() {
                     if (isWithinTime && isMenuOpen) {
                         viewModel.selectOption(option.id)
                     } else {
-                        Toast.makeText(
-                            requireContext(),
-                            getString(R.string.time_expired),
-                            Toast.LENGTH_LONG
-                        ).show()
+                        // Mostrar mensaje informativo en el banner en lugar de Toast
+                        showInfoBanner("El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00).")
                     }
                 }
             }
@@ -267,6 +349,15 @@ class DailyMenuFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Desregistrar BroadcastReceiver
+        try {
+            requireContext().unregisterReceiver(menuUpdateReceiver)
+        } catch (e: Exception) {
+            // El receiver puede no estar registrado, ignorar
+        }
+        // Cancelar trabajo de ocultación del banner
+        infoBannerHideJob?.cancel()
+        infoBannerHideJob = null
         _binding = null
     }
 }

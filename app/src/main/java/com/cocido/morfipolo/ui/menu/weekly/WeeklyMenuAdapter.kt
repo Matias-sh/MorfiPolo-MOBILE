@@ -16,8 +16,8 @@ import java.util.*
 
 class WeeklyMenuAdapter(
     private val onMenuClick: (WeeklyMenuItem) -> Unit = {},
-    private val onRemoveVote: (String) -> Unit = {}, // voteId
-    private val onSelectOption: (String, String) -> Unit = { _, _ -> } // menuId, optionId
+    private val onRemoveVote: (String, String?) -> Unit = { _, _ -> }, // voteId, errorMessage
+    private val onSelectOption: (String, String, String?) -> Unit = { _, _, _ -> } // menuId, optionId, errorMessage
 ) : ListAdapter<WeeklyMenuItem, WeeklyMenuAdapter.MenuViewHolder>(MenuDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MenuViewHolder {
@@ -36,8 +36,8 @@ class WeeklyMenuAdapter(
     class MenuViewHolder(
         private val binding: ItemWeeklyMenuBinding,
         private val onMenuClick: (WeeklyMenuItem) -> Unit,
-        private val onRemoveVote: (String) -> Unit,
-        private val onSelectOption: (String, String) -> Unit
+        private val onRemoveVote: (String, String?) -> Unit,
+        private val onSelectOption: (String, String, String?) -> Unit
     ) : RecyclerView.ViewHolder(binding.root) {
 
         private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -180,7 +180,13 @@ class WeeklyMenuAdapter(
                         optionButton.setBackgroundResource(R.drawable.button_red)
                         selectedIndicator.visibility = View.VISIBLE
                         optionButton.setOnClickListener {
-                            onRemoveVote(userVote.id)
+                            if (isActuallyOpen) {
+                                onRemoveVote(userVote.id, null)
+                            } else {
+                                // Mostrar mensaje informativo si el menú está cerrado
+                                val message = "El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00)."
+                                onRemoveVote(userVote.id, message)
+                            }
                         }
                     } else {
                         // Opción no seleccionada
@@ -191,13 +197,11 @@ class WeeklyMenuAdapter(
                         optionButton.isEnabled = isActuallyOpen
                         optionButton.setOnClickListener {
                             if (isActuallyOpen) {
-                                onSelectOption(menu.id, option.id)
+                                onSelectOption(menu.id, option.id, null)
                             } else {
-                                android.widget.Toast.makeText(
-                                    binding.root.context,
-                                    binding.root.context.getString(R.string.time_expired),
-                                    android.widget.Toast.LENGTH_LONG
-                                ).show()
+                                // Mostrar mensaje informativo si el menú está cerrado
+                                val message = "El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00)."
+                                onSelectOption(menu.id, option.id, message)
                             }
                         }
                     }

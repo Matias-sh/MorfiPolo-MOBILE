@@ -161,6 +161,23 @@ class MenuWidgetProvider : AppWidgetProvider() {
             if (hasFillInIntentExtras && actionFromExtras != null) {
                 // Es un click de un item de la lista - procesar según la action en los extras
                 android.util.Log.d(TAG, "onReceive: ✅ CLICK DE ITEM DETECTADO")
+                
+                // Obtener appWidgetId - puede venir en extras o en EXTRA_APPWIDGET_ID
+                val appWidgetId = intent.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1)
+                if (appWidgetId == -1) {
+                    // Intentar obtener desde extras como int[]
+                    val appWidgetIds = intent.getIntArrayExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS)
+                    if (appWidgetIds != null && appWidgetIds.isNotEmpty()) {
+                        // Usar el primer widget ID
+                        intent.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetIds[0])
+                        android.util.Log.d(TAG, "onReceive: appWidgetId obtenido de EXTRA_APPWIDGET_IDS: ${appWidgetIds[0]}")
+                    } else {
+                        android.util.Log.w(TAG, "onReceive: ⚠️ No se pudo obtener appWidgetId")
+                    }
+                } else {
+                    android.util.Log.d(TAG, "onReceive: appWidgetId obtenido de EXTRA_APPWIDGET_ID: $appWidgetId")
+                }
+                
                 when (actionFromExtras) {
                     ACTION_SELECT_OPTION -> {
                         android.util.Log.d(TAG, "onReceive: 🎯 PROCESANDO ACTION_SELECT_OPTION desde FillInIntent")
@@ -756,6 +773,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
     private fun handleSelectOption(context: Context, intent: Intent) {
         val menuId = intent.getStringExtra(EXTRA_MENU_ID)
         val optionId = intent.getStringExtra(EXTRA_OPTION_ID)
+        val appWidgetId = intent.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1)
         
         if (menuId == null || optionId == null) {
             android.util.Log.w(TAG, "handleSelectOption: ⚠️ menuId o optionId es null")
@@ -774,6 +792,22 @@ class MenuWidgetProvider : AppWidgetProvider() {
                 
                 android.util.Log.d(TAG, "handleSelectOption: Resultado: ${if (result.isSuccess) "Éxito" else "Error: ${result.exceptionOrNull()?.message}"}")
                 
+                // Verificar si es un error de horario cerrado
+                if (!result.isSuccess) {
+                    val exception = result.exceptionOrNull()
+                    val message = exception?.message ?: ""
+                    
+                    if (message.contains("cerrado", ignoreCase = true) || 
+                        message.contains("horario", ignoreCase = true) || 
+                        message.contains("time", ignoreCase = true) || 
+                        message.contains("expired", ignoreCase = true) ||
+                        message.contains("closed", ignoreCase = true)) {
+                        // Mostrar mensaje temporal en el widget
+                        showTemporaryMessage(context, appWidgetId, "El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00).")
+                        return@launch
+                    }
+                }
+                
                 // IMPORTANTE: Actualizar el widget SIEMPRE, incluso si hay un error
                 // Esto asegura que el widget refleje el estado actual después de la acción
                 android.util.Log.d(TAG, "handleSelectOption: 🔄 Forzando actualización del widget...")
@@ -790,8 +824,17 @@ class MenuWidgetProvider : AppWidgetProvider() {
                 android.util.Log.d(TAG, "handleSelectOption: ✅ Widget actualizado")
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "Error al seleccionar opción", e)
-                // Aún así intentar actualizar el widget
-                updateAllWidgets(context)
+                val message = e.message ?: ""
+                if (message.contains("cerrado", ignoreCase = true) || 
+                    message.contains("horario", ignoreCase = true) || 
+                    message.contains("time", ignoreCase = true) || 
+                    message.contains("expired", ignoreCase = true) ||
+                    message.contains("closed", ignoreCase = true)) {
+                    showTemporaryMessage(context, appWidgetId, "El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00).")
+                } else {
+                    // Aún así intentar actualizar el widget
+                    updateAllWidgets(context)
+                }
             }
         }
     }
@@ -801,6 +844,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
      */
     private fun handleDeleteVote(context: Context, intent: Intent) {
         val voteId = intent.getStringExtra(EXTRA_VOTE_ID) ?: return
+        val appWidgetId = intent.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1)
         
         widgetScope.launch {
             try {
@@ -812,6 +856,22 @@ class MenuWidgetProvider : AppWidgetProvider() {
                 }
                 
                 android.util.Log.d(TAG, "handleDeleteVote: Resultado: ${if (result.isSuccess) "Éxito" else "Error: ${result.exceptionOrNull()?.message}"}")
+                
+                // Verificar si es un error de horario cerrado
+                if (!result.isSuccess) {
+                    val exception = result.exceptionOrNull()
+                    val message = exception?.message ?: ""
+                    
+                    if (message.contains("cerrado", ignoreCase = true) || 
+                        message.contains("horario", ignoreCase = true) || 
+                        message.contains("time", ignoreCase = true) || 
+                        message.contains("expired", ignoreCase = true) ||
+                        message.contains("closed", ignoreCase = true)) {
+                        // Mostrar mensaje temporal en el widget
+                        showTemporaryMessage(context, appWidgetId, "El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00).")
+                        return@launch
+                    }
+                }
                 
                 // IMPORTANTE: Actualizar el widget SIEMPRE, incluso si el servidor devuelve 404
                 // El voto puede ya estar eliminado en el servidor pero aún mostrarse en el widget
@@ -830,8 +890,17 @@ class MenuWidgetProvider : AppWidgetProvider() {
                 android.util.Log.d(TAG, "handleDeleteVote: ✅ Widget actualizado")
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "Error al eliminar voto", e)
-                // Aún así intentar actualizar el widget
-                updateAllWidgets(context)
+                val message = e.message ?: ""
+                if (message.contains("cerrado", ignoreCase = true) || 
+                    message.contains("horario", ignoreCase = true) || 
+                    message.contains("time", ignoreCase = true) || 
+                    message.contains("expired", ignoreCase = true) ||
+                    message.contains("closed", ignoreCase = true)) {
+                    showTemporaryMessage(context, appWidgetId, "El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00).")
+                } else {
+                    // Aún así intentar actualizar el widget
+                    updateAllWidgets(context)
+                }
             }
         }
     }
@@ -859,6 +928,53 @@ class MenuWidgetProvider : AppWidgetProvider() {
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error al actualizar widgets", e)
             e.printStackTrace()
+        }
+    }
+
+    /**
+     * Muestra un mensaje temporal en el widget durante unos segundos.
+     */
+    private fun showTemporaryMessage(context: Context, appWidgetId: Int, message: String) {
+        if (appWidgetId == -1) {
+            // Si no tenemos un widgetId específico, mostrar en todos los widgets
+            val appWidgetManager = AppWidgetManager.getInstance(context)
+            val appWidgetIds = appWidgetManager.getAppWidgetIds(
+                android.content.ComponentName(context, MenuWidgetProvider::class.java)
+            )
+            appWidgetIds.forEach { id ->
+                showTemporaryMessageForWidget(context, appWidgetManager, id, message)
+            }
+        } else {
+            showTemporaryMessageForWidget(context, AppWidgetManager.getInstance(context), appWidgetId, message)
+        }
+    }
+    
+    private fun showTemporaryMessageForWidget(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        message: String
+    ) {
+        try {
+            val views = RemoteViews(context.packageName, R.layout.widget_menu_simple)
+            
+            // Mostrar el mensaje temporalmente en el widgetNoMenuTextView
+            views.setViewVisibility(R.id.widgetNoMenuTextView, View.VISIBLE)
+            views.setTextViewText(R.id.widgetNoMenuTextView, message)
+            views.setTextColor(R.id.widgetNoMenuTextView, context.resources.getColor(R.color.nonna_error, null))
+            appWidgetManager.updateAppWidget(appWidgetId, views)
+            
+            // Ocultar el mensaje después de 5 segundos
+            widgetScope.launch {
+                kotlinx.coroutines.delay(5000) // 5 segundos
+                
+                // Restaurar el widget a su estado normal
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                    updateWidget(context, appWidgetManager, appWidgetId)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Error al mostrar mensaje temporal en widget", e)
         }
     }
 

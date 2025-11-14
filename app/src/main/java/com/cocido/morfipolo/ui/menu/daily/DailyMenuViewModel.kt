@@ -60,11 +60,19 @@ class DailyMenuViewModel(
                     val isWithinTime = isWithinSelectionTime(menu)
                     val isActuallyOpen = menu.status == "open" && isWithinTime && isToday
                     
+                    // Determinar mensaje informativo si el menú está cerrado
+                    val infoMessage = if (!isActuallyOpen && isToday) {
+                        "El horario de selección ha finalizado. Solo puedes votar entre las 08:00 y las 11:00."
+                    } else {
+                        null
+                    }
+                    
                     _uiState.value = DailyMenuUiState.Success(
                         menu = menu,
                         userVote = userVote,
                         isWithinTime = isWithinTime && isToday,
-                        isActuallyOpen = isActuallyOpen
+                        isActuallyOpen = isActuallyOpen,
+                        infoMessage = infoMessage
                     )
                 } else {
                     android.util.Log.w("DailyMenuViewModel", "No se encontró menú para la fecha")
@@ -82,6 +90,17 @@ class DailyMenuViewModel(
             try {
                 val state = _uiState.value
                 if (state is DailyMenuUiState.Success) {
+                    // Validar horario antes de intentar seleccionar
+                    if (!state.isActuallyOpen) {
+                        val currentState = _uiState.value
+                        if (currentState is DailyMenuUiState.Success) {
+                            _uiState.value = currentState.copy(
+                                infoMessage = "El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00)."
+                            )
+                        }
+                        return@launch
+                    }
+                    
                     val menu = state.menu
                     val userId = userRepository.getCurrentUser()?.id
                     
@@ -97,12 +116,21 @@ class DailyMenuViewModel(
                         loadMenuForDate(currentDate.time)
                     } ?: run {
                         val exception = result.exceptionOrNull()
-                        android.util.Log.e("DailyMenuViewModel", "Error al seleccionar opción", exception)
-                        _uiState.value = DailyMenuUiState.Error(exception?.message ?: "Error al seleccionar opción")
+                        val errorMessage = exception?.message ?: "Error al seleccionar opción"
+                        // Si el error es por horario cerrado, mostrar como mensaje informativo
+                        if (errorMessage.contains("cerrado", ignoreCase = true) ||
+                            errorMessage.contains("horario", ignoreCase = true) ||
+                            errorMessage.contains("time", ignoreCase = true)) {
+                            val currentState = _uiState.value
+                            if (currentState is DailyMenuUiState.Success) {
+                                _uiState.value = currentState.copy(infoMessage = errorMessage)
+                            }
+                        } else {
+                            _uiState.value = DailyMenuUiState.Error(errorMessage)
+                        }
                     }
                 }
             } catch (e: Exception) {
-                android.util.Log.e("DailyMenuViewModel", "Excepción al seleccionar opción", e)
                 _uiState.value = DailyMenuUiState.Error("Error: ${e.message}")
             }
         }
@@ -112,6 +140,17 @@ class DailyMenuViewModel(
         viewModelScope.launch {
             val state = _uiState.value
             if (state is DailyMenuUiState.Success) {
+                // Validar horario antes de intentar eliminar
+                if (!state.isActuallyOpen) {
+                    val currentState = _uiState.value
+                    if (currentState is DailyMenuUiState.Success) {
+                        _uiState.value = currentState.copy(
+                            infoMessage = "El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00)."
+                        )
+                    }
+                    return@launch
+                }
+                
                 val userVote = state.userVote
                 if (userVote != null) {
                     val result = voteRepository.deleteVote(userVote.id)
@@ -120,7 +159,18 @@ class DailyMenuViewModel(
                         loadMenuForDate(currentDate.time)
                     } ?: run {
                         val exception = result.exceptionOrNull()
-                        _uiState.value = DailyMenuUiState.Error(exception?.message ?: "Error al eliminar voto")
+                        val errorMessage = exception?.message ?: "Error al eliminar voto"
+                        // Si el error es por horario cerrado, mostrar como mensaje informativo
+                        if (errorMessage.contains("cerrado", ignoreCase = true) ||
+                            errorMessage.contains("horario", ignoreCase = true) ||
+                            errorMessage.contains("time", ignoreCase = true)) {
+                            val currentState = _uiState.value
+                            if (currentState is DailyMenuUiState.Success) {
+                                _uiState.value = currentState.copy(infoMessage = errorMessage)
+                            }
+                        } else {
+                            _uiState.value = DailyMenuUiState.Error(errorMessage)
+                        }
                     }
                 }
             }
@@ -203,7 +253,8 @@ sealed class DailyMenuUiState {
         val menu: Menu,
         val userVote: com.cocido.morfipolo.domain.model.Vote?,
         val isWithinTime: Boolean,
-        val isActuallyOpen: Boolean
+        val isActuallyOpen: Boolean,
+        val infoMessage: String? = null // Mensaje informativo para mostrar en banner
     ) : DailyMenuUiState()
     data class Error(val message: String) : DailyMenuUiState()
 }
