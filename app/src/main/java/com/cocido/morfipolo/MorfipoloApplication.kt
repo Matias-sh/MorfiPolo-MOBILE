@@ -17,7 +17,7 @@ import com.cocido.morfipolo.data.remote.TokenManager
 import com.cocido.morfipolo.data.repository.MenuRepository
 import com.cocido.morfipolo.data.repository.UserRepository
 import com.cocido.morfipolo.data.repository.VoteRepository
-import com.cocido.morfipolo.util.work.MenuPollingWorker
+import com.cocido.morfipolo.util.work.DailyReminderWorker
 import com.cocido.morfipolo.util.work.SessionRefreshWorker
 import java.util.concurrent.TimeUnit
 
@@ -92,37 +92,8 @@ class MorfipoloApplication : Application() {
             sessionRefreshWork
         )
 
-        // Configurar worker para verificar nuevos menús y enviar notificaciones
-        // IMPORTANTE: Usamos OneTimeWorkRequest con re-programación para poder tener intervalos más cortos
-        // PeriodicWorkRequest tiene un mínimo de 15 minutos, pero OneTimeWorkRequest permite intervalos más cortos
-        // Sin embargo, Android puede aplicar limitaciones según el estado de la batería y Doze mode
-        val menuPollingConstraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-
-        // Usar OneTimeWorkRequest con intervalo de 5 minutos (más frecuente que el mínimo de 15min de Periodic)
-        scheduleMenuPollingWork(workManager, menuPollingConstraints)
-    }
-
-    /**
-     * Programa el trabajo de polling de menú usando OneTimeWorkRequest
-     * que se re-programa automáticamente para permitir intervalos más cortos
-     * @param workManager Instancia de WorkManager
-     * @param constraints Restricciones para el trabajo (red conectada)
-     */
-    private fun scheduleMenuPollingWork(workManager: WorkManager, constraints: Constraints) {
-        // Crear un OneTimeWorkRequest que se ejecuta inmediatamente la primera vez
-        // El worker se re-programa a sí mismo al finalizar para crear un ciclo continuo
-        val menuPollingWork = OneTimeWorkRequestBuilder<MenuPollingWorker>()
-            .setConstraints(constraints)
-            .addTag("menu_polling") // Tag para poder cancelar si es necesario
-            .build()
-
-        workManager.enqueueUniqueWork(
-            "menu_polling_work",
-            ExistingWorkPolicy.REPLACE, // Reemplazar si ya existe
-            menuPollingWork
-        )
+        // Configurar worker para enviar recordatorio diario a las 9am
+        DailyReminderWorker.scheduleDailyReminder(this)
     }
 }
 

@@ -156,5 +156,12 @@ class TokenManager(
         val currentTime = System.currentTimeMillis() / 1000
         return currentTime >= expirationTime
     }
+    
+    /**
+     * Limpia la sesión cuando el refresh token expiró
+     */
+    suspend fun clearSession() {
+        sessionManager.logout()
+    }
 }
 

@@ -133,6 +133,16 @@ class DailyMenuFragment : Fragment() {
 
     private fun setupObservers() {
         lifecycleScope.launch {
+            // Observar cuando la sesión expira
+            viewModel.sessionExpired.collect { expired ->
+                if (expired) {
+                    android.util.Log.w("DailyMenuFragment", "Sesión expirada, redirigiendo al login")
+                    navigateToLogin()
+                }
+            }
+        }
+        
+        lifecycleScope.launch {
             viewModel.uiState.collect { state ->
                 binding.swipeRefreshLayout.isRefreshing = false
                 
@@ -159,7 +169,11 @@ class DailyMenuFragment : Fragment() {
                         
                         val errorMessage = when {
                             !NetworkUtils.isNetworkAvailable(requireContext()) -> getString(R.string.error_no_connection)
-                            state.message.contains("sesión", ignoreCase = true) || state.message.contains("session", ignoreCase = true) -> getString(R.string.error_session_expired)
+                            state.message.contains("sesión", ignoreCase = true) || state.message.contains("session", ignoreCase = true) -> {
+                                // Si es error de sesión expirada, redirigir al login
+                                navigateToLogin()
+                                return@collect
+                            }
                             else -> state.message
                         }
                         
@@ -171,6 +185,13 @@ class DailyMenuFragment : Fragment() {
                 }
             }
         }
+    }
+    
+    private fun navigateToLogin() {
+        val intent = android.content.Intent(requireContext(), com.cocido.morfipolo.ui.login.LoginActivity::class.java)
+        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        requireActivity().finish()
     }
 
     private fun updateUI(state: DailyMenuUiState.Success) {

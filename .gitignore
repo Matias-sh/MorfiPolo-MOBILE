@@ -13,3 +13,25 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Django
+django_menu_monitor_env/
+django_menu_monitor/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.env
+.venv
+venv/
+env/
+*.pot
+*.po
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+

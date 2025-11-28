@@ -2,6 +2,7 @@ package com.cocido.morfipolo.data.repository
 
 import com.cocido.morfipolo.data.local.database.AppDatabase
 import com.cocido.morfipolo.data.local.database.entity.MenuEntity
+import com.cocido.morfipolo.data.remote.SessionExpiredException
 import com.cocido.morfipolo.data.remote.api.MorfiPoloApiService
 import com.cocido.morfipolo.domain.model.Menu
 import kotlinx.coroutines.flow.Flow
@@ -120,9 +121,23 @@ class MenuRepository(
                 
                 sortedMenus
             } else {
+                // Si es 401, lanzar excepción de sesión expirada
+                if (response.code() == 401) {
+                    throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
+                }
                 // Si falla, obtener desde base de datos local
                 getWeeklyMenusFromLocal()
             }
+        } catch (e: SessionExpiredException) {
+            // Propagar la excepción de sesión expirada
+            throw e
+        } catch (e: HttpException) {
+            // Si es 401, lanzar excepción de sesión expirada
+            if (e.code() == 401) {
+                throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
+            }
+            // Si falla, obtener desde base de datos local
+            getWeeklyMenusFromLocal()
         } catch (e: Exception) {
             // Si falla, obtener desde base de datos local
             getWeeklyMenusFromLocal()

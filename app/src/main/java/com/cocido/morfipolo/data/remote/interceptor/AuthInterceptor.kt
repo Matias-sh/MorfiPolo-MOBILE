@@ -1,6 +1,7 @@
 package com.cocido.morfipolo.data.remote.interceptor
 
 import android.util.Log
+import com.cocido.morfipolo.data.remote.SessionExpiredException
 import com.cocido.morfipolo.data.remote.TokenManager
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
@@ -62,17 +63,29 @@ class AuthInterceptor(
                 
                 response = chain.proceed(authenticatedRequest)
                 
-                // Si el reintento también falla con 401, significa que el refresh token expiró o hay otro problema
+                // Si el reintento también falla con 401, significa que el refresh token expiró
                 if (response.code == 401) {
-                    Log.e(TAG, "Reintento falló con 401 después de refresh. Refresh token probablemente expirado o error del servidor")
+                    Log.e(TAG, "Reintento falló con 401 después de refresh. Refresh token expirado")
+                    // Limpiar sesión cuando el refresh token expiró
+                    runBlocking {
+                        tokenManager.clearSession()
+                    }
+                    // Cerrar la respuesta y lanzar excepción para que se propague
+                    response.close()
+                    throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
                 } else {
                     Log.d(TAG, "Reintento exitoso con código ${response.code}")
                 }
             } else {
                 // No se pudo refrescar el token (refresh token expirado o error de conexión)
-                // Devolver la respuesta 401 original sin cerrarla
                 Log.e(TAG, "No se pudo refrescar el token después de 401. Refresh token expirado o error de conexión")
-                // La respuesta 401 original se devuelve sin cerrar para que el error se propague correctamente
+                // Limpiar sesión cuando no se puede refrescar
+                runBlocking {
+                    tokenManager.clearSession()
+                }
+                // Cerrar la respuesta y lanzar excepción
+                response.close()
+                throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
             }
         }
         
