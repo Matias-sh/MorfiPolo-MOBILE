@@ -86,11 +86,18 @@ class WeeklyMenuFragment : Fragment() {
                             val exception = result.exceptionOrNull()
                             val message = exception?.message ?: ""
                             
+                            // Verificar si es un error de sesión expirada
+                            if (exception is com.cocido.morfipolo.data.remote.SessionExpiredException ||
+                                message.contains("sesión", ignoreCase = true) || 
+                                message.contains("session", ignoreCase = true)) {
+                                navigateToLogin()
+                                return@launch
+                            }
+                            
                             // Verificar si es un error de horario cerrado
                             if (message.contains("cerrado", ignoreCase = true) || 
                                 message.contains("horario", ignoreCase = true) || 
-                                message.contains("time", ignoreCase = true) || 
-                                message.contains("expired", ignoreCase = true) ||
+                                message.contains("time", ignoreCase = true) ||
                                 errorMessage != null) {
                                 val infoMessage = errorMessage ?: "El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00)."
                                 showInfoBanner(infoMessage)
@@ -98,13 +105,18 @@ class WeeklyMenuFragment : Fragment() {
                                 showInfoBanner("Error al eliminar voto")
                             }
                         }
+                    } catch (e: com.cocido.morfipolo.data.remote.SessionExpiredException) {
+                        android.util.Log.w("WeeklyMenuFragment", "Sesión expirada al eliminar voto")
+                        navigateToLogin()
                     } catch (e: Exception) {
                         android.util.Log.e("WeeklyMenuFragment", "Error al eliminar voto", e)
                         val message = e.message ?: ""
-                        if (message.contains("cerrado", ignoreCase = true) || 
+                        if (message.contains("sesión", ignoreCase = true) || 
+                            message.contains("session", ignoreCase = true)) {
+                            navigateToLogin()
+                        } else if (message.contains("cerrado", ignoreCase = true) || 
                             message.contains("horario", ignoreCase = true) || 
-                            message.contains("time", ignoreCase = true) || 
-                            message.contains("expired", ignoreCase = true)) {
+                            message.contains("time", ignoreCase = true)) {
                             showInfoBanner("El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00).")
                         } else {
                             showInfoBanner("Error al eliminar voto: ${e.message}")
@@ -128,11 +140,18 @@ class WeeklyMenuFragment : Fragment() {
                                 val exception = result.exceptionOrNull()
                                 val message = exception?.message ?: ""
                                 
+                                // Verificar si es un error de sesión expirada
+                                if (exception is com.cocido.morfipolo.data.remote.SessionExpiredException ||
+                                    message.contains("sesión", ignoreCase = true) || 
+                                    message.contains("session", ignoreCase = true)) {
+                                    navigateToLogin()
+                                    return@launch
+                                }
+                                
                                 // Verificar si es un error de horario cerrado
                                 if (message.contains("cerrado", ignoreCase = true) || 
                                     message.contains("horario", ignoreCase = true) || 
-                                    message.contains("time", ignoreCase = true) || 
-                                    message.contains("expired", ignoreCase = true) ||
+                                    message.contains("time", ignoreCase = true) ||
                                     errorMessage != null) {
                                     val infoMessage = errorMessage ?: "El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00)."
                                     showInfoBanner(infoMessage)
@@ -141,13 +160,18 @@ class WeeklyMenuFragment : Fragment() {
                                 }
                             }
                         }
+                    } catch (e: com.cocido.morfipolo.data.remote.SessionExpiredException) {
+                        android.util.Log.w("WeeklyMenuFragment", "Sesión expirada al seleccionar opción")
+                        navigateToLogin()
                     } catch (e: Exception) {
                         android.util.Log.e("WeeklyMenuFragment", "Error al seleccionar opción", e)
                         val message = e.message ?: ""
-                        if (message.contains("cerrado", ignoreCase = true) || 
+                        if (message.contains("sesión", ignoreCase = true) || 
+                            message.contains("session", ignoreCase = true)) {
+                            navigateToLogin()
+                        } else if (message.contains("cerrado", ignoreCase = true) || 
                             message.contains("horario", ignoreCase = true) || 
-                            message.contains("time", ignoreCase = true) || 
-                            message.contains("expired", ignoreCase = true)) {
+                            message.contains("time", ignoreCase = true)) {
                             showInfoBanner("El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00).")
                         } else {
                             showInfoBanner("Error al seleccionar opción: ${e.message}")
@@ -208,6 +232,16 @@ class WeeklyMenuFragment : Fragment() {
 
     private fun setupObservers() {
         lifecycleScope.launch {
+            // Observar cuando la sesión expira
+            viewModel.sessionExpired.collect { expired ->
+                if (expired) {
+                    android.util.Log.w("WeeklyMenuFragment", "Sesión expirada, redirigiendo al login")
+                    navigateToLogin()
+                }
+            }
+        }
+        
+        lifecycleScope.launch {
             viewModel.uiState.collect { state ->
                 binding.swipeRefreshLayout.isRefreshing = false
                 
@@ -247,7 +281,11 @@ class WeeklyMenuFragment : Fragment() {
                         
                         val errorMessage = when {
                             !NetworkUtils.isNetworkAvailable(requireContext()) -> getString(R.string.error_no_connection)
-                            state.message.contains("sesión", ignoreCase = true) || state.message.contains("session", ignoreCase = true) -> getString(R.string.error_session_expired)
+                            state.message.contains("sesión", ignoreCase = true) || state.message.contains("session", ignoreCase = true) -> {
+                                // Si es error de sesión expirada, redirigir al login
+                                navigateToLogin()
+                                return@collect
+                            }
                             else -> state.message
                         }
                         
@@ -258,6 +296,13 @@ class WeeklyMenuFragment : Fragment() {
                 }
             }
         }
+    }
+    
+    private fun navigateToLogin() {
+        val intent = android.content.Intent(requireContext(), com.cocido.morfipolo.ui.login.LoginActivity::class.java)
+        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        requireActivity().finish()
     }
 
     private fun showInfoBanner(message: String) {

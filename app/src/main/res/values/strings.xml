@@ -50,8 +50,11 @@
     <string name="password_current_required">Ingresá tu contraseña actual</string>
     
     <!-- Notifications -->
-    <string name="notification_channel_name">Actualizaciones de Menú</string>
-    <string name="notification_channel_description">Notificaciones cuando se carga el menú del día</string>
+    <string name="notification_channel_name">Recordatorios de Menú</string>
+    <string name="notification_channel_description">Recordatorios diarios para anotarse en el menú</string>
+    <string name="daily_reminder_notification_title">¡Recordatorio de almuerzo!</string>
+    <string name="daily_reminder_notification_text">No olvides anotarte en el menú de hoy. Tienes tiempo hasta las 11:00.</string>
+    <string name="daily_reminder_notification_summary">Comedor - Recordatorio diario</string>
     <string name="menu_loaded_notification_title">¡Nuevo menú disponible!</string>
     <string name="menu_loaded_notification_text">Se subió un nuevo menú del día. ¡Anotate al almuerzo ahora!</string>
     
@@ -69,9 +72,20 @@
     <string name="error_retry">Reintentar</string>
     <string name="error_session_expired">Sesión expirada. Por favor, inicia sesión nuevamente.</string>
     <string name="error_generic">Ocurrió un error. Por favor, intenta de nuevo.</string>
+    <string name="error_login_failed">No se pudo iniciar sesión. Verifica tu conexión e intenta de nuevo.</string>
+    <string name="error_connection">No se pudo conectar al servidor. Verifica tu conexión a internet.</string>
+    <string name="error_server">El servidor no está disponible en este momento. Por favor, intenta más tarde.</string>
+    <string name="error_load_menu">No se pudo cargar el menú. Intenta de nuevo.</string>
+    <string name="error_load_votes">No se pudo cargar la información. Intenta de nuevo.</string>
+    <string name="error_vote_failed">No se pudo registrar tu elección. Intenta de nuevo.</string>
+    <string name="error_delete_vote_failed">No se pudo quitar tu elección. Intenta de nuevo.</string>
+    <string name="error_password_change_failed">No se pudo cambiar la contraseña. Verifica los datos e intenta de nuevo.</string>
+    <string name="error_invalid_data">Los datos ingresados no son válidos. Verifica e intenta de nuevo.</string>
+    <string name="error_unauthorized">No tienes permiso para realizar esta acción.</string>
     <string name="menu_closed_message">El menú está cerrado. No puedes agregar o quitar votos fuera del horario de selección (08:00 - 11:00).</string>
     <string name="menu_closed_time_message">El horario de selección ha finalizado. Solo puedes votar entre las 08:00 y las 11:00.</string>
     <string name="dni_invalid_format">El DNI debe tener entre 7 y 8 dígitos numéricos</string>
+    <string name="error_already_voted">Ya tienes un voto registrado para este menú</string>
     
     <!-- Empty States -->
     <string name="empty_state_title">No hay menús disponibles</string>

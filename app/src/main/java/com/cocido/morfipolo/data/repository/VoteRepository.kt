@@ -1,5 +1,6 @@
 package com.cocido.morfipolo.data.repository
 
+import com.cocido.morfipolo.data.remote.SessionExpiredException
 import com.cocido.morfipolo.data.remote.api.MorfiPoloApiService
 import com.cocido.morfipolo.domain.model.CreateVoteRequest
 import com.cocido.morfipolo.domain.model.Vote
@@ -20,7 +21,7 @@ class VoteRepository(
                 if (vote != null) {
                     Result.success(vote)
                 } else {
-                    Result.failure(Exception("Respuesta vacía del servidor"))
+                    Result.failure(Exception("No se pudo registrar tu elección. Intenta de nuevo."))
                 }
             } else {
                 val errorBody = response.errorBody()?.string() ?: ""
@@ -43,18 +44,29 @@ class VoteRepository(
                             }
                         }
                     }
-                    401 -> "No autorizado"
-                    404 -> "Opción o menú no encontrado"
-                    else -> "Error al crear voto: ${response.code()}"
+                    401 -> throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
+                    404 -> "No se encontró la opción o el menú seleccionado"
+                    500, 502, 503, 504 -> "El servidor no está disponible en este momento. Por favor, intenta más tarde."
+                    else -> "No se pudo registrar tu elección. Intenta de nuevo."
                 }
                 Result.failure(Exception(errorMessage))
             }
+        } catch (e: SessionExpiredException) {
+            // Propagar la excepción de sesión expirada
+            throw e
         } catch (e: HttpException) {
-            Result.failure(Exception("Error HTTP: ${e.code()} ${e.message()}"))
+            if (e.code() == 401) {
+                throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
+            }
+            val errorMessage = when (e.code()) {
+                500, 502, 503, 504 -> "El servidor no está disponible en este momento. Por favor, intenta más tarde."
+                else -> "No se pudo registrar tu elección. Verifica tu conexión e intenta de nuevo."
+            }
+            Result.failure(Exception(errorMessage))
         } catch (e: IOException) {
-            Result.failure(Exception("Error de conexión: ${e.message}"))
+            Result.failure(Exception("No se pudo conectar al servidor. Verifica tu conexión a internet."))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception("No se pudo registrar tu elección. Intenta de nuevo."))
         }
     }
     
@@ -76,21 +88,32 @@ class VoteRepository(
                             errorBody.contains("expired", ignoreCase = true)) {
                             "El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00)."
                         } else {
-                            "No se puede eliminar el voto en este momento."
+                            "No se puede quitar el voto en este momento."
                         }
                     }
-                    401 -> "No autorizado"
-                    404 -> "Voto no encontrado"
-                    else -> "Error al eliminar voto: ${response.code()}"
+                    401 -> throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
+                    404 -> "No se encontró el voto"
+                    500, 502, 503, 504 -> "El servidor no está disponible en este momento. Por favor, intenta más tarde."
+                    else -> "No se pudo quitar tu elección. Intenta de nuevo."
                 }
                 Result.failure(Exception(errorMessage))
             }
+        } catch (e: SessionExpiredException) {
+            // Propagar la excepción de sesión expirada
+            throw e
         } catch (e: HttpException) {
-            Result.failure(Exception("Error HTTP: ${e.code()} ${e.message()}"))
+            if (e.code() == 401) {
+                throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
+            }
+            val errorMessage = when (e.code()) {
+                500, 502, 503, 504 -> "El servidor no está disponible en este momento. Por favor, intenta más tarde."
+                else -> "No se pudo quitar tu elección. Verifica tu conexión e intenta de nuevo."
+            }
+            Result.failure(Exception(errorMessage))
         } catch (e: IOException) {
-            Result.failure(Exception("Error de conexión: ${e.message}"))
+            Result.failure(Exception("No se pudo conectar al servidor. Verifica tu conexión a internet."))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception("No se pudo quitar tu elección. Intenta de nuevo."))
         }
     }
     
@@ -104,24 +127,34 @@ class VoteRepository(
                 if (votesResponse != null) {
                     Result.success(votesResponse.data)
                 } else {
-                    // Si el body es null, significa que Moshi no pudo parsear la respuesta
-                    Result.failure(Exception("Error al parsear respuesta del servidor"))
+                    Result.failure(Exception("No se pudo cargar la información. Intenta de nuevo."))
                 }
             } else {
                 val errorMessage = when (response.code()) {
-                    401 -> "No autorizado"
-                    else -> "Error al obtener votos: ${response.code()}"
+                    401 -> throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
+                    500, 502, 503, 504 -> "El servidor no está disponible en este momento. Por favor, intenta más tarde."
+                    else -> "No se pudo cargar la información. Intenta de nuevo."
                 }
                 Result.failure(Exception(errorMessage))
             }
+        } catch (e: SessionExpiredException) {
+            // Propagar la excepción de sesión expirada
+            throw e
         } catch (e: com.squareup.moshi.JsonDataException) {
-            Result.failure(Exception("Error al parsear respuesta: ${e.message}"))
+            Result.failure(Exception("No se pudo cargar la información. Intenta de nuevo."))
         } catch (e: retrofit2.HttpException) {
-            Result.failure(Exception("Error HTTP: ${e.code()} ${e.message()}"))
+            if (e.code() == 401) {
+                throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
+            }
+            val errorMessage = when (e.code()) {
+                500, 502, 503, 504 -> "El servidor no está disponible en este momento. Por favor, intenta más tarde."
+                else -> "No se pudo cargar la información. Verifica tu conexión e intenta de nuevo."
+            }
+            Result.failure(Exception(errorMessage))
         } catch (e: java.io.IOException) {
-            Result.failure(Exception("Error de conexión: ${e.message}"))
+            Result.failure(Exception("No se pudo conectar al servidor. Verifica tu conexión a internet."))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception("No se pudo cargar la información. Intenta de nuevo."))
         }
     }
     

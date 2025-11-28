@@ -1,10 +1,13 @@
 package com.cocido.morfipolo.ui.login
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import android.appwidget.AppWidgetManager
 import com.cocido.morfipolo.MorfipoloApplication
@@ -21,6 +24,17 @@ class LoginActivity : AppCompatActivity() {
     private val viewModel: LoginViewModel by viewModels {
         LoginViewModelFactory((application as MorfipoloApplication).userRepository)
     }
+    
+    // Launcher para solicitar permiso de notificaciones
+    private val requestNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            android.util.Log.d("LoginActivity", "✅ Permiso de notificaciones concedido")
+        } else {
+            android.util.Log.w("LoginActivity", "⚠️ Permiso de notificaciones denegado")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +49,9 @@ class LoginActivity : AppCompatActivity() {
         }
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Solicitar permiso de notificaciones si es necesario (Android 13+)
+        requestNotificationPermissionIfNeeded()
 
         setupObservers()
         setupListeners()
@@ -64,6 +81,7 @@ class LoginActivity : AppCompatActivity() {
                     is LoginUiState.Idle -> {
                         binding.progressBar.visibility = android.view.View.GONE
                         binding.loginButton.isEnabled = true
+                        binding.errorTextView.visibility = android.view.View.GONE
                     }
                     is LoginUiState.Loading -> {
                         binding.progressBar.visibility = android.view.View.VISIBLE
@@ -74,12 +92,31 @@ class LoginActivity : AppCompatActivity() {
                         binding.loginButton.isEnabled = true
                         // Actualizar widget después del login exitoso
                         updateWidget()
+                        // Programar recordatorio diario después del login
+                        com.cocido.morfipolo.util.work.DailyReminderWorker.scheduleDailyReminder(this@LoginActivity)
                         navigateToMain()
                     }
                     is LoginUiState.Error -> {
                         binding.progressBar.visibility = android.view.View.GONE
                         binding.loginButton.isEnabled = true
-                        Toast.makeText(this@LoginActivity, state.message, Toast.LENGTH_LONG).show()
+                        // Mostrar mensaje de error amigable sin información técnica
+                        val friendlyMessage = when {
+                            state.message.contains("conexión", ignoreCase = true) || 
+                            state.message.contains("connection", ignoreCase = true) ||
+                            state.message.contains("conectar", ignoreCase = true) -> {
+                                getString(R.string.error_connection)
+                            }
+                            state.message.contains("servidor", ignoreCase = true) ||
+                            state.message.contains("server", ignoreCase = true) -> {
+                                getString(R.string.error_server)
+                            }
+                            state.message.contains("DNI") || state.message.contains("contraseña") -> {
+                                state.message // Mantener mensajes de validación
+                            }
+                            else -> getString(R.string.error_login_failed)
+                        }
+                        binding.errorTextView.text = friendlyMessage
+                        binding.errorTextView.visibility = android.view.View.VISIBLE
                     }
                 }
             }
@@ -131,6 +168,29 @@ class LoginActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             android.util.Log.e("LoginActivity", "Error al actualizar widget después del login", e)
+        }
+    }
+    
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED -> {
+                    android.util.Log.d("LoginActivity", "✅ Permiso de notificaciones ya concedido")
+                }
+                shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS) -> {
+                    // El usuario denegó el permiso anteriormente, explicar por qué lo necesitamos
+                    android.util.Log.d("LoginActivity", "Solicitando permiso de notificaciones (ya denegado antes)")
+                    requestNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+                else -> {
+                    // Primera vez que se solicita
+                    android.util.Log.d("LoginActivity", "Solicitando permiso de notificaciones por primera vez")
+                    requestNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
         }
     }
 }

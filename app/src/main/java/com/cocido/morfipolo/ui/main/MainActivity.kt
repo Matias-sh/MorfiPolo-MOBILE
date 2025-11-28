@@ -2,8 +2,11 @@ package com.cocido.morfipolo.ui.main
 
 import android.appwidget.AppWidgetManager
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.ui.setupWithNavController
 import com.cocido.morfipolo.MorfipoloApplication
@@ -17,6 +20,17 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    
+    // Launcher para solicitar permiso de notificaciones
+    private val requestNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            android.util.Log.d("MainActivity", "✅ Permiso de notificaciones concedido")
+        } else {
+            android.util.Log.w("MainActivity", "⚠️ Permiso de notificaciones denegado")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +46,9 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Solicitar permiso de notificaciones si es necesario (Android 13+)
+        requestNotificationPermissionIfNeeded()
+
         // Verificar y refrescar autenticación automáticamente
         // El SessionRefreshWorker debería mantener la sesión activa automáticamente
         lifecycleScope.launch {
@@ -45,13 +62,13 @@ class MainActivity : AppCompatActivity() {
                     updateWidget()
                 }
                 is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.RefreshFailed -> {
-                    // Si el refresh falló, intentar continuar de todas formas
-                    // El SessionRefreshWorker intentará refrescar en segundo plano
-                    setupNavigation()
-                    updateWidget()
+                    // Si el refresh falló, la sesión expiró - redirigir al login
+                    android.util.Log.w("MainActivity", "Sesión expirada (RefreshFailed), redirigiendo al login")
+                    navigateToLogin()
                 }
                 is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.NotLoggedIn -> {
-                    // Solo redirigir a login si realmente no hay sesión guardada
+                    // No hay sesión guardada, redirigir al login
+                    android.util.Log.d("MainActivity", "No hay sesión guardada, redirigiendo al login")
                     navigateToLogin()
                 }
             }
@@ -100,6 +117,29 @@ class MainActivity : AppCompatActivity() {
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
+    }
+    
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED -> {
+                    android.util.Log.d("MainActivity", "✅ Permiso de notificaciones ya concedido")
+                }
+                shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS) -> {
+                    // El usuario denegó el permiso anteriormente, explicar por qué lo necesitamos
+                    android.util.Log.d("MainActivity", "Solicitando permiso de notificaciones (ya denegado antes)")
+                    requestNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+                else -> {
+                    // Primera vez que se solicita
+                    android.util.Log.d("MainActivity", "Solicitando permiso de notificaciones por primera vez")
+                    requestNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        }
     }
 
 }
