@@ -123,7 +123,7 @@ class DailyMenuFragment : Fragment() {
     }
     
     private fun showErrorWithRetry(message: String, retryAction: () -> Unit) {
-        val snackbar = Snackbar.make(binding.root, message, Snackbar.LENGTH_INDEFINITE)
+        val snackbar = Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG)
         snackbar.setAction(getString(R.string.error_retry)) {
             retryAction()
         }

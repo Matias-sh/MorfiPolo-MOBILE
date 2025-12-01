@@ -3,21 +3,18 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/card_elevated"
-    android:padding="16dp"
-    android:layout_marginStart="16dp"
-    android:layout_marginEnd="16dp"
-    android:layout_marginTop="8dp"
-    android:layout_marginBottom="8dp">
+    android:background="@drawable/widget_item_background"
+    android:padding="@dimen/spacing_m"
+    android:layout_marginHorizontal="@dimen/spacing_m"
+    android:layout_marginVertical="@dimen/spacing_xs">
 
     <TextView
         android:id="@+id/widgetItemName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="@color/nonna_text_primary"
-        android:textSize="16sp"
+        android:textColor="@color/text_primary"
+        android:textSize="15sp"
         android:textStyle="bold"
-        android:lineSpacingExtra="2dp"
         android:maxLines="2"
         android:ellipsize="end" />
 
@@ -25,13 +22,13 @@
         android:id="@+id/widgetItemButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:minHeight="44dp"
-        android:padding="12dp"
+        android:layout_marginTop="@dimen/spacing_s"
+        android:minHeight="40dp"
+        android:padding="@dimen/spacing_s"
         android:gravity="center"
-        android:textSize="14sp"
+        android:textSize="13sp"
         android:textStyle="bold"
-        android:textColor="@color/nonna_text_white"
-        android:background="@drawable/button_primary_solid" />
+        android:textColor="@color/white"
+        android:background="@color/brand_primary" />
 
 </LinearLayout>

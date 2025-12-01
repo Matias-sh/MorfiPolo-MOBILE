@@ -4,194 +4,145 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/nonna_beige_primary"
+    android:background="@color/surface_background"
+    android:padding="@dimen/spacing_l"
     tools:context=".ui.login.LoginActivity">
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true"
-        android:fadeScrollbars="false">
+    <!-- Logo -->
+    <ImageView
+        android:id="@+id/logoImageView"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_marginTop="@dimen/spacing_xl"
+        android:contentDescription="@string/app_name"
+        android:src="@mipmap/ic_launcher_round"
+        android:elevation="@dimen/elevation_medium"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+    <!-- Title -->
+    <TextView
+        android:id="@+id/titleTextView"
+        style="@style/TextAppearance.Morfipolo.Headline1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_l"
+        android:text="@string/login_title"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/logoImageView" />
+
+    <!-- DNI Input -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/dniInputLayout"
+        style="@style/Widget.Morfipolo.TextInputLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_xl"
+        android:hint="@string/dni_hint"
+        app:startIconDrawable="@drawable/ic_person"
+        app:startIconTint="@color/brand_primary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/titleTextView">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/dniEditText"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:maxLength="8"
+            android:textColor="@color/text_primary" />
+    </com.google.android.material.textfield.TextInputLayout>
 
-            <ImageView
-                android:id="@+id/logoImageView"
+    <!-- Password Input -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/passwordInputLayout"
+        style="@style/Widget.Morfipolo.TextInputLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_m"
+        android:hint="@string/password_hint"
+        app:endIconMode="password_toggle"
+        app:endIconTint="@color/brand_primary"
+        app:startIconDrawable="@drawable/ic_lock"
+        app:startIconTint="@color/brand_primary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/dniInputLayout">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/passwordEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textPassword"
+            android:textColor="@color/text_primary" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Instruction Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/instructionCard"
+        style="@style/Widget.Morfipolo.Card"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_l"
+        app:cardBackgroundColor="@color/surface_card_alt"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/passwordInputLayout">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/spacing_m">
+
+            <TextView
+                style="@style/TextAppearance.Morfipolo.Body"
                 android:layout_width="match_parent"
-                android:layout_height="250dp"
-                android:src="@drawable/comedor_polo_logo"
-                android:contentDescription="@string/app_name"
-                android:scaleType="fitCenter"
-                app:layout_constraintEnd_toEndOf="parent"
-                android:layout_marginTop="20dp"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                android:layout_height="wrap_content"
+                android:text="@string/login_instruction"
+                android:textSize="@dimen/text_size_small" />
 
+            <TextView
+                style="@style/TextAppearance.Morfipolo.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_xs"
+                android:text="@string/login_instruction_warning"
+                android:textColor="@color/brand_primary"
+                android:textStyle="bold"
+                android:textSize="@dimen/text_size_small" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
+    <!-- Login Button -->
+    <Button
+        android:id="@+id/loginButton"
+        style="@style/Widget.Morfipolo.Button.Primary"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_xl"
+        android:text="@string/login_button"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/instructionCard" />
 
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:layout_constraintTop_toBottomOf="@+id/logoImageView"
-                    android:padding="32dp">
-
-                    <TextView
-                        android:id="@+id/titleTextView"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:letterSpacing="0.02"
-                        android:text="@string/login_title"
-                        android:textColor="@color/nonna_text_primary"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent" />
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/dniInputLayout"
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="32dp"
-                        android:hint="@string/dni"
-                        app:boxCornerRadiusBottomEnd="16dp"
-                        app:boxCornerRadiusBottomStart="16dp"
-                        app:boxCornerRadiusTopEnd="16dp"
-                        app:boxCornerRadiusTopStart="16dp"
-                        app:boxStrokeColor="@color/nonna_brown_primary"
-                        app:boxStrokeWidth="1.5dp"
-                        app:boxStrokeWidthFocused="2dp"
-                        app:hintTextColor="@color/nonna_text_hint"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/titleTextView"
-                        app:startIconDrawable="@drawable/ic_person"
-                        app:startIconTint="@color/nonna_brown_primary">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/dniEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="number"
-                            android:maxLines="1"
-                            android:padding="18dp"
-                            android:textColor="@color/nonna_text_primary"
-                            android:textSize="16sp" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/passwordInputLayout"
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        android:hint="@string/password"
-                        app:boxCornerRadiusBottomEnd="16dp"
-                        app:boxCornerRadiusBottomStart="16dp"
-                        app:boxCornerRadiusTopEnd="16dp"
-                        app:boxCornerRadiusTopStart="16dp"
-                        app:boxStrokeColor="@color/nonna_brown_primary"
-                        app:boxStrokeWidth="1.5dp"
-                        app:boxStrokeWidthFocused="2dp"
-                        app:endIconMode="password_toggle"
-                        app:endIconTint="@color/nonna_brown_primary"
-                        app:hintTextColor="@color/nonna_text_hint"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/dniInputLayout"
-                        app:startIconDrawable="@android:drawable/ic_lock_lock"
-                        app:startIconTint="@color/nonna_brown_primary">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/passwordEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textPassword"
-                            android:maxLines="1"
-                            android:padding="18dp"
-                            android:textColor="@color/nonna_text_primary"
-                            android:textSize="16sp" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/instructionCard"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
-                        app:cardBackgroundColor="@color/nonna_beige_light"
-                        app:cardCornerRadius="16dp"
-                        app:cardElevation="0dp"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/passwordInputLayout"
-                        app:strokeWidth="0dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="18dp">
-
-                            <TextView
-                                android:id="@+id/instructionTextView"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:lineSpacingExtra="4dp"
-                                android:text="@string/first_login_instruction"
-                                android:textColor="@color/nonna_text_primary"
-                                android:textSize="14sp" />
-
-                            <TextView
-                                android:id="@+id/reminderTextView"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:text="@string/change_password_reminder"
-                                android:textColor="@color/nonna_brown_primary"
-                                android:textSize="14sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/loginButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="64dp"
-                        android:layout_marginTop="28dp"
-                        android:background="@drawable/button_primary_solid"
-                        android:elevation="2dp"
-                        android:letterSpacing="0.02"
-                        android:text="@string/login_button"
-                        android:textColor="@color/nonna_text_white"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        app:cornerRadius="16dp"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/instructionCard"
-                        app:rippleColor="@color/nonna_brown_dark" />
-
-
-
-                    <TextView
-                        android:id="@+id/errorTextView"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:gravity="center"
-                        android:textColor="@color/nonna_error"
-                        android:textSize="14sp"
-                        android:visibility="gone"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/loginButton" />
-
-                </androidx.constraintlayout.widget.ConstraintLayout>
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-    </ScrollView>
+    <!-- General Error TextView -->
+    <TextView
+        android:id="@+id/errorTextView"
+        style="@style/TextAppearance.Morfipolo.Caption"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_m"
+        android:gravity="center"
+        android:textColor="@color/color_error"
+        android:visibility="gone"
+        tools:text="Error de conexión"
+        tools:visibility="visible"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/loginButton" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
