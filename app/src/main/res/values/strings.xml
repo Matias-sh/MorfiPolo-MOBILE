@@ -72,7 +72,7 @@
     <string name="error_retry">Reintentar</string>
     <string name="error_session_expired">Sesión expirada. Por favor, inicia sesión nuevamente.</string>
     <string name="error_generic">Ocurrió un error. Por favor, intenta de nuevo.</string>
-    <string name="error_login_failed">No se pudo iniciar sesión. Verifica tu conexión e intenta de nuevo.</string>
+    <string name="error_login_failed">No se pudo iniciar sesión. Por favor, intenta de nuevo.</string>
     <string name="error_connection">No se pudo conectar al servidor. Verifica tu conexión a internet.</string>
     <string name="error_server">El servidor no está disponible en este momento. Por favor, intenta más tarde.</string>
     <string name="error_load_menu">No se pudo cargar el menú. Intenta de nuevo.</string>

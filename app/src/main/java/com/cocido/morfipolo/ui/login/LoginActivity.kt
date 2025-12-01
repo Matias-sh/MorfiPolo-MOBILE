@@ -79,17 +79,15 @@ class LoginActivity : AppCompatActivity() {
             viewModel.uiState.collect { state ->
                 when (state) {
                     is LoginUiState.Idle -> {
-                        binding.progressBar.visibility = android.view.View.GONE
-                        binding.loginButton.isEnabled = true
+                        setLoading(false)
                         binding.errorTextView.visibility = android.view.View.GONE
                     }
                     is LoginUiState.Loading -> {
-                        binding.progressBar.visibility = android.view.View.VISIBLE
-                        binding.loginButton.isEnabled = false
+                        setLoading(true)
+                        binding.errorTextView.visibility = android.view.View.GONE
                     }
                     is LoginUiState.Success -> {
-                        binding.progressBar.visibility = android.view.View.GONE
-                        binding.loginButton.isEnabled = true
+                        setLoading(false)
                         // Actualizar widget después del login exitoso
                         updateWidget()
                         // Programar recordatorio diario después del login
@@ -97,30 +95,75 @@ class LoginActivity : AppCompatActivity() {
                         navigateToMain()
                     }
                     is LoginUiState.Error -> {
-                        binding.progressBar.visibility = android.view.View.GONE
-                        binding.loginButton.isEnabled = true
-                        // Mostrar mensaje de error amigable sin información técnica
-                        val friendlyMessage = when {
-                            state.message.contains("conexión", ignoreCase = true) || 
-                            state.message.contains("connection", ignoreCase = true) ||
-                            state.message.contains("conectar", ignoreCase = true) -> {
-                                getString(R.string.error_connection)
-                            }
-                            state.message.contains("servidor", ignoreCase = true) ||
-                            state.message.contains("server", ignoreCase = true) -> {
-                                getString(R.string.error_server)
-                            }
-                            state.message.contains("DNI") || state.message.contains("contraseña") -> {
-                                state.message // Mantener mensajes de validación
-                            }
-                            else -> getString(R.string.error_login_failed)
-                        }
-                        binding.errorTextView.text = friendlyMessage
-                        binding.errorTextView.visibility = android.view.View.VISIBLE
+                        setLoading(false)
+                        handleError(state.message)
                     }
                 }
             }
         }
+    }
+
+    private fun setLoading(isLoading: Boolean) {
+        binding.loginButton.isEnabled = !isLoading
+        if (isLoading) {
+            binding.loginButton.text = "Ingresando..."
+            binding.loginButton.alpha = 0.7f
+        } else {
+            binding.loginButton.text = getString(R.string.login_button)
+            binding.loginButton.alpha = 1.0f
+        }
+    }
+
+    private fun handleError(message: String) {
+        // Limpiar errores previos
+        binding.dniInputLayout.error = null
+        binding.passwordInputLayout.error = null
+        binding.errorTextView.visibility = android.view.View.GONE
+
+        when {
+            // Prioridad 1: Credenciales incorrectas (Error general)
+            message.contains("incorrectos", ignoreCase = true) ||
+            message.contains("inválidos", ignoreCase = true) -> {
+                binding.errorTextView.text = message
+                binding.errorTextView.visibility = android.view.View.VISIBLE
+                shakeView(binding.loginButton)
+            }
+            // Prioridad 2: Errores específicos de campo
+            message.contains("DNI", ignoreCase = true) -> {
+                binding.dniInputLayout.error = message
+                binding.dniEditText.requestFocus()
+            }
+            message.contains("contraseña", ignoreCase = true) || 
+            message.contains("password", ignoreCase = true) -> {
+                binding.passwordInputLayout.error = message
+                binding.passwordEditText.requestFocus()
+            }
+            // Prioridad 3: Errores generales de red/servidor
+            else -> {
+                val friendlyMessage = when {
+                    message.contains("conexión", ignoreCase = true) || 
+                    message.contains("connection", ignoreCase = true) ||
+                    message.contains("conectar", ignoreCase = true) -> {
+                        getString(R.string.error_connection)
+                    }
+                    message.contains("servidor", ignoreCase = true) ||
+                    message.contains("server", ignoreCase = true) -> {
+                        getString(R.string.error_server)
+                    }
+                    else -> getString(R.string.error_login_failed)
+                }
+                binding.errorTextView.text = friendlyMessage
+                binding.errorTextView.visibility = android.view.View.VISIBLE
+            }
+        }
+    }
+
+    private fun shakeView(view: android.view.View) {
+        val rotate = android.view.animation.TranslateAnimation(0f, 10f, 0f, 0f)
+        rotate.duration = 50
+        rotate.repeatCount = 5
+        rotate.repeatMode = android.view.animation.Animation.REVERSE
+        view.startAnimation(rotate)
     }
 
     private fun setupListeners() {
@@ -130,7 +173,7 @@ class LoginActivity : AppCompatActivity() {
             
             // Validar formato de DNI
             if (!ValidationUtils.isValidDni(dni)) {
-                binding.dniEditText.error = getString(R.string.dni_invalid_format)
+                binding.dniInputLayout.error = getString(R.string.dni_invalid_format)
                 return@setOnClickListener
             }
             
@@ -138,10 +181,50 @@ class LoginActivity : AppCompatActivity() {
         }
         
         // Limpiar error cuando el usuario empieza a escribir
-        binding.dniEditText.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                binding.dniEditText.error = null
+        binding.dniEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                binding.dniInputLayout.error = null
+                binding.errorTextView.visibility = android.view.View.GONE
             }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
+        binding.passwordEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                binding.passwordInputLayout.error = null
+                binding.errorTextView.visibility = android.view.View.GONE
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+    }
+
+    override fun onStart() {
+        super.onStart()
+        startEntryAnimation()
+    }
+
+    private fun startEntryAnimation() {
+        val views = listOf(
+            binding.logoImageView,
+            binding.titleTextView,
+            binding.dniInputLayout,
+            binding.passwordInputLayout,
+            binding.instructionCard,
+            binding.loginButton
+        )
+
+        views.forEachIndexed { index, view ->
+            view.alpha = 0f
+            view.translationY = 50f
+            view.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(index * 100L)
+                .setDuration(500)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
         }
     }
 

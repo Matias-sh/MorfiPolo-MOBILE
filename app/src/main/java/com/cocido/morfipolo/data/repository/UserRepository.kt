@@ -60,22 +60,15 @@ class UserRepository(
                 }
             } else {
                 val errorMessage = when (response.code()) {
-                    401 -> "DNI o contraseña incorrectos"
+                    401, 404 -> "DNI o contraseña incorrectos"
                     400 -> "Datos inválidos. Verifica tu DNI y contraseña."
-                    else -> "No se pudo iniciar sesión. Verifica tu conexión e intenta de nuevo."
+                    500, 502, 503, 504 -> "El servidor no está disponible en este momento. Por favor, intenta más tarde."
+                    else -> "No se pudo iniciar sesión. Intenta de nuevo más tarde."
                 }
                 Result.failure(Exception(errorMessage))
             }
-        } catch (e: HttpException) {
-            val errorMessage = when (e.code()) {
-                401 -> "DNI o contraseña incorrectos"
-                400 -> "Datos inválidos. Verifica tu DNI y contraseña."
-                500, 502, 503, 504 -> "El servidor no está disponible en este momento. Por favor, intenta más tarde."
-                else -> "No se pudo iniciar sesión. Verifica tu conexión e intenta de nuevo."
-            }
-            Result.failure(Exception(errorMessage))
         } catch (e: IOException) {
-            Result.failure(Exception("No se pudo conectar al servidor. Verifica tu conexión a internet."))
+            Result.failure(Exception("Error de conexión."))
         } catch (e: Exception) {
             Result.failure(Exception("No se pudo iniciar sesión. Intenta de nuevo."))
         }
