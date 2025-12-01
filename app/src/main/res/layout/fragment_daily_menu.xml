@@ -4,18 +4,18 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/nonna_beige_primary"
+    android:background="@color/surface_background"
     tools:context=".ui.menu.daily.DailyMenuFragment">
 
+    <!-- Offline Indicator -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/offlineIndicator"
+        style="@style/Widget.Morfipolo.Card"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
+        android:layout_margin="@dimen/spacing_m"
         android:visibility="gone"
-        app:cardBackgroundColor="@color/nonna_error"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
+        app:cardBackgroundColor="@color/color_error"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -25,38 +25,37 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:padding="18dp">
+            android:padding="@dimen/spacing_m">
 
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_menu_revert"
-                android:tint="@color/nonna_text_white"
+                app:tint="@color/white"
                 android:contentDescription="@string/offline_icon" />
 
             <TextView
+                style="@style/TextAppearance.Morfipolo.Body"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="@dimen/spacing_s"
                 android:text="@string/offline_message"
-                android:textColor="@color/nonna_text_white"
-                android:textSize="14sp"
+                android:textColor="@color/white"
                 android:textStyle="bold" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Info Banner -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/infoBanner"
+        style="@style/Widget.Morfipolo.Card"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="16dp"
+        android:layout_marginHorizontal="@dimen/spacing_m"
+        android:layout_marginTop="@dimen/spacing_s"
         android:visibility="gone"
-        app:cardBackgroundColor="@color/nonna_accent_warm"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
+        app:cardBackgroundColor="@color/brand_secondary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/offlineIndicator">
@@ -66,25 +65,25 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:padding="16dp">
+            android:padding="@dimen/spacing_m">
 
             <ImageView
                 android:id="@+id/infoBannerIcon"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_dialog_info"
-                android:tint="@color/nonna_text_white"
+                app:tint="@color/text_on_secondary"
                 android:contentDescription="@string/info_icon" />
 
             <TextView
                 android:id="@+id/infoBannerText"
+                style="@style/TextAppearance.Morfipolo.Body"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="@dimen/spacing_s"
                 android:text=""
-                android:textColor="@color/nonna_text_white"
-                android:textSize="14sp"
+                android:textColor="@color/text_on_secondary"
                 android:textStyle="bold" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
@@ -92,7 +91,7 @@
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefreshLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -108,39 +107,37 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="20dp">
+                android:padding="@dimen/spacing_l">
 
+                <!-- Header Date -->
                 <TextView
                     android:id="@+id/dateTextView"
+                    style="@style/TextAppearance.Morfipolo.Headline1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="06/11/2025"
-                    android:textColor="@color/nonna_text_primary"
-                    android:textSize="28sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.02"
+                    android:layout_marginTop="@dimen/spacing_l"
                     app:layout_constraintEnd_toEndOf="parent"
-                    android:layout_marginTop="40dp"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
                     android:id="@+id/timeRangeTextView"
+                    style="@style/TextAppearance.Morfipolo.Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="@dimen/spacing_xs"
                     android:text="@string/selection_time"
-                    android:textColor="@color/nonna_text_secondary"
-                    android:textSize="14sp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/dateTextView" />
 
+                <!-- Status Badges -->
                 <LinearLayout
                     android:id="@+id/statusLayout"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="@dimen/spacing_m"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -149,75 +146,89 @@
 
                     <TextView
                         android:id="@+id/alreadySelectedTextView"
+                        style="@style/TextAppearance.Morfipolo.Caption"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:background="@drawable/badge_success_modern"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:paddingTop="8dp"
-                        android:paddingBottom="8dp"
+                        android:paddingHorizontal="@dimen/spacing_m"
+                        android:paddingVertical="@dimen/spacing_xs"
                         android:text="@string/already_selected"
-                        android:textColor="@color/nonna_text_white"
-                        android:textSize="12sp"
+                        android:textColor="@color/white"
                         android:textStyle="bold"
-                        android:maxLines="1"
-                        android:ellipsize="end"
                         android:visibility="gone" />
 
                     <TextView
                         android:id="@+id/statusTextView"
+                        style="@style/TextAppearance.Morfipolo.Caption"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
+                        android:layout_marginStart="@dimen/spacing_s"
                         android:background="@drawable/badge_success_modern"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:paddingTop="8dp"
-                        android:paddingBottom="8dp"
+                        android:paddingHorizontal="@dimen/spacing_m"
+                        android:paddingVertical="@dimen/spacing_xs"
                         android:text="@string/open"
-                        android:textColor="@color/nonna_text_white"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:maxLines="1" />
+                        android:textColor="@color/white"
+                        android:textStyle="bold" />
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/menuDescriptionTextView"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="Arrollado de pollo con pure de papas"
-                    android:textColor="@color/nonna_text_primary"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:lineSpacingExtra="4dp"
-                    android:gravity="center"
-                    android:maxLines="3"
-                    android:ellipsize="end"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/statusLayout" />
-
-                <View
-                    android:id="@+id/divider"
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="20dp"
-                    android:background="@color/divider_light"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/menuDescriptionTextView" />
-
-                <LinearLayout
-                    android:id="@+id/optionsContainer"
+                <!-- Menu Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/menuCardContainer"
+                    style="@style/Widget.Morfipolo.Card"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:orientation="vertical"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/divider" />
+                    android:layout_marginTop="@dimen/spacing_l"
+                    app:layout_constraintTop_toBottomOf="@id/statusLayout">
 
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/spacing_l">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="MENU DEL DÍA"
+                            style="@style/TextAppearance.Morfipolo.Caption"
+                            android:textColor="@color/brand_primary"
+                            android:letterSpacing="0.1"
+                            android:layout_gravity="center_horizontal"/>
+
+                        <View
+                            android:layout_width="40dp"
+                            android:layout_height="2dp"
+                            android:background="@color/brand_secondary"
+                            android:layout_gravity="center_horizontal"
+                            android:layout_marginTop="@dimen/spacing_xs"
+                            android:layout_marginBottom="@dimen/spacing_m"/>
+
+                        <TextView
+                            android:id="@+id/menuDescriptionTextView"
+                            style="@style/TextAppearance.Morfipolo.Headline2"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Arrollado de pollo con pure de papas"
+                            android:gravity="center"
+                            android:layout_marginBottom="@dimen/spacing_l"/>
+
+                        <View
+                            android:id="@+id/divider"
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:background="@color/divider"
+                            android:layout_marginBottom="@dimen/spacing_l" />
+
+                        <LinearLayout
+                            android:id="@+id/optionsContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical" />
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Hidden legacy card to prevent crash if referenced -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/menuCardView"
                     android:layout_width="0dp"
@@ -231,7 +242,7 @@
                     android:id="@+id/progressBar"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:indeterminateTint="@color/nonna_brown_primary"
+                    android:indeterminateTint="@color/brand_primary"
                     android:visibility="gone"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"

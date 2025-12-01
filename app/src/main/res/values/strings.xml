@@ -13,6 +13,8 @@
     <string name="login_error">DNI o contraseña incorrectos</string>
     <string name="dni_empty_error">El DNI no puede estar vacío</string>
     <string name="password_empty_error">La contraseña no puede estar vacía</string>
+    <string name="login_instruction">Ingresá con tu DNI</string>
+    <string name="login_instruction_warning">Si es tu primera vez, tu contraseña es Ab + tu DNI</string>
     
     <!-- Menu -->
     <string name="menu_daily">Menú del Día</string>

@@ -1,59 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.Morfipolo.Card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginStart="0dp"
-    android:layout_marginEnd="0dp"
-    android:layout_marginTop="12dp"
-    android:layout_marginBottom="12dp"
-    app:cardBackgroundColor="@color/nonna_white_card"
-    app:cardCornerRadius="20dp"
-    app:cardElevation="4dp"
-    app:strokeWidth="0dp">
+    android:layout_marginBottom="@dimen/spacing_m">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:paddingTop="20dp"
-        android:paddingBottom="20dp">
+        android:padding="@dimen/spacing_m">
 
+        <!-- Date -->
         <TextView
             android:id="@+id/dateTextView"
+            style="@style/TextAppearance.Morfipolo.Headline3"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="06/11/2025"
-            android:textColor="@color/nonna_text_primary"
-            android:textSize="20sp"
-            android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <TextView
-            android:id="@+id/timeRangeTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="Horario para elegir: 08:00 - 11:00"
-            android:textColor="@color/nonna_text_secondary"
-            android:textSize="13sp"
-            android:visibility="gone"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/dateTextView" />
-
-        <TextView
-            android:id="@+id/menuSubtitleTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="@string/menu_daily"
-            android:textColor="@color/nonna_text_secondary"
-            android:textSize="13sp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/timeRangeTextView" />
-
+        <!-- Status Badges -->
         <LinearLayout
             android:id="@+id/badgesLayout"
             android:layout_width="wrap_content"
@@ -65,73 +33,69 @@
 
             <TextView
                 android:id="@+id/alreadySelectedTextView"
+                style="@style/TextAppearance.Morfipolo.Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
+                android:layout_marginEnd="@dimen/spacing_xs"
                 android:background="@drawable/badge_success_modern"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp"
+                android:paddingHorizontal="@dimen/spacing_s"
+                android:paddingVertical="@dimen/spacing_xxs"
                 android:text="@string/already_selected"
-                android:textColor="@color/nonna_text_white"
-                android:textSize="11sp"
+                android:textColor="@color/white"
                 android:textStyle="bold"
-                android:maxLines="1"
-                android:ellipsize="end"
                 android:visibility="gone" />
 
             <TextView
                 android:id="@+id/statusTextView"
+                style="@style/TextAppearance.Morfipolo.Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/badge_success_modern"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp"
+                android:paddingHorizontal="@dimen/spacing_s"
+                android:paddingVertical="@dimen/spacing_xxs"
                 android:text="@string/open"
-                android:textColor="@color/nonna_text_white"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:maxLines="1" />
+                android:textColor="@color/white"
+                android:textStyle="bold" />
         </LinearLayout>
 
+        <!-- Description -->
         <TextView
             android:id="@+id/menuDescriptionTextView"
+            style="@style/TextAppearance.Morfipolo.Body"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="12dp"
-            android:background="@color/nonna_beige_light"
+            android:layout_marginTop="@dimen/spacing_m"
+            android:padding="@dimen/spacing_s"
+            android:background="@color/surface_background"
             android:text="Arrollado de pollo con pure de papas"
-            android:textColor="@color/nonna_text_primary"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:lineSpacingExtra="4dp"
             android:maxLines="2"
             android:ellipsize="end"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/menuSubtitleTextView" />
+            app:layout_constraintTop_toBottomOf="@id/dateTextView" />
+
+        <!-- Legacy fields hidden to prevent crashes -->
+        <TextView
+            android:id="@+id/timeRangeTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/dateTextView" />
+
+        <TextView
+            android:id="@+id/menuSubtitleTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/timeRangeTextView" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/removeVoteButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:minHeight="44dp"
-            android:text="@string/remove_selection"
-            android:textColor="@color/nonna_text_white"
-            android:textSize="14sp"
-            android:backgroundTint="@color/nonna_error"
             android:visibility="gone"
-            android:maxLines="1"
-            android:ellipsize="end"
-            app:cornerRadius="12dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/menuDescriptionTextView" />
@@ -140,8 +104,6 @@
             android:id="@+id/optionsContainer"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:orientation="vertical"
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"

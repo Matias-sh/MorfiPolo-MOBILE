@@ -4,18 +4,18 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/nonna_beige_primary"
+    android:background="@color/surface_background"
     tools:context=".ui.menu.weekly.WeeklyMenuFragment">
 
+    <!-- Offline Indicator -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/offlineIndicator"
+        style="@style/Widget.Morfipolo.Card"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
+        android:layout_margin="@dimen/spacing_m"
         android:visibility="gone"
-        app:cardBackgroundColor="@color/nonna_error"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
+        app:cardBackgroundColor="@color/color_error"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -25,38 +25,37 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:padding="18dp">
+            android:padding="@dimen/spacing_m">
 
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_menu_revert"
-                android:tint="@color/nonna_text_white"
+                app:tint="@color/white"
                 android:contentDescription="@string/offline_icon" />
 
             <TextView
+                style="@style/TextAppearance.Morfipolo.Body"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="@dimen/spacing_s"
                 android:text="@string/offline_message"
-                android:textColor="@color/nonna_text_white"
-                android:textSize="14sp"
+                android:textColor="@color/white"
                 android:textStyle="bold" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Info Banner -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/infoBanner"
+        style="@style/Widget.Morfipolo.Card"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="16dp"
+        android:layout_marginHorizontal="@dimen/spacing_m"
+        android:layout_marginTop="@dimen/spacing_s"
         android:visibility="gone"
-        app:cardBackgroundColor="@color/nonna_accent_warm"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
+        app:cardBackgroundColor="@color/brand_secondary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/offlineIndicator">
@@ -66,62 +65,56 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:padding="16dp">
+            android:padding="@dimen/spacing_m">
 
             <ImageView
                 android:id="@+id/infoBannerIcon"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_dialog_info"
-                android:tint="@color/nonna_text_white"
+                app:tint="@color/text_on_secondary"
                 android:contentDescription="@string/info_icon" />
 
             <TextView
                 android:id="@+id/infoBannerText"
+                style="@style/TextAppearance.Morfipolo.Body"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="@dimen/spacing_s"
                 android:text=""
-                android:textColor="@color/nonna_text_white"
-                android:textSize="14sp"
+                android:textColor="@color/text_on_secondary"
                 android:textStyle="bold" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Header -->
     <LinearLayout
         android:id="@+id/headerLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:paddingTop="34dp"
-        android:paddingBottom="16dp"
+        android:padding="@dimen/spacing_l"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/infoBanner">
 
         <TextView
             android:id="@+id/titleTextView"
+            style="@style/TextAppearance.Morfipolo.Headline1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/menu_weekly"
-            android:textColor="@color/nonna_text_primary"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.02"
-            android:gravity="center_horizontal" />
+            android:layout_gravity="center_horizontal" />
 
         <TextView
             android:id="@+id/instructionTextView"
+            style="@style/TextAppearance.Morfipolo.Caption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/spacing_xs"
             android:text="@string/select_date_instruction"
-            android:textColor="@color/nonna_text_secondary"
-            android:textSize="14sp"
-            android:gravity="center_horizontal" />
+            android:layout_gravity="center_horizontal" />
     </LinearLayout>
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -137,15 +130,12 @@
             android:id="@+id/menusRecyclerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginStart="20dp"
-            android:layout_marginEnd="20dp"
-            android:layout_marginBottom="20dp"
             android:clipToPadding="false"
-            android:paddingTop="12dp"
-            android:paddingBottom="12dp"
+            android:padding="@dimen/spacing_m"
             tools:listitem="@layout/item_weekly_menu" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
+    <!-- Empty State -->
     <LinearLayout
         android:id="@+id/emptyStateLayout"
         android:layout_width="match_parent"
@@ -153,45 +143,41 @@
         android:orientation="vertical"
         android:gravity="center"
         android:visibility="gone"
-        android:padding="40dp"
+        android:padding="@dimen/spacing_xl"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/headerLayout">
 
         <ImageView
-            android:layout_width="140dp"
-            android:layout_height="140dp"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
             android:src="@android:drawable/ic_menu_view"
-            android:tint="@color/nonna_text_secondary"
-            android:alpha="0.6"
+            app:tint="@color/text_tertiary"
+            android:alpha="0.5"
             android:contentDescription="@string/empty_state_icon"
-            android:layout_marginBottom="28dp" />
+            android:layout_marginBottom="@dimen/spacing_l" />
 
         <TextView
+            style="@style/TextAppearance.Morfipolo.Headline2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/empty_state_title"
-            android:textColor="@color/nonna_text_primary"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="@dimen/spacing_s" />
 
         <TextView
+            style="@style/TextAppearance.Morfipolo.Body"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/empty_state_message"
-            android:textColor="@color/nonna_text_secondary"
-            android:textSize="15sp"
-            android:gravity="center"
-            android:lineSpacingExtra="4dp" />
+            android:gravity="center" />
     </LinearLayout>
 
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:indeterminateTint="@color/nonna_brown_primary"
+        android:indeterminateTint="@color/brand_primary"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

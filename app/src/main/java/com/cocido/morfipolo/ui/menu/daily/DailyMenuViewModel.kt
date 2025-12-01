@@ -142,6 +142,11 @@ class DailyMenuViewModel(
                             if (currentState is DailyMenuUiState.Success) {
                                 _uiState.value = currentState.copy(infoMessage = errorMessage)
                             }
+                        } else if (errorMessage.contains("already voted", ignoreCase = true) || 
+                            errorMessage.contains("ya tienes un voto", ignoreCase = true)) {
+                            // Si ya tiene voto, recargar para sincronizar estado
+                            android.util.Log.i("DailyMenuViewModel", "Voto ya existente detectado, recargando menú...")
+                            loadMenuForDate(currentDate.time)
                         } else {
                             _uiState.value = DailyMenuUiState.Error(errorMessage)
                         }

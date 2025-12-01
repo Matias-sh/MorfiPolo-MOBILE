@@ -1,18 +1,36 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme - Forzado a modo claro. -->
-    <style name="Base.Theme.Morfipolo" parent="Theme.Material3.Light.NoActionBar">
-        <item name="colorPrimary">@color/nonna_brown_primary</item>
-        <item name="colorPrimaryVariant">@color/nonna_brown_dark</item>
-        <item name="colorSecondary">@color/nonna_accent_warm</item>
-        <item name="colorOnPrimary">@color/nonna_text_white</item>
-        <item name="colorOnSecondary">@color/nonna_text_white</item>
-        <item name="android:windowBackground">@drawable/background_gradient_main</item>
-        <item name="android:textColorPrimary">@color/nonna_text_primary</item>
-        <item name="android:textColorSecondary">@color/nonna_text_secondary</item>
-        <!-- Status bar: transparente para que se integre con el fondo -->
+    <style name="Base.Theme.Morfipolo" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <!-- Color Palette -->
+        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="colorPrimaryVariant">@color/brand_primary_dark</item>
+        <item name="colorOnPrimary">@color/text_on_primary</item>
+        
+        <item name="colorSecondary">@color/brand_secondary</item>
+        <item name="colorSecondaryVariant">@color/brand_secondary_light</item>
+        <item name="colorOnSecondary">@color/text_on_secondary</item>
+        
+        <item name="colorError">@color/color_error</item>
+        <item name="colorOnError">@color/white</item>
+        
+        <item name="android:colorBackground">@color/surface_background</item>
+        <item name="colorSurface">@color/surface_card</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        
+        <!-- Typography -->
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        
+        <!-- Status Bar -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        
+        <!-- Shapes -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Morfipolo.SmallComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Morfipolo.MediumComponent</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Morfipolo.LargeComponent</item>
+        <item name="android:windowAnimationStyle">@style/WindowAnimation.Morfipolo</item>
     </style>
 
     <style name="Theme.Morfipolo" parent="Base.Theme.Morfipolo" />

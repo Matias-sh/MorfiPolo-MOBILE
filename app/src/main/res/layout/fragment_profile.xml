@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/nonna_beige_primary"
+    android:background="@color/surface_background"
     tools:context=".ui.profile.ProfileFragment">
 
     <ScrollView
@@ -16,16 +16,14 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="20dp">
+            android:padding="@dimen/spacing_l">
 
+            <!-- Profile Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/profileCardView"
+                style="@style/Widget.Morfipolo.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="@color/nonna_white_card"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="4dp"
-                app:strokeWidth="0dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
@@ -33,15 +31,15 @@
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="36dp">
+                    android:padding="@dimen/spacing_xl">
 
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/avatarCardView"
-                        android:layout_width="120dp"
-                        android:layout_height="120dp"
-                        app:cardBackgroundColor="@color/nonna_brown_primary"
-                        app:cardCornerRadius="60dp"
-                        app:cardElevation="6dp"
+                        android:layout_width="100dp"
+                        android:layout_height="100dp"
+                        app:cardBackgroundColor="@color/brand_primary"
+                        app:cardCornerRadius="50dp"
+                        app:cardElevation="@dimen/elevation_medium"
                         app:strokeWidth="0dp"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
@@ -52,37 +50,32 @@
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:gravity="center"
-                            android:text="M"
-                            android:textColor="@color/nonna_text_white"
-                            android:textSize="48sp"
+                            android:text="U"
+                            android:textColor="@color/white"
+                            android:textSize="40sp"
                             android:textStyle="bold" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <TextView
                         android:id="@+id/nameTextView"
+                        style="@style/TextAppearance.Morfipolo.Headline2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
-                        android:text="Matías Federico"
-                        android:textColor="@color/nonna_text_primary"
-                        android:textSize="26sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.02"
+                        android:layout_marginTop="@dimen/spacing_l"
+                        android:text="Usuario"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/avatarCardView" />
                 </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Options Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/optionsCardView"
+                style="@style/Widget.Morfipolo.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                app:cardBackgroundColor="@color/nonna_white_card"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="4dp"
-                app:strokeWidth="0dp"
+                android:layout_marginTop="@dimen/spacing_l"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/profileCardView">
@@ -91,61 +84,59 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="8dp">
+                    android:padding="@dimen/spacing_s">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/changePasswordButton"
-                        style="@style/Widget.Material3.Button.TextButton"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
                         android:layout_width="match_parent"
-                        android:layout_height="68dp"
+                        android:layout_height="60dp"
                         android:text="@string/change_password"
-                        android:textColor="@color/nonna_text_primary"
-                        android:textSize="17sp"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_size_body"
                         android:textAlignment="textStart"
                         android:gravity="center_vertical|start"
-                        android:paddingStart="20dp"
-                        android:paddingEnd="20dp"
+                        android:paddingStart="@dimen/spacing_m"
+                        android:paddingEnd="@dimen/spacing_m"
                         app:icon="@android:drawable/ic_menu_manage"
                         app:iconGravity="textStart"
-                        app:iconTint="@color/nonna_brown_primary"
+                        app:iconTint="@color/brand_primary"
                         app:iconSize="24dp"
-                        app:iconPadding="20dp"
-                        app:rippleColor="@color/nonna_beige_dark" />
+                        app:iconPadding="@dimen/spacing_m" />
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginStart="20dp"
-                        android:layout_marginEnd="20dp"
-                        android:background="@color/divider_light" />
+                        android:layout_marginHorizontal="@dimen/spacing_m"
+                        android:background="@color/divider" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/logoutButton"
-                        style="@style/Widget.Material3.Button.TextButton"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
                         android:layout_width="match_parent"
-                        android:layout_height="68dp"
+                        android:layout_height="60dp"
                         android:text="@string/logout"
-                        android:textColor="@color/nonna_error"
-                        android:textSize="17sp"
+                        android:textColor="@color/color_error"
+                        android:textSize="@dimen/text_size_body"
                         android:textAlignment="textStart"
                         android:gravity="center_vertical|start"
-                        android:paddingStart="20dp"
-                        android:paddingEnd="20dp"
+                        android:paddingStart="@dimen/spacing_m"
+                        android:paddingEnd="@dimen/spacing_m"
                         app:icon="@android:drawable/ic_menu_close_clear_cancel"
                         app:iconGravity="textStart"
-                        app:iconTint="@color/nonna_error"
+                        app:iconTint="@color/color_error"
                         app:iconSize="24dp"
-                        app:iconPadding="20dp"
-                        app:rippleColor="@color/nonna_error" />
+                        app:iconPadding="@dimen/spacing_m"
+                        app:rippleColor="@color/color_error" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Footer con información de desarrollo -->
+            <!-- Footer -->
             <LinearLayout
                 android:id="@+id/developmentFooter"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
+                android:layout_marginTop="@dimen/spacing_xl"
                 android:orientation="horizontal"
                 android:gravity="center"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -154,26 +145,18 @@
                 app:layout_constraintBottom_toBottomOf="parent">
 
                 <TextView
+                    style="@style/TextAppearance.Morfipolo.Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Desarrollado por la Dirección de Ingeniería"
-                    android:textColor="@color/nonna_text_secondary"
-                    android:textSize="14sp"
-                    android:layout_marginEnd="12dp"
+                    android:layout_marginEnd="@dimen/spacing_s"
                     android:gravity="center_vertical" />
 
-                <FrameLayout
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:gravity="center">
-
-                    <ImageView
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:src="@drawable/di_logo"
-                        android:scaleType="fitCenter"
-                        android:contentDescription="Logo Dirección de Ingeniería" />
-                </FrameLayout>
+                <ImageView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/di_logo"
+                    android:contentDescription="Logo Dirección de Ingeniería" />
             </LinearLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
