@@ -17,6 +17,7 @@ import com.cocido.morfipolo.data.remote.TokenManager
 import com.cocido.morfipolo.data.repository.MenuRepository
 import com.cocido.morfipolo.data.repository.UserRepository
 import com.cocido.morfipolo.data.repository.VoteRepository
+import com.cocido.morfipolo.util.alarm.AlarmScheduler
 import com.cocido.morfipolo.util.work.DailyReminderWorker
 import com.cocido.morfipolo.util.work.SessionRefreshWorker
 import java.util.concurrent.TimeUnit
@@ -92,7 +93,12 @@ class MorfipoloApplication : Application() {
             sessionRefreshWork
         )
 
-        // Configurar worker para enviar recordatorio diario a las 9am
+        // PRINCIPAL: Programar alarma exacta para notificación a las 9am
+        // Usa AlarmManager con setExactAndAllowWhileIdle() para garantizar ejecución
+        // incluso cuando la app está completamente cerrada
+        AlarmScheduler.scheduleDailyAlarm(this)
+        
+        // BACKUP: También usar WorkManager como respaldo (menos confiable pero adicional)
         DailyReminderWorker.scheduleDailyReminder(this)
     }
 }

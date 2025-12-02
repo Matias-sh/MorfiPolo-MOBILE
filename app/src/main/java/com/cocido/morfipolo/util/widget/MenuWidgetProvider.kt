@@ -271,12 +271,22 @@ class MenuWidgetProvider : AppWidgetProvider() {
                     }
                 }
 
-                if (authResult !is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.Authenticated) {
-                    android.util.Log.w(TAG, "updateWidget: Autenticación fallida")
-                    showNotLoggedInState(context, appWidgetManager, appWidgetId)
-                    return@launch
+                when (authResult) {
+                    is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.Authenticated -> {
+                        android.util.Log.d(TAG, "updateWidget: Autenticación exitosa")
+                    }
+                    is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.TemporaryError -> {
+                        android.util.Log.w(TAG, "updateWidget: Error temporal de autenticación, continuando...")
+                        // Continuar intentando cargar el menú
+                    }
+                    is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.RefreshFailed,
+                    is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.NotLoggedIn,
+                    null -> {
+                        android.util.Log.w(TAG, "updateWidget: Autenticación fallida")
+                        showNotLoggedInState(context, appWidgetManager, appWidgetId)
+                        return@launch
+                    }
                 }
-                android.util.Log.d(TAG, "updateWidget: Autenticación exitosa")
 
                 // Obtener menú del día
                 android.util.Log.d(TAG, "updateWidget: Obteniendo menú del día...")

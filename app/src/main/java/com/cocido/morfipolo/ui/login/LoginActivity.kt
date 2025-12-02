@@ -66,6 +66,17 @@ class LoginActivity : AppCompatActivity() {
                     // Usuario autenticado correctamente, ir a MainActivity
                     navigateToMain()
                 }
+                is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.TemporaryError -> {
+                    // Error temporal (servidor/red), pero la sesión sigue válida localmente
+                    // Verificar si la sesión es válida localmente e ir a MainActivity
+                    if (app.authManager.isSessionLocallyValid()) {
+                        android.util.Log.d("LoginActivity", "Error temporal pero sesión válida localmente, continuando...")
+                        navigateToMain()
+                    } else {
+                        // La sesión expiró localmente, mantener en login
+                        android.util.Log.w("LoginActivity", "Error temporal y sesión expirada localmente")
+                    }
+                }
                 is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.RefreshFailed,
                 is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.NotLoggedIn -> {
                     // Mantener en login, no hacer nada

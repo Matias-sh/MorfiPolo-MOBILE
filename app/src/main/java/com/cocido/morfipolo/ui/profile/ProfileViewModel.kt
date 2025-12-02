@@ -39,23 +39,12 @@ class ProfileViewModel(
                 when (authResult) {
                     is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.Authenticated -> {
                         android.util.Log.d("ProfileViewModel", "Sesión válida, cambiando contraseña...")
-                        val userId = userRepository.getCurrentUser()?.id
-                        if (userId == null) {
-                            _passwordChangeState.value = PasswordChangeState.Error("No se pudo obtener el ID del usuario")
-                            return@launch
-                        }
-                        
-                        val result = userRepository.changePassword(userId, currentPassword, newPassword)
-                        result.getOrNull()?.let {
-                            android.util.Log.d("ProfileViewModel", "✅ Contraseña cambiada exitosamente")
-                            _passwordChangeState.value = PasswordChangeState.Success
-                        } ?: run {
-                            val exception = result.exceptionOrNull()
-                            android.util.Log.e("ProfileViewModel", "Error al cambiar contraseña", exception)
-                            _passwordChangeState.value = PasswordChangeState.Error(
-                                exception?.message ?: "Error al cambiar la contraseña"
-                            )
-                        }
+                        performPasswordChange(currentPassword, newPassword)
+                    }
+                    is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.TemporaryError -> {
+                        // Error temporal - intentar cambiar contraseña de todos modos
+                        android.util.Log.w("ProfileViewModel", "Error temporal de autenticación, intentando cambiar contraseña...")
+                        performPasswordChange(currentPassword, newPassword)
                     }
                     is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.RefreshFailed,
                     is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.NotLoggedIn -> {
@@ -67,6 +56,26 @@ class ProfileViewModel(
                 android.util.Log.e("ProfileViewModel", "Error inesperado al cambiar contraseña", e)
                 _passwordChangeState.value = PasswordChangeState.Error("Error inesperado: ${e.message}")
             }
+        }
+    }
+
+    private suspend fun performPasswordChange(currentPassword: String, newPassword: String) {
+        val userId = userRepository.getCurrentUser()?.id
+        if (userId == null) {
+            _passwordChangeState.value = PasswordChangeState.Error("No se pudo obtener el ID del usuario")
+            return
+        }
+        
+        val result = userRepository.changePassword(userId, currentPassword, newPassword)
+        result.getOrNull()?.let {
+            android.util.Log.d("ProfileViewModel", "✅ Contraseña cambiada exitosamente")
+            _passwordChangeState.value = PasswordChangeState.Success
+        } ?: run {
+            val exception = result.exceptionOrNull()
+            android.util.Log.e("ProfileViewModel", "Error al cambiar contraseña", exception)
+            _passwordChangeState.value = PasswordChangeState.Error(
+                exception?.message ?: "Error al cambiar la contraseña"
+            )
         }
     }
 

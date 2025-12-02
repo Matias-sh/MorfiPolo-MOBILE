@@ -29,12 +29,11 @@
 
             <ImageView
                 android:id="@+id/selectedIndicator"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
                 android:layout_marginEnd="12dp"
-                android:src="@android:drawable/checkbox_on_background"
+                android:src="@drawable/ic_check_circle"
                 android:contentDescription="Seleccionado"
-                android:tint="@color/nonna_success"
                 android:visibility="gone" />
 
             <TextView

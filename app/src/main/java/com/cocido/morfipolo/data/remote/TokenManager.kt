@@ -22,20 +22,53 @@ class TokenManager(
     }
     
     /**
-     * Obtiene el access token, refrescándolo si es necesario
+     * Resultado del intento de obtener/refrescar un token
      */
-    suspend fun getValidAccessToken(): String? {
+    sealed class TokenResult {
+        data class Success(val accessToken: String) : TokenResult()
+        object TokenExpired : TokenResult() // Refresh token expiró (401 o expirado localmente)
+        object ServerError : TokenResult() // Error del servidor (5xx) - no limpiar sesión
+        object NetworkError : TokenResult() // Error de red - no limpiar sesión
+        object NoCredentials : TokenResult() // No hay credenciales guardadas
+    }
+    
+    /**
+     * Obtiene el access token, refrescándolo si es necesario.
+     * Retorna TokenResult para que el caller pueda distinguir el tipo de error.
+     */
+    suspend fun getValidAccessTokenResult(): TokenResult {
         mutex.withLock {
             val accessToken = sessionManager.getAccessToken()
             if (accessToken == null) {
-                return null
+                return TokenResult.NoCredentials
             }
             
             if (shouldRefreshToken(accessToken)) {
-                return refreshAccessToken()
+                return refreshAccessTokenResult()
             }
             
-            return accessToken
+            return TokenResult.Success(accessToken)
+        }
+    }
+    
+    /**
+     * Obtiene el access token, refrescándolo si es necesario.
+     * Retorna null si no se puede obtener (mantener compatibilidad).
+     */
+    suspend fun getValidAccessToken(): String? {
+        return when (val result = getValidAccessTokenResult()) {
+            is TokenResult.Success -> result.accessToken
+            else -> null
+        }
+    }
+    
+    /**
+     * Fuerza el refresh del access token (útil cuando se recibe un 401)
+     * Retorna TokenResult para distinguir el tipo de error.
+     */
+    suspend fun forceRefreshAccessTokenResult(): TokenResult {
+        mutex.withLock {
+            return refreshAccessTokenResult()
         }
     }
     
@@ -43,8 +76,9 @@ class TokenManager(
      * Fuerza el refresh del access token (útil cuando se recibe un 401)
      */
     suspend fun forceRefreshAccessToken(): String? {
-        mutex.withLock {
-            return refreshAccessToken()
+        return when (val result = forceRefreshAccessTokenResult()) {
+            is TokenResult.Success -> result.accessToken
+            else -> null
         }
     }
     
@@ -84,31 +118,29 @@ class TokenManager(
     }
     
     /**
-     * Refresca el access token usando el refresh token
+     * Refresca el access token usando el refresh token.
+     * Retorna TokenResult para distinguir el tipo de error.
      */
-    private suspend fun refreshAccessToken(): String? {
+    private suspend fun refreshAccessTokenResult(): TokenResult {
         return try {
             val dni = sessionManager.getCurrentUserDni()
             val refreshToken = sessionManager.getRefreshToken()
             
             if (dni == null || refreshToken == null) {
                 Log.w(TAG, "No hay DNI o refresh token disponible")
-                return null
+                return TokenResult.NoCredentials
             }
             
             // Verificar si el refresh token está expirado antes de intentar usarlo
             if (isTokenExpired(refreshToken)) {
-                Log.w(TAG, "Refresh token expirado, requiere login")
-                return null
+                Log.w(TAG, "Refresh token expirado localmente, requiere login")
+                return TokenResult.TokenExpired
             }
             
-            // Nota: Según la colección de Postman, el refresh-token requiere dni y password
-            // Esto es inusual, pero seguimos el formato del API
-            // Si el backend cambia esto, se debe actualizar
-            val password = sessionManager.getCurrentUserPassword() // Necesitamos guardar password temporalmente
+            val password = sessionManager.getCurrentUserPassword()
             if (password == null) {
                 Log.w(TAG, "No hay password guardado para refresh token")
-                return null
+                return TokenResult.NoCredentials
             }
             
             Log.d(TAG, "Intentando refrescar access token...")
@@ -125,26 +157,52 @@ class TokenManager(
                         loginResponse.accessToken,
                         loginResponse.refreshToken
                     )
-                    Log.d(TAG, "Token refrescado exitosamente")
-                    return loginResponse.accessToken
+                    Log.d(TAG, "✅ Token refrescado exitosamente")
+                    return TokenResult.Success(loginResponse.accessToken)
                 } else {
                     Log.e(TAG, "Respuesta de refresh exitosa pero body es null")
+                    return TokenResult.ServerError
                 }
             } else {
                 val errorBody = response.errorBody()?.string()
-                Log.e(TAG, "Error refrescando token: ${response.code()} ${response.message()}, body: $errorBody")
+                val errorCode = response.code()
+                Log.e(TAG, "Error refrescando token: $errorCode ${response.message()}, body: $errorBody")
                 
-                // Si el error es 401, el refresh token expiró
-                if (response.code() == 401) {
-                    Log.w(TAG, "Refresh token expirado o inválido (401)")
-                    // No limpiar la sesión aquí, lo hará AuthManager si es necesario
+                return when {
+                    // 401 = Refresh token expirado o inválido
+                    errorCode == 401 -> {
+                        Log.w(TAG, "Refresh token expirado o inválido (401)")
+                        TokenResult.TokenExpired
+                    }
+                    // 5xx = Error del servidor, no es culpa del token
+                    errorCode in 500..599 -> {
+                        Log.w(TAG, "Error del servidor ($errorCode), el token puede seguir siendo válido")
+                        TokenResult.ServerError
+                    }
+                    // 4xx (excepto 401) = Otro error del cliente
+                    errorCode in 400..499 -> {
+                        Log.w(TAG, "Error del cliente ($errorCode)")
+                        TokenResult.TokenExpired
+                    }
+                    // Otros códigos
+                    else -> {
+                        Log.w(TAG, "Error desconocido ($errorCode)")
+                        TokenResult.ServerError
+                    }
                 }
             }
-            
-            null
+        } catch (e: java.net.UnknownHostException) {
+            Log.e(TAG, "Error de red: No se puede resolver el host", e)
+            TokenResult.NetworkError
+        } catch (e: java.net.SocketTimeoutException) {
+            Log.e(TAG, "Error de red: Timeout", e)
+            TokenResult.NetworkError
+        } catch (e: java.io.IOException) {
+            Log.e(TAG, "Error de red/IO", e)
+            TokenResult.NetworkError
         } catch (e: Exception) {
-            Log.e(TAG, "Excepción al refrescar token", e)
-            null
+            Log.e(TAG, "Excepción inesperada al refrescar token", e)
+            TokenResult.NetworkError
         }
     }
     
@@ -158,10 +216,18 @@ class TokenManager(
     }
     
     /**
+     * Verifica si el refresh token guardado está expirado localmente.
+     * No hace llamadas de red.
+     */
+    fun isRefreshTokenExpiredLocally(): Boolean {
+        val refreshToken = sessionManager.getRefreshToken() ?: return true
+        return isTokenExpired(refreshToken)
+    }
+    
+    /**
      * Limpia la sesión cuando el refresh token expiró
      */
     suspend fun clearSession() {
         sessionManager.logout()
     }
 }
-

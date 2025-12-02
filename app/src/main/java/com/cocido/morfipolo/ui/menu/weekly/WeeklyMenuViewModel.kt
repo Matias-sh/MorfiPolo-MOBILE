@@ -33,12 +33,21 @@ class WeeklyMenuViewModel(
                 val authResult = authManager.verifyAndRefreshAuth()
                 
                 // Si no hay sesión válida, marcar como expirada
-                if (authResult is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.NotLoggedIn ||
-                    authResult is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.RefreshFailed) {
-                    android.util.Log.w("WeeklyMenuViewModel", "Sesión no válida, marcando como expirada")
-                    _sessionExpired.value = true
-                    _uiState.value = WeeklyMenuUiState.Error("Sesión expirada. Por favor, inicia sesión nuevamente.")
-                    return@launch
+                when (authResult) {
+                    is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.NotLoggedIn,
+                    is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.RefreshFailed -> {
+                        android.util.Log.w("WeeklyMenuViewModel", "Sesión no válida, marcando como expirada")
+                        _sessionExpired.value = true
+                        _uiState.value = WeeklyMenuUiState.Error("Sesión expirada. Por favor, inicia sesión nuevamente.")
+                        return@launch
+                    }
+                    is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.TemporaryError -> {
+                        // Error temporal - continuar intentando cargar menús
+                        android.util.Log.w("WeeklyMenuViewModel", "Error temporal de autenticación, intentando cargar menús...")
+                    }
+                    is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.Authenticated -> {
+                        // Todo bien, continuar
+                    }
                 }
                 
                 // Intentar cargar menús
@@ -58,9 +67,11 @@ class WeeklyMenuViewModel(
                 
                 android.util.Log.d("WeeklyMenuViewModel", "Menús cargados: ${menus.size}")
                 
-                // Obtener votos del usuario para cada menú (solo si hay sesión)
+                // Obtener votos del usuario para cada menú (solo si hay sesión válida)
                 val userId = sessionManager.getCurrentUserId()
-                val menusWithVotes = if (userId != null && authResult is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.Authenticated) {
+                val hasValidSession = authResult is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.Authenticated ||
+                    authResult is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.TemporaryError
+                val menusWithVotes = if (userId != null && hasValidSession) {
                     menus.map { menu ->
                         try {
                             val userVote = voteRepository.getUserVoteForMenu(menu.id, userId)

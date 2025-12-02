@@ -122,12 +122,38 @@ class DailyMenuFragment : Fragment() {
         binding.offlineIndicator.visibility = if (!isOnline) View.VISIBLE else View.GONE
     }
     
+    private var currentSnackbar: Snackbar? = null
+    
     private fun showErrorWithRetry(message: String, retryAction: () -> Unit) {
-        val snackbar = Snackbar.make(binding.root, message, Snackbar.LENGTH_INDEFINITE)
+        // Ocultar snackbar anterior si existe
+        currentSnackbar?.dismiss()
+        
+        // Usar duración de 4 segundos
+        val snackbar = Snackbar.make(binding.root, message, 4000)
         snackbar.setAction(getString(R.string.error_retry)) {
             retryAction()
         }
         snackbar.setActionTextColor(resources.getColor(R.color.nonna_brown_primary, null))
+        snackbar.addCallback(object : Snackbar.Callback() {
+            override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
+                currentSnackbar = null
+            }
+        })
+        currentSnackbar = snackbar
+        snackbar.show()
+    }
+    
+    private fun showTemporaryMessage(message: String) {
+        // Ocultar snackbar anterior si existe
+        currentSnackbar?.dismiss()
+        
+        val snackbar = Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG)
+        snackbar.addCallback(object : Snackbar.Callback() {
+            override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
+                currentSnackbar = null
+            }
+        })
+        currentSnackbar = snackbar
         snackbar.show()
     }
 
@@ -167,19 +193,35 @@ class DailyMenuFragment : Fragment() {
                         binding.progressBar.visibility = View.GONE
                         checkNetworkStatus()
                         
-                        val errorMessage = when {
-                            !NetworkUtils.isNetworkAvailable(requireContext()) -> getString(R.string.error_no_connection)
-                            state.message.contains("sesión", ignoreCase = true) || state.message.contains("session", ignoreCase = true) -> {
-                                // Si es error de sesión expirada, redirigir al login
+                        // Detectar tipo de error
+                        when {
+                            state.message.contains("sesión", ignoreCase = true) || 
+                            state.message.contains("session", ignoreCase = true) -> {
+                                // Error de sesión expirada, redirigir al login
                                 navigateToLogin()
                                 return@collect
                             }
-                            else -> state.message
-                        }
-                        
-                        showErrorWithRetry(errorMessage) {
-                            val currentDate = viewModel.getCurrentDate()
-                            viewModel.loadMenuForDate(currentDate)
+                            state.message.contains("08:00", ignoreCase = true) ||
+                            state.message.contains("11:00", ignoreCase = true) ||
+                            state.message.contains("horario", ignoreCase = true) ||
+                            state.message.contains("cerrado", ignoreCase = true) ||
+                            state.message.contains("eliminar el voto", ignoreCase = true) ||
+                            state.message.contains("votar", ignoreCase = true) -> {
+                                // Error de horario - mostrar banner informativo sin reintentar
+                                showInfoBanner(state.message)
+                            }
+                            !NetworkUtils.isNetworkAvailable(requireContext()) -> {
+                                // Error de conexión - mostrar con reintentar
+                                showErrorWithRetry(getString(R.string.error_no_connection)) {
+                                    viewModel.loadMenuForDate(viewModel.getCurrentDate())
+                                }
+                            }
+                            else -> {
+                                // Otros errores - mostrar con reintentar
+                                showErrorWithRetry(state.message) {
+                                    viewModel.loadMenuForDate(viewModel.getCurrentDate())
+                                }
+                            }
                         }
                     }
                 }
@@ -379,6 +421,9 @@ class DailyMenuFragment : Fragment() {
         // Cancelar trabajo de ocultación del banner
         infoBannerHideJob?.cancel()
         infoBannerHideJob = null
+        // Ocultar snackbar si existe
+        currentSnackbar?.dismiss()
+        currentSnackbar = null
         _binding = null
     }
 }
