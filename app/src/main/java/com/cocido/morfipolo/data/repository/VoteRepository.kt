@@ -32,15 +32,9 @@ class VoteRepository(
                             errorBody.contains("already voted", ignoreCase = true) -> {
                                 "Ya tienes un voto registrado para este menú"
                             }
-                            errorBody.contains("cerrado", ignoreCase = true) ||
-                            errorBody.contains("closed", ignoreCase = true) ||
-                            errorBody.contains("horario", ignoreCase = true) ||
-                            errorBody.contains("time", ignoreCase = true) ||
-                            errorBody.contains("expired", ignoreCase = true) -> {
-                                "El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00)."
-                            }
                             else -> {
-                                "No se puede agregar el voto en este momento."
+                                // Cualquier otro error 400 es probablemente por horario cerrado
+                                "No se puede votar. Solo puedes elegir tu opción de 08:00 a 11:00."
                             }
                         }
                     }
@@ -80,16 +74,8 @@ class VoteRepository(
                 val errorBody = response.errorBody()?.string() ?: ""
                 val errorMessage = when (response.code()) {
                     400 -> {
-                        // Si el error 400 es por horario cerrado o menú cerrado
-                        if (errorBody.contains("cerrado", ignoreCase = true) ||
-                            errorBody.contains("closed", ignoreCase = true) ||
-                            errorBody.contains("horario", ignoreCase = true) ||
-                            errorBody.contains("time", ignoreCase = true) ||
-                            errorBody.contains("expired", ignoreCase = true)) {
-                            "El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00)."
-                        } else {
-                            "No se puede quitar el voto en este momento."
-                        }
+                        // Cualquier error 400 al eliminar voto es probablemente por horario cerrado
+                        "No se puede eliminar el voto. Solo puedes modificar tu elección de 08:00 a 11:00."
                     }
                     401 -> throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
                     404 -> "No se encontró el voto"
