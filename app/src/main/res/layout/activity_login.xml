@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/nonna_beige_primary"
+    android:background="@color/comedor_beige_primary"
     tools:context=".ui.login.LoginActivity">
 
     <ScrollView
@@ -43,7 +43,7 @@
                         android:layout_height="wrap_content"
                         android:letterSpacing="0.02"
                         android:text="@string/login_title"
-                        android:textColor="@color/nonna_text_primary"
+                        android:textColor="@color/comedor_text_primary"
                         android:textSize="28sp"
                         android:textStyle="bold"
                         app:layout_constraintEnd_toEndOf="parent"
@@ -61,15 +61,15 @@
                         app:boxCornerRadiusBottomStart="16dp"
                         app:boxCornerRadiusTopEnd="16dp"
                         app:boxCornerRadiusTopStart="16dp"
-                        app:boxStrokeColor="@color/nonna_brown_primary"
+                        app:boxStrokeColor="@color/comedor_brown_primary"
                         app:boxStrokeWidth="1.5dp"
                         app:boxStrokeWidthFocused="2dp"
-                        app:hintTextColor="@color/nonna_text_hint"
+                        app:hintTextColor="@color/comedor_text_hint"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/titleTextView"
                         app:startIconDrawable="@drawable/ic_person"
-                        app:startIconTint="@color/nonna_brown_primary">
+                        app:startIconTint="@color/comedor_brown_primary">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/dniEditText"
@@ -78,7 +78,7 @@
                             android:inputType="number"
                             android:maxLines="1"
                             android:padding="18dp"
-                            android:textColor="@color/nonna_text_primary"
+                            android:textColor="@color/comedor_text_primary"
                             android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -93,17 +93,17 @@
                         app:boxCornerRadiusBottomStart="16dp"
                         app:boxCornerRadiusTopEnd="16dp"
                         app:boxCornerRadiusTopStart="16dp"
-                        app:boxStrokeColor="@color/nonna_brown_primary"
+                        app:boxStrokeColor="@color/comedor_brown_primary"
                         app:boxStrokeWidth="1.5dp"
                         app:boxStrokeWidthFocused="2dp"
                         app:endIconMode="password_toggle"
-                        app:endIconTint="@color/nonna_brown_primary"
-                        app:hintTextColor="@color/nonna_text_hint"
+                        app:endIconTint="@color/comedor_brown_primary"
+                        app:hintTextColor="@color/comedor_text_hint"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/dniInputLayout"
                         app:startIconDrawable="@android:drawable/ic_lock_lock"
-                        app:startIconTint="@color/nonna_brown_primary">
+                        app:startIconTint="@color/comedor_brown_primary">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/passwordEditText"
@@ -112,7 +112,7 @@
                             android:inputType="textPassword"
                             android:maxLines="1"
                             android:padding="18dp"
-                            android:textColor="@color/nonna_text_primary"
+                            android:textColor="@color/comedor_text_primary"
                             android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -121,7 +121,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="24dp"
-                        app:cardBackgroundColor="@color/nonna_beige_light"
+                        app:cardBackgroundColor="@color/comedor_beige_light"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
                         app:layout_constraintEnd_toEndOf="parent"
@@ -141,7 +141,7 @@
                                 android:layout_height="wrap_content"
                                 android:lineSpacingExtra="4dp"
                                 android:text="@string/first_login_instruction"
-                                android:textColor="@color/nonna_text_primary"
+                                android:textColor="@color/comedor_text_primary"
                                 android:textSize="14sp" />
 
                             <TextView
@@ -150,7 +150,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
                                 android:text="@string/change_password_reminder"
-                                android:textColor="@color/nonna_brown_primary"
+                                android:textColor="@color/comedor_brown_primary"
                                 android:textSize="14sp"
                                 android:textStyle="bold" />
                         </LinearLayout>
@@ -165,14 +165,14 @@
                         android:elevation="2dp"
                         android:letterSpacing="0.02"
                         android:text="@string/login_button"
-                        android:textColor="@color/nonna_text_white"
+                        android:textColor="@color/comedor_text_white"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         app:cornerRadius="16dp"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/instructionCard"
-                        app:rippleColor="@color/nonna_brown_dark" />
+                        app:rippleColor="@color/comedor_brown_dark" />
 
 
 
@@ -182,7 +182,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
                         android:gravity="center"
-                        android:textColor="@color/nonna_error"
+                        android:textColor="@color/comedor_error"
                         android:textSize="14sp"
                         android:visibility="gone"
                         app:layout_constraintEnd_toEndOf="parent"

@@ -12,17 +12,23 @@ import java.util.*
  * Clase utilitaria para programar alarmas exactas para las notificaciones diarias.
  * Usa AlarmManager con setExactAndAllowWhileIdle() para garantizar que la alarma
  * se ejecute incluso cuando la app está completamente cerrada.
+ * 
+ * Programa dos alarmas:
+ * - 9:00 AM: Recordatorio general para votar
+ * - 10:00 AM: Recordatorio de seguimiento (solo si no votó)
  */
 object AlarmScheduler {
     
     private const val TAG = "AlarmScheduler"
-    private const val REMINDER_HOUR = 9 // 9am
+    private const val REMINDER_HOUR_9AM = 9
+    private const val REMINDER_HOUR_10AM = 10
     private const val REMINDER_MINUTE = 0
-    private const val ALARM_REQUEST_CODE = 9001
+    private const val ALARM_REQUEST_CODE_9AM = 9001
+    private const val ALARM_REQUEST_CODE_10AM = 10001
     
     /**
-     * Programa la alarma diaria a las 9am del próximo día laboral.
-     * Esta alarma se ejecutará incluso si la app está cerrada.
+     * Programa las alarmas diarias a las 9am y 10am del próximo día laboral.
+     * Estas alarmas se ejecutarán incluso si la app está cerrada.
      */
     fun scheduleDailyAlarm(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -31,14 +37,28 @@ object AlarmScheduler {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (!alarmManager.canScheduleExactAlarms()) {
                 Log.w(TAG, "⚠️ No tenemos permiso para alarmas exactas. Solicitando...")
-                // En Android 12+ el usuario debe dar permiso manualmente
-                // La app debería mostrar un diálogo explicando esto
-                // Por ahora, intentamos programar de todas formas
             }
         }
         
-        val nextAlarmTime = calculateNextAlarmTime()
-        val pendingIntent = createAlarmPendingIntent(context)
+        // Programar alarma de 9am
+        scheduleAlarmAtHour(context, alarmManager, REMINDER_HOUR_9AM, ALARM_REQUEST_CODE_9AM, AlarmReceiver.ACTION_REMINDER_9AM)
+        
+        // Programar alarma de 10am (recordatorio de seguimiento)
+        scheduleAlarmAtHour(context, alarmManager, REMINDER_HOUR_10AM, ALARM_REQUEST_CODE_10AM, AlarmReceiver.ACTION_REMINDER_10AM)
+    }
+    
+    /**
+     * Programa una alarma específica a una hora determinada.
+     */
+    private fun scheduleAlarmAtHour(
+        context: Context,
+        alarmManager: AlarmManager,
+        hour: Int,
+        requestCode: Int,
+        action: String
+    ) {
+        val nextAlarmTime = calculateNextAlarmTime(hour)
+        val pendingIntent = createAlarmPendingIntent(context, requestCode, action)
         
         try {
             // Cancelar alarma anterior si existe
@@ -46,7 +66,6 @@ object AlarmScheduler {
             
             // Programar nueva alarma exacta
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                // setExactAndAllowWhileIdle funciona incluso en modo Doze
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     nextAlarmTime,
@@ -62,38 +81,44 @@ object AlarmScheduler {
             
             val formattedTime = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
                 .format(Date(nextAlarmTime))
-            Log.d(TAG, "✅ Alarma programada para: $formattedTime")
+            Log.d(TAG, "✅ Alarma ${hour}:00 programada para: $formattedTime")
             
         } catch (e: SecurityException) {
-            Log.e(TAG, "❌ Error de seguridad al programar alarma: ${e.message}")
+            Log.e(TAG, "❌ Error de seguridad al programar alarma ${hour}am: ${e.message}")
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error al programar alarma: ${e.message}")
+            Log.e(TAG, "❌ Error al programar alarma ${hour}am: ${e.message}")
         }
     }
     
     /**
-     * Cancela la alarma diaria programada.
+     * Cancela todas las alarmas diarias programadas.
      */
     fun cancelDailyAlarm(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val pendingIntent = createAlarmPendingIntent(context)
         
         try {
-            alarmManager.cancel(pendingIntent)
-            Log.d(TAG, "🛑 Alarma cancelada")
+            // Cancelar alarma de 9am
+            val pendingIntent9am = createAlarmPendingIntent(context, ALARM_REQUEST_CODE_9AM, AlarmReceiver.ACTION_REMINDER_9AM)
+            alarmManager.cancel(pendingIntent9am)
+            
+            // Cancelar alarma de 10am
+            val pendingIntent10am = createAlarmPendingIntent(context, ALARM_REQUEST_CODE_10AM, AlarmReceiver.ACTION_REMINDER_10AM)
+            alarmManager.cancel(pendingIntent10am)
+            
+            Log.d(TAG, "🛑 Alarmas canceladas (9am y 10am)")
         } catch (e: Exception) {
-            Log.e(TAG, "Error al cancelar alarma: ${e.message}")
+            Log.e(TAG, "Error al cancelar alarmas: ${e.message}")
         }
     }
     
     /**
-     * Calcula el próximo momento para la alarma:
-     * - Si hoy es día laboral y aún no son las 9am, programa para hoy a las 9am
-     * - Si ya pasaron las 9am o es fin de semana, programa para el próximo día laboral a las 9am
+     * Calcula el próximo momento para la alarma a una hora específica:
+     * - Si hoy es día laboral y aún no es la hora, programa para hoy
+     * - Si ya pasó la hora o es fin de semana, programa para el próximo día laboral
      */
-    private fun calculateNextAlarmTime(): Long {
+    private fun calculateNextAlarmTime(hour: Int): Long {
         val calendar = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault()).apply {
-            set(Calendar.HOUR_OF_DAY, REMINDER_HOUR)
+            set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, REMINDER_MINUTE)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
@@ -102,12 +127,12 @@ object AlarmScheduler {
         val now = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault())
         
         Log.d(TAG, "Hora actual: ${formatCalendar(now)}")
-        Log.d(TAG, "Hora objetivo inicial: ${formatCalendar(calendar)}")
+        Log.d(TAG, "Hora objetivo ${hour}:00: ${formatCalendar(calendar)}")
         
-        // Si ya pasaron las 9am hoy, avanzar a mañana
+        // Si ya pasó la hora hoy, avanzar a mañana
         if (calendar.timeInMillis <= now.timeInMillis) {
             calendar.add(Calendar.DAY_OF_MONTH, 1)
-            Log.d(TAG, "Ya pasaron las 9am, avanzando a mañana")
+            Log.d(TAG, "Ya pasaron las ${hour}:00, avanzando a mañana")
         }
         
         // Avanzar hasta el próximo día laboral (lunes a viernes)
@@ -120,7 +145,7 @@ object AlarmScheduler {
         val delayHours = delayMillis / (1000 * 60 * 60)
         val delayMinutes = (delayMillis / (1000 * 60)) % 60
         
-        Log.d(TAG, "Próxima alarma: ${formatCalendar(calendar)} (en ${delayHours}h ${delayMinutes}m)")
+        Log.d(TAG, "Próxima alarma ${hour}:00: ${formatCalendar(calendar)} (en ${delayHours}h ${delayMinutes}m)")
         
         return calendar.timeInMillis
     }
@@ -136,9 +161,9 @@ object AlarmScheduler {
     /**
      * Crea el PendingIntent para la alarma.
      */
-    private fun createAlarmPendingIntent(context: Context): PendingIntent {
+    private fun createAlarmPendingIntent(context: Context, requestCode: Int, action: String): PendingIntent {
         val intent = Intent(context, AlarmReceiver::class.java).apply {
-            action = AlarmReceiver.ACTION_DAILY_REMINDER
+            this.action = action
         }
         
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -149,7 +174,7 @@ object AlarmScheduler {
         
         return PendingIntent.getBroadcast(
             context,
-            ALARM_REQUEST_CODE,
+            requestCode,
             intent,
             flags
         )
@@ -179,4 +204,5 @@ object AlarmScheduler {
         }
     }
 }
+
 

@@ -3,37 +3,37 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     
-    <!-- Nonna Inspired Color Palette - Beige, Brown, White -->
-    <!-- Primary Browns (Nonna Style) -->
-    <color name="nonna_brown_primary">#8B6F47</color>
-    <color name="nonna_brown_dark">#6B5435</color>
-    <color name="nonna_brown_light">#A6895F</color>
-    <color name="nonna_brown_accent">#9D7A4F</color>
+    <!-- Comedor Color Palette - Beige, Brown, White -->
+    <!-- Primary Browns -->
+    <color name="comedor_brown_primary">#8B6F47</color>
+    <color name="comedor_brown_dark">#6B5435</color>
+    <color name="comedor_brown_light">#A6895F</color>
+    <color name="comedor_brown_accent">#9D7A4F</color>
     
     <!-- Beige Backgrounds -->
-    <color name="nonna_beige_primary">#F5F1EB</color>
-    <color name="nonna_beige_light">#FAF8F5</color>
-    <color name="nonna_beige_dark">#E8E3DB</color>
+    <color name="comedor_beige_primary">#F5F1EB</color>
+    <color name="comedor_beige_light">#FAF8F5</color>
+    <color name="comedor_beige_dark">#E8E3DB</color>
     
     <!-- White Cards -->
-    <color name="nonna_white_card">#FFFFFF</color>
-    <color name="nonna_white_pure">#FFFFFF</color>
+    <color name="comedor_white_card">#FFFFFF</color>
+    <color name="comedor_white_pure">#FFFFFF</color>
     
     <!-- Text Colors -->
-    <color name="nonna_text_primary">#3E2723</color>
-    <color name="nonna_text_secondary">#6D4C41</color>
-    <color name="nonna_text_hint">#A1887F</color>
-    <color name="nonna_text_white">#FFFFFF</color>
+    <color name="comedor_text_primary">#3E2723</color>
+    <color name="comedor_text_secondary">#6D4C41</color>
+    <color name="comedor_text_hint">#A1887F</color>
+    <color name="comedor_text_white">#FFFFFF</color>
     
     <!-- Accent Colors -->
-    <color name="nonna_accent_warm">#D4A574</color>
-    <color name="nonna_accent_gold">#C9A961</color>
+    <color name="comedor_accent_warm">#D4A574</color>
+    <color name="comedor_accent_gold">#C9A961</color>
     
-    <!-- Status Colors (Adapted to Nonna Style) -->
-    <color name="nonna_success">#6B8E23</color>
-    <color name="nonna_error">#C85A5A</color>
-    <color name="nonna_warning">#D4A574</color>
-    <color name="nonna_info">#8B6F47</color>
+    <!-- Status Colors -->
+    <color name="comedor_success">#6B8E23</color>
+    <color name="comedor_error">#C85A5A</color>
+    <color name="comedor_warning">#D4A574</color>
+    <color name="comedor_info">#8B6F47</color>
     
     <!-- Legacy Colors (for compatibility) -->
     <color name="primary_green">#6B8E23</color>

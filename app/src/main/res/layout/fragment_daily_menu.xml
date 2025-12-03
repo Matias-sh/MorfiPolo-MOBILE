@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/nonna_beige_primary"
+    android:background="@color/comedor_beige_primary"
     tools:context=".ui.menu.daily.DailyMenuFragment">
 
     <com.google.android.material.card.MaterialCardView
@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:visibility="gone"
-        app:cardBackgroundColor="@color/nonna_error"
+        app:cardBackgroundColor="@color/comedor_error"
         app:cardCornerRadius="12dp"
         app:cardElevation="4dp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -31,7 +31,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_menu_revert"
-                android:tint="@color/nonna_text_white"
+                android:tint="@color/comedor_text_white"
                 android:contentDescription="@string/offline_icon" />
 
             <TextView
@@ -40,7 +40,7 @@
                 android:layout_weight="1"
                 android:layout_marginStart="12dp"
                 android:text="@string/offline_message"
-                android:textColor="@color/nonna_text_white"
+                android:textColor="@color/comedor_text_white"
                 android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -72,7 +72,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="06/11/2025"
-                    android:textColor="@color/nonna_text_primary"
+                    android:textColor="@color/comedor_text_primary"
                     android:textSize="28sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.02"
@@ -87,7 +87,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="@string/selection_time"
-                    android:textColor="@color/nonna_text_secondary"
+                    android:textColor="@color/comedor_text_secondary"
                     android:textSize="14sp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
@@ -114,7 +114,7 @@
                         android:paddingTop="8dp"
                         android:paddingBottom="8dp"
                         android:text="@string/already_selected"
-                        android:textColor="@color/nonna_text_white"
+                        android:textColor="@color/comedor_text_white"
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:maxLines="1"
@@ -132,7 +132,7 @@
                         android:paddingTop="8dp"
                         android:paddingBottom="8dp"
                         android:text="@string/open"
-                        android:textColor="@color/nonna_text_white"
+                        android:textColor="@color/comedor_text_white"
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:maxLines="1" />
@@ -144,7 +144,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:text="Arrollado de pollo con pure de papas"
-                    android:textColor="@color/nonna_text_primary"
+                    android:textColor="@color/comedor_text_primary"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:lineSpacingExtra="4dp"
@@ -188,7 +188,7 @@
                     android:id="@+id/progressBar"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:indeterminateTint="@color/nonna_brown_primary"
+                    android:indeterminateTint="@color/comedor_brown_primary"
                     android:visibility="gone"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -208,7 +208,7 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
         android:visibility="gone"
-        app:cardBackgroundColor="@color/nonna_accent_warm"
+        app:cardBackgroundColor="@color/comedor_accent_warm"
         app:cardCornerRadius="12dp"
         app:cardElevation="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -227,7 +227,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_dialog_info"
-                android:tint="@color/nonna_text_white"
+                android:tint="@color/comedor_text_white"
                 android:contentDescription="@string/info_icon" />
 
             <TextView
@@ -237,7 +237,7 @@
                 android:layout_weight="1"
                 android:layout_marginStart="12dp"
                 android:text=""
-                android:textColor="@color/nonna_text_white"
+                android:textColor="@color/comedor_text_white"
                 android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>

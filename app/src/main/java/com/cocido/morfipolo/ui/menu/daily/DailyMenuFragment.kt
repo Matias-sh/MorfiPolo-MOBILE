@@ -107,9 +107,9 @@ class DailyMenuFragment : Fragment() {
     
     private fun setupPullToRefresh() {
         binding.swipeRefreshLayout.setColorSchemeResources(
-            R.color.nonna_brown_primary,
-            R.color.nonna_accent_warm,
-            R.color.nonna_success
+            R.color.comedor_brown_primary,
+            R.color.comedor_accent_warm,
+            R.color.comedor_success
         )
         binding.swipeRefreshLayout.setOnRefreshListener {
             val currentDate = viewModel.getCurrentDate()
@@ -133,7 +133,7 @@ class DailyMenuFragment : Fragment() {
         snackbar.setAction(getString(R.string.error_retry)) {
             retryAction()
         }
-        snackbar.setActionTextColor(resources.getColor(R.color.nonna_brown_primary, null))
+        snackbar.setActionTextColor(resources.getColor(R.color.comedor_brown_primary, null))
         snackbar.addCallback(object : Snackbar.Callback() {
             override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
                 currentSnackbar = null
@@ -297,7 +297,7 @@ class DailyMenuFragment : Fragment() {
         
         binding.infoBannerText.text = message
         binding.infoBannerIcon.setImageResource(android.R.drawable.ic_dialog_info)
-        binding.infoBanner.setCardBackgroundColor(resources.getColor(R.color.nonna_accent_warm, null))
+        binding.infoBanner.setCardBackgroundColor(resources.getColor(R.color.comedor_accent_warm, null))
         
         // Mostrar con animación suave
         if (binding.infoBanner.visibility != View.VISIBLE) {

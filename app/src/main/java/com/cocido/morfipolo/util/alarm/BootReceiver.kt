@@ -7,7 +7,7 @@ import android.util.Log
 
 /**
  * BroadcastReceiver que escucha cuando el dispositivo se reinicia
- * y reprograma la alarma de las 9am.
+ * y reprograma las alarmas de las 9am y 10am.
  * 
  * Esto es necesario porque las alarmas programadas con AlarmManager
  * se pierden cuando el dispositivo se apaga.
@@ -24,12 +24,12 @@ class BootReceiver : BroadcastReceiver() {
             Intent.ACTION_LOCKED_BOOT_COMPLETED,
             "android.intent.action.QUICKBOOT_POWERON",
             "com.htc.intent.action.QUICKBOOT_POWERON" -> {
-                Log.d(TAG, "📱 Dispositivo reiniciado, reprogramando alarma...")
+                Log.d(TAG, "📱 Dispositivo reiniciado, reprogramando alarmas...")
                 
                 try {
-                    // Reprogramar la alarma diaria
+                    // Reprogramar las alarmas diarias (9am y 10am)
                     AlarmScheduler.scheduleDailyAlarm(context)
-                    Log.d(TAG, "✅ Alarma reprogramada después del reinicio")
+                    Log.d(TAG, "✅ Alarmas (9am y 10am) reprogramadas después del reinicio")
                 } catch (e: Exception) {
                     Log.e(TAG, "❌ Error al reprogramar alarma: ${e.message}", e)
                 }
@@ -40,4 +40,5 @@ class BootReceiver : BroadcastReceiver() {
         }
     }
 }
+
 

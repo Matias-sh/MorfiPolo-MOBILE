@@ -6,12 +6,12 @@
     android:viewportHeight="24">
     <!-- Icono de plato/bandeja para notificaciones de menú -->
     <path
-        android:fillColor="@color/nonna_brown_primary"
+        android:fillColor="@color/comedor_brown_primary"
         android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.41,0 -8,-3.59 -8,-8s3.59,-8 8,-8 8,3.59 8,8 -3.59,8 -8,8z"/>
     <path
-        android:fillColor="@color/nonna_brown_primary"
+        android:fillColor="@color/comedor_brown_primary"
         android:pathData="M8,10h8v2h-8z"/>
     <path
-        android:fillColor="@color/nonna_brown_primary"
+        android:fillColor="@color/comedor_brown_primary"
         android:pathData="M8,13h6v2h-6z"/>
 </vector>

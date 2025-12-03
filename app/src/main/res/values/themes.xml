@@ -1,14 +1,14 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme - Forzado a modo claro. -->
     <style name="Base.Theme.Morfipolo" parent="Theme.Material3.Light.NoActionBar">
-        <item name="colorPrimary">@color/nonna_brown_primary</item>
-        <item name="colorPrimaryVariant">@color/nonna_brown_dark</item>
-        <item name="colorSecondary">@color/nonna_accent_warm</item>
-        <item name="colorOnPrimary">@color/nonna_text_white</item>
-        <item name="colorOnSecondary">@color/nonna_text_white</item>
+        <item name="colorPrimary">@color/comedor_brown_primary</item>
+        <item name="colorPrimaryVariant">@color/comedor_brown_dark</item>
+        <item name="colorSecondary">@color/comedor_accent_warm</item>
+        <item name="colorOnPrimary">@color/comedor_text_white</item>
+        <item name="colorOnSecondary">@color/comedor_text_white</item>
         <item name="android:windowBackground">@drawable/background_gradient_main</item>
-        <item name="android:textColorPrimary">@color/nonna_text_primary</item>
-        <item name="android:textColorSecondary">@color/nonna_text_secondary</item>
+        <item name="android:textColorPrimary">@color/comedor_text_primary</item>
+        <item name="android:textColorSecondary">@color/comedor_text_secondary</item>
         <!-- Status bar: transparente para que se integre con el fondo -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
