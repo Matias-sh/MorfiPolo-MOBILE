@@ -123,11 +123,10 @@ class TokenManager(
      */
     private suspend fun refreshAccessTokenResult(): TokenResult {
         return try {
-            val dni = sessionManager.getCurrentUserDni()
             val refreshToken = sessionManager.getRefreshToken()
             
-            if (dni == null || refreshToken == null) {
-                Log.w(TAG, "No hay DNI o refresh token disponible")
+            if (refreshToken == null) {
+                Log.w(TAG, "No hay refresh token disponible")
                 return TokenResult.NoCredentials
             }
             
@@ -137,17 +136,11 @@ class TokenManager(
                 return TokenResult.TokenExpired
             }
             
-            val password = sessionManager.getCurrentUserPassword()
-            if (password == null) {
-                Log.w(TAG, "No hay password guardado para refresh token")
-                return TokenResult.NoCredentials
-            }
-            
             Log.d(TAG, "Intentando refrescar access token...")
             
             // Usar el servicio temporal para refresh (sin interceptor de auth)
-            val refreshApiService = apiServiceProvider(dni, password)
-            val request = RefreshTokenRequest(dni, password)
+            val refreshApiService = apiServiceProvider("", "")
+            val request = RefreshTokenRequest(refreshToken)
             val response = refreshApiService.refreshToken(request)
             
             if (response.isSuccessful) {

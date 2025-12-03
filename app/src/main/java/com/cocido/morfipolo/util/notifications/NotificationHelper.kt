@@ -26,7 +26,7 @@ class NotificationHelper(private val context: Context) {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val accentColor = ContextCompat.getColor(context, R.color.nonna_brown_primary)
+            val accentColor = ContextCompat.getColor(context, R.color.comedor_brown_primary)
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 context.getString(R.string.notification_channel_name),
@@ -163,7 +163,7 @@ class NotificationHelper(private val context: Context) {
             // Construir contenido del recordatorio con mejor formato
             val baseText = context.getString(R.string.daily_reminder_notification_text)
             val bigText = if (menuDescription != null && menuDescription.isNotEmpty()) {
-                "$baseText\n\n🍽️ Menú del día:\n$menuDescription"
+                "$baseText\n\n🍽️ Opciones disponibles:\n$menuDescription"
             } else {
                 baseText
             }
@@ -183,7 +183,7 @@ class NotificationHelper(private val context: Context) {
             }
 
             // Obtener color de acento de la app
-            val accentColor = ContextCompat.getColor(context, R.color.nonna_brown_primary)
+            val accentColor = ContextCompat.getColor(context, R.color.comedor_brown_primary)
 
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(smallIcon)
@@ -216,10 +216,98 @@ class NotificationHelper(private val context: Context) {
         }
     }
 
+    /**
+     * Muestra una notificación de seguimiento a las 10am
+     * para recordar al usuario que aún no votó
+     */
+    fun showFollowUpReminderNotification(menuDescription: String? = null) {
+        try {
+            // Verificar permisos de notificaciones en Android 13+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val hasPermission = android.content.pm.PackageManager.PERMISSION_GRANTED ==
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.POST_NOTIFICATIONS
+                    )
+                
+                if (!hasPermission) {
+                    android.util.Log.e("NotificationHelper", "❌ No hay permiso de notificaciones")
+                    return
+                }
+            }
+
+            val intent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                2, // ID diferente para el recordatorio de seguimiento
+                intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+
+            // Construir contenido del recordatorio de seguimiento con mensaje más urgente
+            val title = "⚠️ ¡Aún no elegiste tu comida!"
+            val baseText = "Quedan menos de una hora para anotarte. No te quedes sin comer hoy."
+            val bigText = if (menuDescription != null && menuDescription.isNotEmpty()) {
+                "$baseText\n\n🍽️ Opciones disponibles:\n$menuDescription\n\n⏰ Votá antes de las 11:00"
+            } else {
+                "$baseText\n\n⏰ Votá antes de las 11:00"
+            }
+
+            // Usar icono blanco para notificaciones
+            val smallIcon = R.drawable.ic_notification_white
+            
+            // Usar el logo de la app como large icon
+            val largeIcon = try {
+                BitmapFactory.decodeResource(
+                    context.resources,
+                    R.drawable.comedor_polo_logo
+                )
+            } catch (e: Exception) {
+                null
+            }
+
+            // Usar color naranja/rojo para urgencia
+            val urgentColor = ContextCompat.getColor(context, R.color.comedor_accent_warm)
+
+            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(smallIcon)
+                .setLargeIcon(largeIcon)
+                .setContentTitle(title)
+                .setContentText(baseText)
+                .setStyle(
+                    NotificationCompat.BigTextStyle()
+                        .bigText(bigText)
+                        .setSummaryText("Última oportunidad para votar")
+                )
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .setCategory(NotificationCompat.CATEGORY_REMINDER)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setWhen(System.currentTimeMillis())
+                .setShowWhen(true)
+                .setOnlyAlertOnce(false)
+                .setColor(urgentColor)
+                .setColorized(true)
+                .build()
+
+            notificationManager.notify(FOLLOWUP_NOTIFICATION_ID, notification)
+            
+            android.util.Log.d("NotificationHelper", "📢✅ Recordatorio de seguimiento (10AM) enviado exitosamente")
+        } catch (e: Exception) {
+            android.util.Log.e("NotificationHelper", "❌ Error al enviar notificación de seguimiento", e)
+        }
+    }
+
     companion object {
         private const val CHANNEL_ID = "menu_updates_channel"
         private const val NOTIFICATION_ID = 1
         private const val REMINDER_NOTIFICATION_ID = 2
+        private const val FOLLOWUP_NOTIFICATION_ID = 3
     }
 }
 

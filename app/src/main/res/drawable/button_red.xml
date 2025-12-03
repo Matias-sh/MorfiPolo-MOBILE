@@ -8,7 +8,7 @@
     </item>
     <item>
         <shape>
-            <solid android:color="@color/nonna_error" />
+            <solid android:color="@color/comedor_error" />
             <corners android:radius="16dp" />
         </shape>
     </item>

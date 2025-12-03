@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/nonna_beige_primary"
+    android:background="@color/comedor_beige_primary"
     tools:context=".ui.profile.ProfileFragment">
 
     <ScrollView
@@ -22,7 +22,7 @@
                 android:id="@+id/profileCardView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="@color/nonna_white_card"
+                app:cardBackgroundColor="@color/comedor_white_card"
                 app:cardCornerRadius="24dp"
                 app:cardElevation="4dp"
                 app:strokeWidth="0dp"
@@ -39,7 +39,7 @@
                         android:id="@+id/avatarCardView"
                         android:layout_width="120dp"
                         android:layout_height="120dp"
-                        app:cardBackgroundColor="@color/nonna_brown_primary"
+                        app:cardBackgroundColor="@color/comedor_brown_primary"
                         app:cardCornerRadius="60dp"
                         app:cardElevation="6dp"
                         app:strokeWidth="0dp"
@@ -53,7 +53,7 @@
                             android:layout_height="match_parent"
                             android:gravity="center"
                             android:text="M"
-                            android:textColor="@color/nonna_text_white"
+                            android:textColor="@color/comedor_text_white"
                             android:textSize="48sp"
                             android:textStyle="bold" />
                     </com.google.android.material.card.MaterialCardView>
@@ -64,7 +64,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="24dp"
                         android:text="Matías Federico"
-                        android:textColor="@color/nonna_text_primary"
+                        android:textColor="@color/comedor_text_primary"
                         android:textSize="26sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.02"
@@ -79,7 +79,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                app:cardBackgroundColor="@color/nonna_white_card"
+                app:cardBackgroundColor="@color/comedor_white_card"
                 app:cardCornerRadius="24dp"
                 app:cardElevation="4dp"
                 app:strokeWidth="0dp"
@@ -99,7 +99,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="68dp"
                         android:text="@string/change_password"
-                        android:textColor="@color/nonna_text_primary"
+                        android:textColor="@color/comedor_text_primary"
                         android:textSize="17sp"
                         android:textAlignment="textStart"
                         android:gravity="center_vertical|start"
@@ -107,10 +107,10 @@
                         android:paddingEnd="20dp"
                         app:icon="@android:drawable/ic_menu_manage"
                         app:iconGravity="textStart"
-                        app:iconTint="@color/nonna_brown_primary"
+                        app:iconTint="@color/comedor_brown_primary"
                         app:iconSize="24dp"
                         app:iconPadding="20dp"
-                        app:rippleColor="@color/nonna_beige_dark" />
+                        app:rippleColor="@color/comedor_beige_dark" />
 
                     <View
                         android:layout_width="match_parent"
@@ -125,7 +125,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="68dp"
                         android:text="@string/logout"
-                        android:textColor="@color/nonna_error"
+                        android:textColor="@color/comedor_error"
                         android:textSize="17sp"
                         android:textAlignment="textStart"
                         android:gravity="center_vertical|start"
@@ -133,10 +133,10 @@
                         android:paddingEnd="20dp"
                         app:icon="@android:drawable/ic_menu_close_clear_cancel"
                         app:iconGravity="textStart"
-                        app:iconTint="@color/nonna_error"
+                        app:iconTint="@color/comedor_error"
                         app:iconSize="24dp"
                         app:iconPadding="20dp"
-                        app:rippleColor="@color/nonna_error" />
+                        app:rippleColor="@color/comedor_error" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -157,7 +157,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Desarrollado por la Dirección de Ingeniería"
-                    android:textColor="@color/nonna_text_secondary"
+                    android:textColor="@color/comedor_text_secondary"
                     android:textSize="14sp"
                     android:layout_marginEnd="12dp"
                     android:gravity="center_vertical" />
