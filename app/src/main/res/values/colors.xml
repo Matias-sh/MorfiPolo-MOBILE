@@ -92,6 +92,7 @@
     
     <!-- Accessibility Colors -->
     <color name="error_red">#C85A5A</color>
+
     <color name="error_color">#C85A5A</color>
     <color name="warning_orange">#D4A574</color>
     <color name="info_blue">#8B6F47</color>

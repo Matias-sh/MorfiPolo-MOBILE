@@ -8,3 +8,5 @@ package com.cocido.morfipolo.data.remote
 class TemporaryServerException(message: String) : Exception(message)
 
 
+
+
