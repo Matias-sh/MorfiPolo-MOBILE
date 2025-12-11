@@ -38,14 +38,10 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Configurar status bar transparente para que se integre con el fondo
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            window.statusBarColor = android.graphics.Color.TRANSPARENT
-        }
+        // Configurar status bar con iconos oscuros (sin fullscreen para que funcione adjustPan)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
-                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            window.statusBarColor = getColor(R.color.comedor_beige_primary)
+            window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
         }
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -209,6 +205,25 @@ class LoginActivity : AppCompatActivity() {
             }
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
+        
+        // Scroll automático al botón cuando los campos reciben foco
+        binding.dniEditText.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                scrollToButton()
+            }
+        }
+        
+        binding.passwordEditText.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                scrollToButton()
+            }
+        }
+    }
+    
+    private fun scrollToButton() {
+        binding.scrollView.postDelayed({
+            binding.scrollView.smoothScrollTo(0, binding.loginButton.bottom)
+        }, 300) // Esperar a que el teclado aparezca
     }
 
     override fun onStart() {
