@@ -90,6 +90,26 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         // Actualizar widget cuando la app vuelve al foreground
         updateWidget()
+        
+        // CRÍTICO: Emitir broadcast para que los fragments refresquen sus datos
+        // Esto soluciona el bug de sincronización cuando el usuario vota desde la web
+        notifyMenuUpdated()
+    }
+    
+    /**
+     * Notifica a los fragments que deben refrescar el menú/votos.
+     * Soluciona el bug de sincronización web-app.
+     */
+    private fun notifyMenuUpdated() {
+        try {
+            val updateIntent = Intent("com.cocido.morfipolo.MENU_UPDATED").apply {
+                setPackage(packageName)
+            }
+            sendBroadcast(updateIntent)
+            android.util.Log.d("MainActivity", "📱 Broadcast MENU_UPDATED enviado para sincronizar votos")
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error al enviar broadcast de actualización", e)
+        }
     }
     
     private fun updateWidget() {

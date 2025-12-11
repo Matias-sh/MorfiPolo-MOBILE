@@ -5,8 +5,8 @@
     
     <!-- Comedor Color Palette - Beige, Brown, White -->
     <!-- Primary Browns -->
-    <color name="comedor_brown_primary">#8B6F47</color>
-    <color name="comedor_brown_dark">#6B5435</color>
+    <color name="comedor_brown_primary">#CA5905</color>
+    <color name="comedor_brown_dark">#CE5906</color>
     <color name="comedor_brown_light">#A6895F</color>
     <color name="comedor_brown_accent">#9D7A4F</color>
     

@@ -6,18 +6,32 @@ import android.content.Intent
 import android.os.PowerManager
 import android.util.Log
 import com.cocido.morfipolo.MorfipoloApplication
+import com.cocido.morfipolo.domain.model.Menu
 import com.cocido.morfipolo.util.notifications.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.util.*
 
 /**
- * BroadcastReceiver que recibe las alarmas diarias y envía notificaciones.
- * - 9:00 AM: Recordatorio general para votar
- * - 10:00 AM: Recordatorio de seguimiento (solo si no votó)
+ * BroadcastReceiver que recibe las alarmas diarias y envía notificaciones con lógica inteligente.
+ * 
+ * LÓGICA DE NOTIFICACIONES (siempre valida menú primero):
+ * 
+ * - 9:00 AM:  ¿Hay menú publicado? → NO → No hacer nada
+ *                                  → SÍ → Notificar + Guardar "notificado_9am=true"
+ * 
+ * - 9:30 AM:  ¿Hay menú publicado? → NO → No hacer nada
+ *                                  → SÍ → ¿Se notificó a las 9am? → SÍ → No hacer nada
+ *                                                                 → NO → Notificar (menú cargado tarde)
+ * 
+ * - 10:00 AM: ¿Hay menú publicado? → NO → No hacer nada
+ *                                  → SÍ → ¿Usuario ya votó? → SÍ → No hacer nada
+ *                                                           → NO → Notificar recordatorio urgente
+ * 
+ * REGLA FUNDAMENTAL: Sin menú publicado = sin notificación (aplica a todas las alarmas)
+ * 
  * Este receiver funciona incluso cuando la app está completamente cerrada.
  */
 class AlarmReceiver : BroadcastReceiver() {
@@ -25,6 +39,7 @@ class AlarmReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "AlarmReceiver"
         const val ACTION_REMINDER_9AM = "com.cocido.morfipolo.REMINDER_9AM"
+        const val ACTION_REMINDER_930AM = "com.cocido.morfipolo.REMINDER_930AM"
         const val ACTION_REMINDER_10AM = "com.cocido.morfipolo.REMINDER_10AM"
         // Mantener compatibilidad con alarmas anteriores
         const val ACTION_DAILY_REMINDER = "com.cocido.morfipolo.DAILY_REMINDER_ALARM"
@@ -37,13 +52,20 @@ class AlarmReceiver : BroadcastReceiver() {
         val action = intent?.action
         
         // Validar acción
-        if (action != ACTION_REMINDER_9AM && action != ACTION_REMINDER_10AM && action != ACTION_DAILY_REMINDER) {
+        val validActions = listOf(ACTION_REMINDER_9AM, ACTION_REMINDER_930AM, ACTION_REMINDER_10AM, ACTION_DAILY_REMINDER)
+        if (action !in validActions) {
             Log.w(TAG, "Acción desconocida: $action")
             return
         }
         
-        val isFollowUpReminder = action == ACTION_REMINDER_10AM
-        Log.d(TAG, "⏰ Alarma ${if (isFollowUpReminder) "10AM (seguimiento)" else "9AM"} recibida a las ${getCurrentTime()}")
+        val alarmType = when (action) {
+            ACTION_REMINDER_9AM, ACTION_DAILY_REMINDER -> "9AM"
+            ACTION_REMINDER_930AM -> "9:30AM"
+            ACTION_REMINDER_10AM -> "10AM"
+            else -> "UNKNOWN"
+        }
+        
+        Log.d(TAG, "⏰ Alarma $alarmType recibida a las ${getCurrentTime()}")
         
         // Usar goAsync() para extender el tiempo de ejecución del BroadcastReceiver
         val pendingResult = goAsync()
@@ -70,14 +92,13 @@ class AlarmReceiver : BroadcastReceiver() {
                     return@launch
                 }
                 
-                Log.d(TAG, "📅 Es $dayName, procesando alarma...")
+                Log.d(TAG, "📅 Es $dayName, procesando alarma $alarmType...")
                 
-                if (isFollowUpReminder) {
-                    // Alarma de 10AM: verificar si el usuario ya votó
-                    handleFollowUpReminder(context)
-                } else {
-                    // Alarma de 9AM: enviar recordatorio general
-                    sendNotification(context, isFollowUp = false)
+                // Procesar según el tipo de alarma
+                when (action) {
+                    ACTION_REMINDER_9AM, ACTION_DAILY_REMINDER -> handle9amReminder(context)
+                    ACTION_REMINDER_930AM -> handle930amReminder(context)
+                    ACTION_REMINDER_10AM -> handle10amReminder(context)
                 }
                 
             } catch (e: Exception) {
@@ -99,60 +120,121 @@ class AlarmReceiver : BroadcastReceiver() {
     }
     
     /**
-     * Maneja el recordatorio de seguimiento de las 10AM.
-     * Solo envía notificación si el usuario no ha votado hoy.
+     * Maneja la alarma de las 9:00 AM.
+     * Solo notifica si hay un menú publicado.
      */
-    private suspend fun handleFollowUpReminder(context: Context) {
+    private suspend fun handle9amReminder(context: Context) {
+        Log.d(TAG, "📍 Procesando alarma 9:00 AM...")
+        
+        val alarmPrefs = AlarmPreferences(context)
+        
+        // 1. Verificar si hay menú publicado
+        val menu = getTodayMenu(context)
+        if (menu == null) {
+            Log.d(TAG, "❌ No hay menú publicado para hoy, NO se envía notificación de 9am")
+            return
+        }
+        
+        Log.d(TAG, "✅ Menú encontrado: ${menu.description}")
+        
+        // 2. Enviar notificación
+        val menuContent = formatMenuOptions(menu)
+        sendNotification(context, isFollowUp = false, menuDescription = menuContent)
+        
+        // 3. Marcar que se envió la notificación de 9am
+        alarmPrefs.setNotified9am()
+        Log.d(TAG, "✅ Notificación de 9am enviada y registrada")
+    }
+    
+    /**
+     * Maneja la alarma de las 9:30 AM.
+     * Solo notifica si:
+     * - Hay un menú publicado
+     * - NO se envió notificación a las 9am (menú cargado tarde)
+     */
+    private suspend fun handle930amReminder(context: Context) {
+        Log.d(TAG, "📍 Procesando alarma 9:30 AM...")
+        
+        val alarmPrefs = AlarmPreferences(context)
+        
+        // 1. Verificar si ya se envió notificación antes (9am o 9:30am)
+        if (alarmPrefs.wasAnyReminderNotifiedToday()) {
+            Log.d(TAG, "⏭️ Ya se envió notificación de recordatorio hoy, NO se envía notificación de 9:30am")
+            return
+        }
+        
+        // 2. Verificar si hay menú publicado
+        val menu = getTodayMenu(context)
+        if (menu == null) {
+            Log.d(TAG, "❌ No hay menú publicado para hoy, NO se envía notificación de 9:30am")
+            return
+        }
+        
+        Log.d(TAG, "✅ Menú encontrado (cargado después de las 9am): ${menu.description}")
+        
+        // 3. Enviar notificación (el menú se cargó entre las 9am y 9:30am)
+        val menuContent = formatMenuOptions(menu)
+        sendNotification(context, isFollowUp = false, menuDescription = menuContent)
+        
+        // 4. Marcar que se envió la notificación de 9:30am
+        alarmPrefs.setNotified930am()
+        Log.d(TAG, "✅ Notificación de 9:30am enviada y registrada (menú cargado tarde)")
+    }
+    
+    /**
+     * Maneja la alarma de las 10:00 AM.
+     * Solo notifica si:
+     * - Hay un menú publicado
+     * - El usuario NO ha votado
+     */
+    private suspend fun handle10amReminder(context: Context) {
+        Log.d(TAG, "📍 Procesando alarma 10:00 AM...")
+        
+        val alarmPrefs = AlarmPreferences(context)
+        
+        // 1. Verificar si ya se envió notificación de 10am
+        if (alarmPrefs.wasNotified10am()) {
+            Log.d(TAG, "⏭️ Ya se envió notificación de 10am hoy")
+            return
+        }
+        
+        // 2. Verificar si hay menú publicado
+        val menu = getTodayMenu(context)
+        if (menu == null) {
+            Log.d(TAG, "❌ No hay menú publicado para hoy, NO se envía recordatorio de 10am")
+            return
+        }
+        
+        // 3. Verificar si el usuario ya votó
+        val app = context.applicationContext as? MorfipoloApplication
+        if (app == null) {
+            Log.w(TAG, "No se pudo obtener MorfipoloApplication")
+            return
+        }
+        
+        val userId = app.sessionManager.getCurrentUserId()
+        if (userId == null) {
+            Log.d(TAG, "⚠️ Usuario no logueado, no se puede verificar voto")
+            return
+        }
+        
         try {
-            val app = context.applicationContext as? MorfipoloApplication
-            if (app == null) {
-                Log.w(TAG, "No se pudo obtener MorfipoloApplication")
-                return
-            }
-            
-            // Verificar si el usuario está logueado
-            val userId = app.sessionManager.getCurrentUserId()
-            if (userId == null) {
-                Log.d(TAG, "⚠️ Usuario no logueado, no se envía recordatorio de seguimiento")
-                return
-            }
-            
-            // Obtener el menú del día
-            val today = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault()).apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }.time
-            
-            val menu = app.menuRepository.getMenuByDate(today)
-            if (menu == null) {
-                Log.d(TAG, "⚠️ No hay menú para hoy, no se envía recordatorio de seguimiento")
-                return
-            }
-            
-            // Verificar si el usuario ya votó
             val userVote = app.voteRepository.getUserVoteForMenu(menu.id, userId)
             
             if (userVote != null) {
-                Log.d(TAG, "✅ Usuario ya votó (voto: ${userVote.option.name}), no se envía recordatorio")
+                Log.d(TAG, "✅ Usuario ya votó (opción: ${userVote.option.name}), NO se envía recordatorio de 10am")
                 return
             }
             
-            // El usuario NO ha votado, enviar recordatorio de seguimiento
-            Log.d(TAG, "⚠️ Usuario NO ha votado, enviando recordatorio de seguimiento...")
+            // 4. El usuario NO ha votado - enviar recordatorio urgente
+            Log.d(TAG, "⚠️ Usuario NO ha votado, enviando recordatorio urgente de 10am...")
             
-            // Formatear las opciones del menú para mostrar en la notificación
-            val options = menu.getOptionsOrEmpty()
-            val menuContent = if (options.isNotEmpty()) {
-                options.mapIndexed { index, option -> 
-                    "${index + 1}. ${option.name}"
-                }.joinToString("\n")
-            } else {
-                menu.description
-            }
-            
+            val menuContent = formatMenuOptions(menu)
             sendNotification(context, isFollowUp = true, menuDescription = menuContent)
+            
+            // 5. Marcar que se envió la notificación de 10am
+            alarmPrefs.setNotified10am()
+            Log.d(TAG, "✅ Recordatorio urgente de 10am enviado y registrado")
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error al verificar voto del usuario: ${e.message}", e)
@@ -161,49 +243,10 @@ class AlarmReceiver : BroadcastReceiver() {
     }
     
     /**
-     * Envía la notificación del recordatorio diario.
-     * @param isFollowUp Si es true, es el recordatorio de seguimiento (10AM)
-     * @param menuDescription Descripción del menú (opcional)
+     * Obtiene el menú del día actual.
+     * Devuelve null si no hay menú o es un borrador.
      */
-    private suspend fun sendNotification(context: Context, isFollowUp: Boolean, menuDescription: String? = null) {
-        try {
-            // Si no tenemos descripción del menú, intentar obtenerla
-            val finalMenuDescription = menuDescription ?: tryGetTodayMenuDescription(context)
-            
-            // Enviar notificación
-            val notificationHelper = NotificationHelper(context)
-            
-            if (isFollowUp) {
-                notificationHelper.showFollowUpReminderNotification(finalMenuDescription)
-            } else {
-                notificationHelper.showDailyReminderNotification(finalMenuDescription)
-            }
-            
-            Log.d(TAG, "✅✅✅ Notificación ${if (isFollowUp) "de seguimiento" else "diaria"} enviada exitosamente")
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error al enviar notificación: ${e.message}", e)
-            
-            // Intentar enviar notificación genérica como fallback
-            try {
-                val notificationHelper = NotificationHelper(context)
-                if (isFollowUp) {
-                    notificationHelper.showFollowUpReminderNotification(null)
-                } else {
-                    notificationHelper.showDailyReminderNotification(null)
-                }
-                Log.d(TAG, "✅ Notificación genérica enviada como fallback")
-            } catch (e2: Exception) {
-                Log.e(TAG, "❌ Error al enviar notificación fallback: ${e2.message}", e2)
-            }
-        }
-    }
-    
-    /**
-     * Intenta obtener las opciones del menú del día formateadas.
-     * Devuelve null si no se puede obtener (sin sesión, sin red, etc.)
-     */
-    private suspend fun tryGetTodayMenuDescription(context: Context): String? {
+    private suspend fun getTodayMenu(context: Context): Menu? {
         return try {
             val app = context.applicationContext as? MorfipoloApplication
             if (app == null) {
@@ -211,7 +254,6 @@ class AlarmReceiver : BroadcastReceiver() {
                 return null
             }
             
-            // Obtener fecha de hoy
             val today = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault()).apply {
                 set(Calendar.HOUR_OF_DAY, 0)
                 set(Calendar.MINUTE, 0)
@@ -219,29 +261,53 @@ class AlarmReceiver : BroadcastReceiver() {
                 set(Calendar.MILLISECOND, 0)
             }.time
             
-            // Intentar obtener el menú del día
             val menu = app.menuRepository.getMenuByDate(today)
             
+            // Solo devolver menú si está publicado (no draft)
             if (menu != null && menu.status != "draft") {
-                Log.d(TAG, "📋 Menú encontrado: ${menu.description}")
-                
-                // Formatear las opciones del menú
-                val options = menu.getOptionsOrEmpty()
-                if (options.isNotEmpty()) {
-                    options.mapIndexed { index, option -> 
-                        "${index + 1}. ${option.name}"
-                    }.joinToString("\n")
-                } else {
-                    menu.description
-                }
+                menu
             } else {
-                Log.d(TAG, "📋 No hay menú disponible para hoy")
                 null
             }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error al obtener menú del día: ${e.message}")
+            null
+        }
+    }
+    
+    /**
+     * Formatea las opciones del menú para mostrar en la notificación.
+     */
+    private fun formatMenuOptions(menu: Menu): String {
+        val options = menu.getOptionsOrEmpty()
+        return if (options.isNotEmpty()) {
+            options.mapIndexed { index, option -> 
+                "${index + 1}. ${option.name}"
+            }.joinToString("\n")
+        } else {
+            menu.description
+        }
+    }
+    
+    /**
+     * Envía la notificación del recordatorio.
+     * @param isFollowUp Si es true, es el recordatorio urgente (10AM)
+     * @param menuDescription Descripción/opciones del menú
+     */
+    private fun sendNotification(context: Context, isFollowUp: Boolean, menuDescription: String?) {
+        try {
+            val notificationHelper = NotificationHelper(context)
+            
+            if (isFollowUp) {
+                notificationHelper.showFollowUpReminderNotification(menuDescription)
+            } else {
+                notificationHelper.showDailyReminderNotification(menuDescription)
+            }
+            
+            Log.d(TAG, "✅✅✅ Notificación ${if (isFollowUp) "urgente (10am)" else "de recordatorio"} enviada exitosamente")
             
         } catch (e: Exception) {
-            Log.w(TAG, "No se pudo obtener menú (posible falta de sesión): ${e.message}")
-            null
+            Log.e(TAG, "❌ Error al enviar notificación: ${e.message}", e)
         }
     }
     
@@ -258,5 +324,3 @@ class AlarmReceiver : BroadcastReceiver() {
         )
     }
 }
-
-
