@@ -271,12 +271,22 @@ class MenuWidgetProvider : AppWidgetProvider() {
                     }
                 }
 
-                if (authResult !is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.Authenticated) {
-                    android.util.Log.w(TAG, "updateWidget: Autenticación fallida")
-                    showNotLoggedInState(context, appWidgetManager, appWidgetId)
-                    return@launch
+                when (authResult) {
+                    is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.Authenticated -> {
+                        android.util.Log.d(TAG, "updateWidget: Autenticación exitosa")
+                    }
+                    is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.TemporaryError -> {
+                        android.util.Log.w(TAG, "updateWidget: Error temporal de autenticación, continuando...")
+                        // Continuar intentando cargar el menú
+                    }
+                    is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.RefreshFailed,
+                    is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.NotLoggedIn,
+                    null -> {
+                        android.util.Log.w(TAG, "updateWidget: Autenticación fallida")
+                        showNotLoggedInState(context, appWidgetManager, appWidgetId)
+                        return@launch
+                    }
                 }
-                android.util.Log.d(TAG, "updateWidget: Autenticación exitosa")
 
                 // Obtener menú del día
                 android.util.Log.d(TAG, "updateWidget: Obteniendo menú del día...")
@@ -491,9 +501,9 @@ class MenuWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widgetStatusTextView, statusText)
             try {
                 val statusColor = if (isActuallyOpen) {
-                    0xFF6B8E23.toInt() // Verde Nonna
+                    0xFF6B8E23.toInt() // Verde Comedor
                 } else {
-                    0xFFC85A5A.toInt() // Rojo Nonna
+                    0xFFC85A5A.toInt() // Rojo Comedor
                 }
                 views.setInt(R.id.widgetStatusTextView, "setBackgroundColor", statusColor)
                 android.util.Log.d(TAG, "showMenuState: Estado del menú configurado: $statusText")
@@ -628,7 +638,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
                 } catch (e: Exception) {
                     android.util.Log.d(TAG, "configureOption: Error al configurar drawable de botón rojo, usando color sólido")
                     try {
-                        views.setInt(optionButtonId, "setBackgroundColor", 0xFFC85A5A.toInt()) // Rojo Nonna
+                        views.setInt(optionButtonId, "setBackgroundColor", 0xFFC85A5A.toInt()) // Rojo Comedor
                     } catch (e2: Exception) {
                         android.util.Log.e(TAG, "configureOption: Error al configurar color de botón rojo", e2)
                     }
@@ -654,12 +664,12 @@ class MenuWidgetProvider : AppWidgetProvider() {
                         views.setInt(optionButtonId, "setBackgroundResource", R.drawable.button_primary_solid)
                     } else {
                         // Usar color gris cuando no se puede votar
-                        views.setInt(optionButtonId, "setBackgroundColor", 0xFFA1887F.toInt()) // Gris Nonna
+                        views.setInt(optionButtonId, "setBackgroundColor", 0xFFA1887F.toInt()) // Gris Comedor
                     }
                 } catch (e: Exception) {
                     android.util.Log.d(TAG, "configureOption: Error al configurar drawable de botón, usando color sólido")
                     try {
-                        val buttonColor = if (canVote) 0xFF8B6F47.toInt() else 0xFFA1887F.toInt() // Marrón Nonna o Gris
+                        val buttonColor = if (canVote) 0xFF8B6F47.toInt() else 0xFFA1887F.toInt() // Marrón Comedor o Gris
                         views.setInt(optionButtonId, "setBackgroundColor", buttonColor)
                     } catch (e2: Exception) {
                         android.util.Log.e(TAG, "configureOption: Error al configurar color de botón", e2)
@@ -961,7 +971,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
             // Mostrar el mensaje temporalmente en el widgetNoMenuTextView
             views.setViewVisibility(R.id.widgetNoMenuTextView, View.VISIBLE)
             views.setTextViewText(R.id.widgetNoMenuTextView, message)
-            views.setTextColor(R.id.widgetNoMenuTextView, context.resources.getColor(R.color.nonna_error, null))
+            views.setTextColor(R.id.widgetNoMenuTextView, context.resources.getColor(R.color.comedor_error, null))
             appWidgetManager.updateAppWidget(appWidgetId, views)
             
             // Ocultar el mensaje después de 5 segundos

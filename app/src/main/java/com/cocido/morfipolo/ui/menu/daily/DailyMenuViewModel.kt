@@ -2,6 +2,7 @@ package com.cocido.morfipolo.ui.menu.daily
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cocido.morfipolo.data.remote.SessionExpiredException
 import com.cocido.morfipolo.data.repository.MenuRepository
 import com.cocido.morfipolo.data.repository.UserRepository
 import com.cocido.morfipolo.data.repository.VoteRepository
@@ -20,6 +21,13 @@ class DailyMenuViewModel(
 
     private val _uiState = MutableStateFlow<DailyMenuUiState>(DailyMenuUiState.Loading)
     val uiState: StateFlow<DailyMenuUiState> = _uiState
+    
+    // Estado para notificar cuando la sesión expira
+    private val _sessionExpired = MutableStateFlow<Boolean>(false)
+    val sessionExpired: StateFlow<Boolean> = _sessionExpired
+    
+    // Flag para evitar operaciones duplicadas (doble-click)
+    private var isOperationInProgress = false
 
     private var currentDate = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, 0)
@@ -40,53 +48,72 @@ class DailyMenuViewModel(
         _uiState.value = DailyMenuUiState.Loading
 
         viewModelScope.launch {
-            try {
-                val userId = userRepository.getCurrentUser()?.id
-                if (userId == null) {
-                    android.util.Log.e("DailyMenuViewModel", "No hay usuario logueado")
-                    _uiState.value = DailyMenuUiState.Error("No hay usuario logueado")
-                    return@launch
+            loadMenuForDateInternal(date)
+        }
+    }
+    
+    /**
+     * Carga interna del menú sin cambiar estado de loading.
+     * Útil para recargar después de operaciones de voto.
+     */
+    private suspend fun loadMenuForDateInternal(date: Date) {
+        try {
+            val userId = userRepository.getCurrentUser()?.id
+            if (userId == null) {
+                android.util.Log.e("DailyMenuViewModel", "No hay usuario logueado")
+                _uiState.value = DailyMenuUiState.Error("No hay usuario logueado")
+                return
+            }
+            
+            android.util.Log.d("DailyMenuViewModel", "Obteniendo menú para fecha: ${currentDate.time}")
+            val menu = menuRepository.getMenuByDate(currentDate.time)
+
+            if (menu != null) {
+                android.util.Log.d("DailyMenuViewModel", "Menú encontrado: ${menu.id}, opciones: ${menu.getOptionsOrEmpty().size}")
+                // Obtener voto del usuario para este menú - FORZAR refresh desde API
+                val userVote = voteRepository.getUserVoteForMenu(menu.id, userId)
+                android.util.Log.d("DailyMenuViewModel", "Voto del usuario: ${if (userVote != null) "Sí (${userVote.id}, opción: ${userVote.option.id})" else "No"}")
+                val isToday = isMenuToday(menu)
+                val isWithinTime = isWithinSelectionTime(menu)
+                val isActuallyOpen = menu.status == "open" && isWithinTime && isToday
+                
+                // Determinar mensaje informativo si el menú está cerrado (solo si no tiene voto)
+                val infoMessage = if (!isActuallyOpen && isToday && userVote == null) {
+                    "El horario de selección ha finalizado. Solo puedes votar entre las 08:00 y las 11:00."
+                } else {
+                    null
                 }
                 
-                android.util.Log.d("DailyMenuViewModel", "Obteniendo menú para fecha: ${currentDate.time}")
-                val menu = menuRepository.getMenuByDate(currentDate.time)
-
-                if (menu != null) {
-                       android.util.Log.d("DailyMenuViewModel", "Menú encontrado: ${menu.id}, opciones: ${menu.getOptionsOrEmpty().size}")
-                    // Obtener voto del usuario para este menú
-                    val userVote = voteRepository.getUserVoteForMenu(menu.id, userId)
-                    android.util.Log.d("DailyMenuViewModel", "Voto del usuario: ${if (userVote != null) "Sí (${userVote.id}, opción: ${userVote.option.id})" else "No"}")
-                    val isToday = isMenuToday(menu)
-                    val isWithinTime = isWithinSelectionTime(menu)
-                    val isActuallyOpen = menu.status == "open" && isWithinTime && isToday
-                    
-                    // Determinar mensaje informativo si el menú está cerrado
-                    val infoMessage = if (!isActuallyOpen && isToday) {
-                        "El horario de selección ha finalizado. Solo puedes votar entre las 08:00 y las 11:00."
-                    } else {
-                        null
-                    }
-                    
-                    _uiState.value = DailyMenuUiState.Success(
-                        menu = menu,
-                        userVote = userVote,
-                        isWithinTime = isWithinTime && isToday,
-                        isActuallyOpen = isActuallyOpen,
-                        infoMessage = infoMessage
-                    )
-                } else {
-                    android.util.Log.w("DailyMenuViewModel", "No se encontró menú para la fecha")
-                    _uiState.value = DailyMenuUiState.Error("No hay menú disponible para esta fecha")
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("DailyMenuViewModel", "Error al cargar menú", e)
-                _uiState.value = DailyMenuUiState.Error("Error al cargar el menú: ${e.message}")
+                _uiState.value = DailyMenuUiState.Success(
+                    menu = menu,
+                    userVote = userVote,
+                    isWithinTime = isWithinTime && isToday,
+                    isActuallyOpen = isActuallyOpen,
+                    infoMessage = infoMessage
+                )
+            } else {
+                android.util.Log.w("DailyMenuViewModel", "No se encontró menú para la fecha")
+                _uiState.value = DailyMenuUiState.Error("No hay menú disponible para esta fecha")
             }
+        } catch (e: SessionExpiredException) {
+            android.util.Log.w("DailyMenuViewModel", "Sesión expirada al cargar menú")
+            _sessionExpired.value = true
+            _uiState.value = DailyMenuUiState.Error(e.message ?: "Sesión expirada. Por favor, inicia sesión nuevamente.")
+        } catch (e: Exception) {
+            android.util.Log.e("DailyMenuViewModel", "Error al cargar menú", e)
+            _uiState.value = DailyMenuUiState.Error("No se pudo cargar el menú. Intenta de nuevo.")
         }
     }
 
     fun selectOption(optionId: String) {
+        // Evitar operaciones duplicadas (doble-click)
+        if (isOperationInProgress) {
+            android.util.Log.d("DailyMenuViewModel", "⚠️ Operación en progreso, ignorando click")
+            return
+        }
+        
         viewModelScope.launch {
+            isOperationInProgress = true
             try {
                 val state = _uiState.value
                 if (state is DailyMenuUiState.Success) {
@@ -98,6 +125,7 @@ class DailyMenuViewModel(
                                 infoMessage = "El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00)."
                             )
                         }
+                        isOperationInProgress = false
                         return@launch
                     }
                     
@@ -106,73 +134,143 @@ class DailyMenuViewModel(
                     
                     if (userId == null) {
                         _uiState.value = DailyMenuUiState.Error("No hay usuario logueado")
+                        isOperationInProgress = false
                         return@launch
                     }
                     
+                    android.util.Log.d("DailyMenuViewModel", "🗳️ Iniciando selección de opción: $optionId")
+                    
                     // Usar createVoteOrReplace que elimina el voto existente si hay uno
                     val result = voteRepository.createVoteOrReplace(optionId, menu.id, userId)
-                    result.getOrNull()?.let {
-                        // Recargar menú para obtener el nuevo voto
-                        loadMenuForDate(currentDate.time)
-                    } ?: run {
-                        val exception = result.exceptionOrNull()
-                        val errorMessage = exception?.message ?: "Error al seleccionar opción"
-                        // Si el error es por horario cerrado, mostrar como mensaje informativo
-                        if (errorMessage.contains("cerrado", ignoreCase = true) ||
-                            errorMessage.contains("horario", ignoreCase = true) ||
-                            errorMessage.contains("time", ignoreCase = true)) {
+                    
+                    val exception = result.exceptionOrNull()
+                    val errorMessage = exception?.message
+                    
+                    if (result.isSuccess) {
+                        android.util.Log.d("DailyMenuViewModel", "✅ Voto registrado exitosamente")
+                    } else {
+                        android.util.Log.w("DailyMenuViewModel", "⚠️ Error al votar: $errorMessage")
+                        
+                        // Manejar errores de sesión
+                        if (exception is SessionExpiredException ||
+                            errorMessage?.contains("sesión", ignoreCase = true) == true ||
+                            errorMessage?.contains("session", ignoreCase = true) == true) {
+                            _sessionExpired.value = true
+                            _uiState.value = DailyMenuUiState.Error(errorMessage ?: "Sesión expirada")
+                            isOperationInProgress = false
+                            return@launch
+                        }
+                        
+                        // Mostrar mensaje de error si es por horario
+                        if (errorMessage?.contains("cerrado", ignoreCase = true) == true ||
+                            errorMessage?.contains("horario", ignoreCase = true) == true ||
+                            errorMessage?.contains("time", ignoreCase = true) == true ||
+                            errorMessage?.contains("08:00", ignoreCase = true) == true) {
                             val currentState = _uiState.value
                             if (currentState is DailyMenuUiState.Success) {
                                 _uiState.value = currentState.copy(infoMessage = errorMessage)
                             }
-                        } else {
-                            _uiState.value = DailyMenuUiState.Error(errorMessage)
                         }
                     }
+                    
+                    // CRÍTICO: Siempre recargar el menú para sincronizar estado con servidor
+                    // Esto soluciona bugs de estado desincronizado
+                    android.util.Log.d("DailyMenuViewModel", "🔄 Recargando menú para sincronizar estado...")
+                    loadMenuForDateInternal(currentDate.time)
                 }
+            } catch (e: SessionExpiredException) {
+                android.util.Log.w("DailyMenuViewModel", "Sesión expirada al seleccionar opción")
+                _sessionExpired.value = true
+                _uiState.value = DailyMenuUiState.Error(e.message ?: "Sesión expirada. Por favor, inicia sesión nuevamente.")
             } catch (e: Exception) {
-                _uiState.value = DailyMenuUiState.Error("Error: ${e.message}")
+                android.util.Log.e("DailyMenuViewModel", "Error al seleccionar opción", e)
+                // Aún así recargar para sincronizar estado
+                loadMenuForDateInternal(currentDate.time)
+            } finally {
+                isOperationInProgress = false
             }
         }
     }
 
     fun deleteVote() {
+        // Evitar operaciones duplicadas (doble-click)
+        if (isOperationInProgress) {
+            android.util.Log.d("DailyMenuViewModel", "⚠️ Operación en progreso, ignorando click")
+            return
+        }
+        
         viewModelScope.launch {
-            val state = _uiState.value
-            if (state is DailyMenuUiState.Success) {
-                // Validar horario antes de intentar eliminar
-                if (!state.isActuallyOpen) {
-                    val currentState = _uiState.value
-                    if (currentState is DailyMenuUiState.Success) {
-                        _uiState.value = currentState.copy(
-                            infoMessage = "El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00)."
-                        )
-                    }
-                    return@launch
-                }
-                
-                val userVote = state.userVote
-                if (userVote != null) {
-                    val result = voteRepository.deleteVote(userVote.id)
-                    result.getOrNull()?.let {
-                        // Recargar menú
-                        loadMenuForDate(currentDate.time)
-                    } ?: run {
-                        val exception = result.exceptionOrNull()
-                        val errorMessage = exception?.message ?: "Error al eliminar voto"
-                        // Si el error es por horario cerrado, mostrar como mensaje informativo
-                        if (errorMessage.contains("cerrado", ignoreCase = true) ||
-                            errorMessage.contains("horario", ignoreCase = true) ||
-                            errorMessage.contains("time", ignoreCase = true)) {
-                            val currentState = _uiState.value
-                            if (currentState is DailyMenuUiState.Success) {
-                                _uiState.value = currentState.copy(infoMessage = errorMessage)
-                            }
-                        } else {
-                            _uiState.value = DailyMenuUiState.Error(errorMessage)
+            isOperationInProgress = true
+            try {
+                val state = _uiState.value
+                if (state is DailyMenuUiState.Success) {
+                    // Validar horario antes de intentar eliminar
+                    if (!state.isActuallyOpen) {
+                        val currentState = _uiState.value
+                        if (currentState is DailyMenuUiState.Success) {
+                            _uiState.value = currentState.copy(
+                                infoMessage = "El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00)."
+                            )
                         }
+                        isOperationInProgress = false
+                        return@launch
+                    }
+                    
+                    val userVote = state.userVote
+                    if (userVote != null) {
+                        android.util.Log.d("DailyMenuViewModel", "🗑️ Iniciando eliminación de voto: ${userVote.id}")
+                        
+                        val result = voteRepository.deleteVote(userVote.id)
+                        
+                        val exception = result.exceptionOrNull()
+                        val errorMessage = exception?.message
+                        
+                        if (result.isSuccess) {
+                            android.util.Log.d("DailyMenuViewModel", "✅ Voto eliminado exitosamente")
+                        } else {
+                            android.util.Log.w("DailyMenuViewModel", "⚠️ Error al eliminar voto: $errorMessage")
+                            
+                            // Manejar errores de sesión
+                            if (exception is SessionExpiredException ||
+                                errorMessage?.contains("sesión", ignoreCase = true) == true ||
+                                errorMessage?.contains("session", ignoreCase = true) == true) {
+                                _sessionExpired.value = true
+                                _uiState.value = DailyMenuUiState.Error(errorMessage ?: "Sesión expirada")
+                                isOperationInProgress = false
+                                return@launch
+                            }
+                            
+                            // Mostrar mensaje de error si es por horario
+                            if (errorMessage?.contains("cerrado", ignoreCase = true) == true ||
+                                errorMessage?.contains("horario", ignoreCase = true) == true ||
+                                errorMessage?.contains("time", ignoreCase = true) == true ||
+                                errorMessage?.contains("08:00", ignoreCase = true) == true) {
+                                val currentState = _uiState.value
+                                if (currentState is DailyMenuUiState.Success) {
+                                    _uiState.value = currentState.copy(infoMessage = errorMessage)
+                                }
+                            }
+                        }
+                        
+                        // CRÍTICO: Siempre recargar el menú para sincronizar estado con servidor
+                        android.util.Log.d("DailyMenuViewModel", "🔄 Recargando menú para sincronizar estado...")
+                        loadMenuForDateInternal(currentDate.time)
+                    } else {
+                        android.util.Log.w("DailyMenuViewModel", "⚠️ No hay voto para eliminar")
+                        // Recargar de todos modos por si hay desincronización
+                        loadMenuForDateInternal(currentDate.time)
                     }
                 }
+            } catch (e: SessionExpiredException) {
+                android.util.Log.w("DailyMenuViewModel", "Sesión expirada al eliminar voto")
+                _sessionExpired.value = true
+                _uiState.value = DailyMenuUiState.Error(e.message ?: "Sesión expirada. Por favor, inicia sesión nuevamente.")
+            } catch (e: Exception) {
+                android.util.Log.e("DailyMenuViewModel", "Error al eliminar voto", e)
+                // Aún así recargar para sincronizar estado
+                loadMenuForDateInternal(currentDate.time)
+            } finally {
+                isOperationInProgress = false
             }
         }
     }

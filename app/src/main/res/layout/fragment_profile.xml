@@ -4,179 +4,172 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/nonna_beige_primary"
+    android:background="@color/food_background_light"
     tools:context=".ui.profile.ProfileFragment">
+
+    <View
+        android:id="@+id/headerBackground"
+        android:layout_width="match_parent"
+        android:layout_height="240dp"
+        android:background="@drawable/background_rect_curved_bottom"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true"
-        android:fadeScrollbars="false">
+        android:fillViewport="true">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="20dp">
+            android:orientation="vertical"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="80dp"
+            android:paddingBottom="40dp">
 
+            <!-- Profile Card -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/profileCardView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="@color/nonna_white_card"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="4dp"
-                app:strokeWidth="0dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent">
+                style="@style/Widget.Morfipolo.Card"
+                app:contentPadding="32dp">
 
-                <androidx.constraintlayout.widget.ConstraintLayout
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="36dp">
+                    android:orientation="vertical"
+                    android:gravity="center">
 
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/avatarCardView"
-                        android:layout_width="120dp"
-                        android:layout_height="120dp"
-                        app:cardBackgroundColor="@color/nonna_brown_primary"
-                        app:cardCornerRadius="60dp"
-                        app:cardElevation="6dp"
-                        app:strokeWidth="0dp"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent">
-
+                        android:layout_width="100dp"
+                        android:layout_height="100dp"
+                        app:cardBackgroundColor="@color/food_secondary_green_light"
+                        app:cardCornerRadius="50dp"
+                        app:cardElevation="0dp">
+                        
                         <TextView
                             android:id="@+id/avatarTextView"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:gravity="center"
                             android:text="M"
-                            android:textColor="@color/nonna_text_white"
-                            android:textSize="48sp"
+                            android:textColor="@color/food_secondary_green_dark"
+                            android:textSize="40sp"
                             android:textStyle="bold" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <TextView
                         android:id="@+id/nameTextView"
+                        style="@style/TextAppearance.Morfipolo.Headline"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
+                        android:layout_marginTop="20dp"
                         android:text="Matías Federico"
-                        android:textColor="@color/nonna_text_primary"
-                        android:textSize="26sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.02"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/avatarCardView" />
-                </androidx.constraintlayout.widget.ConstraintLayout>
+                        android:textSize="22sp"
+                        android:gravity="center" />
+                        
+                    <TextView
+                         android:layout_width="wrap_content"
+                         android:layout_height="wrap_content"
+                         android:layout_marginTop="4dp"
+                         android:text="Usuario"
+                         android:textSize="14sp"
+                         android:textColor="@color/food_text_secondary" />
+
+                </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:layout_marginStart="8dp"
+                android:text="Configuración"
+                style="@style/TextAppearance.Morfipolo.Subhead"
+                android:textSize="18sp" />
+
+            <!-- Options -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/optionsCardView"
+                style="@style/Widget.Morfipolo.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                app:cardBackgroundColor="@color/nonna_white_card"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="4dp"
-                app:strokeWidth="0dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/profileCardView">
+                android:layout_marginTop="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="8dp">
+                    android:orientation="vertical">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/changePasswordButton"
                         style="@style/Widget.Material3.Button.TextButton"
                         android:layout_width="match_parent"
-                        android:layout_height="68dp"
+                        android:layout_height="60dp"
                         android:text="@string/change_password"
-                        android:textColor="@color/nonna_text_primary"
-                        android:textSize="17sp"
-                        android:textAlignment="textStart"
-                        android:gravity="center_vertical|start"
-                        android:paddingStart="20dp"
-                        android:paddingEnd="20dp"
+                        android:textColor="@color/food_text_primary"
+                        android:gravity="start|center_vertical"
+                        android:paddingStart="24dp"
                         app:icon="@android:drawable/ic_menu_manage"
-                        app:iconGravity="textStart"
-                        app:iconTint="@color/nonna_brown_primary"
-                        app:iconSize="24dp"
-                        app:iconPadding="20dp"
-                        app:rippleColor="@color/nonna_beige_dark" />
-
+                        app:iconTint="@color/food_primary_orange"
+                        app:iconPadding="16dp" />
+                        
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginStart="20dp"
-                        android:layout_marginEnd="20dp"
-                        android:background="@color/divider_light" />
+                        android:background="@color/food_divider"
+                        android:layout_marginHorizontal="16dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/logoutButton"
                         style="@style/Widget.Material3.Button.TextButton"
                         android:layout_width="match_parent"
-                        android:layout_height="68dp"
+                        android:layout_height="60dp"
                         android:text="@string/logout"
-                        android:textColor="@color/nonna_error"
-                        android:textSize="17sp"
-                        android:textAlignment="textStart"
-                        android:gravity="center_vertical|start"
-                        android:paddingStart="20dp"
-                        android:paddingEnd="20dp"
+                        android:textColor="@color/food_status_error"
+                        android:gravity="start|center_vertical"
+                        android:paddingStart="24dp"
                         app:icon="@android:drawable/ic_menu_close_clear_cancel"
-                        app:iconGravity="textStart"
-                        app:iconTint="@color/nonna_error"
-                        app:iconSize="24dp"
-                        app:iconPadding="20dp"
-                        app:rippleColor="@color/nonna_error" />
+                        app:iconTint="@color/food_status_error"
+                        app:iconPadding="16dp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Footer con información de desarrollo -->
+            <!-- Footer -->
             <LinearLayout
                 android:id="@+id/developmentFooter"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
-                android:orientation="horizontal"
+                android:layout_marginTop="40dp"
+                android:orientation="vertical"
                 android:gravity="center"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/optionsCardView"
-                app:layout_constraintBottom_toBottomOf="parent">
+                android:alpha="0.7">
+
+                <ImageView
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:src="@drawable/di_logo"
+                    android:contentDescription="Logo Dirección de Ingeniería" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Desarrollado por la Dirección de Ingeniería"
-                    android:textColor="@color/nonna_text_secondary"
-                    android:textSize="14sp"
-                    android:layout_marginEnd="12dp"
-                    android:gravity="center_vertical" />
+                    android:layout_marginTop="12dp"
+                    android:text="Desarrollado por la\nDirección de Ingeniería"
+                    android:gravity="center"
+                    android:textColor="@color/food_text_secondary"
+                    android:textSize="12sp" />
 
-                <FrameLayout
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:gravity="center">
+                 <ImageView
+                    android:layout_width="150dp"
+                    android:layout_height="50dp"
+                    android:src="@drawable/sello_gobierno_02"
+                    android:layout_marginTop="12dp"
+                    android:scaleType="fitCenter"/>
 
-                    <ImageView
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:src="@drawable/di_logo"
-                        android:scaleType="fitCenter"
-                        android:contentDescription="Logo Dirección de Ingeniería" />
-                </FrameLayout>
             </LinearLayout>
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
+        </LinearLayout>
     </ScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

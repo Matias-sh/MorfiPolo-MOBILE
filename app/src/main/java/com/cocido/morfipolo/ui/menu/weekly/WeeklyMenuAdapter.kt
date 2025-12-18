@@ -99,6 +99,9 @@ class WeeklyMenuAdapter(
             val menu = item.menu
             val userVote = item.userVote
             
+            android.util.Log.d("WeeklyMenuAdapter", "📋 Bind menú: ${menu.date}, ID: ${menu.id}")
+            android.util.Log.d("WeeklyMenuAdapter", "   Voto: ${if (userVote != null) "SÍ (opción: ${userVote.option.name}, ID: ${userVote.id})" else "NO"}")
+            
             // Convertir date string a Date
             val menuDate = try {
                 SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(menu.date) ?: Date()
@@ -109,16 +112,20 @@ class WeeklyMenuAdapter(
             // Configurar fecha
             binding.dateTextView.text = dateFormat.format(menuDate)
             
-            // Configurar horario fijo: 08:00 - 11:00
-            binding.timeRangeTextView.text = binding.root.context.getString(
-                R.string.selection_time,
-                "08:00",
-                "11:00"
-            )
-            binding.timeRangeTextView.visibility = View.VISIBLE
-            
             // Configurar estado - validar si realmente está abierto según el horario (08:00 - 11:00) y si es el menú de hoy
             val isToday = isMenuToday(menu)
+            
+            // Configurar horario fijo: 08:00 - 11:00 - solo mostrar para el día de hoy
+            if (isToday) {
+                binding.timeRangeTextView.text = binding.root.context.getString(
+                    R.string.selection_time,
+                    "08:00",
+                    "11:00"
+                )
+                binding.timeRangeTextView.visibility = View.VISIBLE
+            } else {
+                binding.timeRangeTextView.visibility = View.GONE
+            }
             val isWithinTime = isWithinSelectionTime(menu)
             val isActuallyOpen = menu.status == "open" && isWithinTime && isToday
             val statusText = when {
@@ -154,54 +161,177 @@ class WeeklyMenuAdapter(
                 // Mostrar descripción del menú
                 binding.menuDescriptionTextView.text = menu.description
                 
-                // Agregar opciones con botones
-                options.forEachIndexed { index, option ->
-                    val optionView = LayoutInflater.from(binding.root.context)
-                        .inflate(R.layout.item_menu_option, optionsContainer, false)
-                    
-                    val optionNameTextView = optionView.findViewById<TextView>(R.id.optionNameTextView)
-                    val optionButton = optionView.findViewById<com.google.android.material.button.MaterialButton>(R.id.optionButton)
-                    val selectedIndicator = optionView.findViewById<android.widget.ImageView>(R.id.selectedIndicator)
-                    
-                    // Nombre de la opción
-                    optionNameTextView.text = if (options.size > 1) {
-                        "Opción ${index + 1}: ${option.name}"
-                    } else {
-                        option.name
-                    }
-                    
-                    // Verificar si esta opción está seleccionada
-                    val isSelected = userVote?.option?.id == option.id
-                    
-                    if (isSelected) {
-                        // Opción seleccionada
-                        optionButton.text = binding.root.context.getString(R.string.remove_selection)
-                        optionButton.setIconResource(android.R.drawable.ic_menu_delete)
-                        optionButton.setBackgroundResource(R.drawable.button_red)
-                        selectedIndicator.visibility = View.VISIBLE
-                        optionButton.setOnClickListener {
-                            if (isActuallyOpen) {
-                                onRemoveVote(userVote.id, null)
-                            } else {
-                                // Mostrar mensaje informativo si el menú está cerrado
-                                val message = "El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00)."
-                                onRemoveVote(userVote.id, message)
-                            }
+                    // Agregar opciones con botones
+                    options.forEachIndexed { index, option ->
+                        val optionView = LayoutInflater.from(binding.root.context)
+                            .inflate(R.layout.item_menu_option, optionsContainer, false)
+                        
+                        val optionNameTextView = optionView.findViewById<TextView>(R.id.optionNameTextView)
+                        val optionButton = optionView.findViewById<com.google.android.material.button.MaterialButton>(R.id.optionButton)
+                        val selectedIndicator = optionView.findViewById<android.widget.ImageView>(R.id.selectedIndicator)
+                        val statusMessageTextView = optionView.findViewById<TextView>(R.id.statusMessageTextView)
+                        // El CardView es la raíz del layout, así que optionView ya es el CardView
+                        val optionCardView = optionView as? com.google.android.material.card.MaterialCardView
+                        
+                        // Nombre de la opción
+                        optionNameTextView.text = if (options.size > 1) {
+                            "Opción ${index + 1}: ${option.name}"
+                        } else {
+                            option.name
                         }
-                    } else {
-                        // Opción no seleccionada
-                        optionButton.text = binding.root.context.getString(R.string.choose_option)
-                        optionButton.setIconResource(android.R.drawable.ic_menu_add)
-                        optionButton.setBackgroundResource(R.drawable.button_primary_solid)
-                        selectedIndicator.visibility = View.GONE
-                        optionButton.isEnabled = isActuallyOpen
-                        optionButton.setOnClickListener {
-                            if (isActuallyOpen) {
-                                onSelectOption(menu.id, option.id, null)
+                        
+                        // Verificar si esta opción está seleccionada
+                        val isSelected = userVote?.option?.id == option.id
+                        val hasVotedAny = userVote != null
+                        
+                        // Lógica de visualización (igual que DailyMenuFragment)
+                        if (!isActuallyOpen) {
+                            // CERRADO / FUERA DE HORARIO
+                            optionButton.visibility = View.GONE
+                            statusMessageTextView.visibility = View.VISIBLE
+                            
+                            if (isSelected) {
+                                // Usuario votó ESTA opción - resaltar visualmente
+                                statusMessageTextView.text = "Usted ya seleccionó esta opción"
+                                statusMessageTextView.setTextColor(androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.food_secondary_green))
+                                statusMessageTextView.setTypeface(null, android.graphics.Typeface.BOLD)
+                                
+                                // Resaltar visualmente la opción seleccionada con diseño más elegante y sutil
+                                optionCardView?.let { card ->
+                                    // Fondo verde muy claro y sutil (solo un toque de color)
+                                    val greenLight = 0x0D4CAF50.toInt() // Verde con ~5% opacidad (muy sutil)
+                                    card.setCardBackgroundColor(greenLight)
+                                    
+                                    // Borde verde suave y delgado para indicar selección
+                                    val greenBorder = androidx.core.content.ContextCompat.getColor(
+                                        binding.root.context,
+                                        R.color.food_secondary_green
+                                    )
+                                    card.strokeWidth = 2 // Borde delgado
+                                    card.strokeColor = greenBorder
+                                    card.cardElevation = 2f // Elevación muy sutil
+                                    card.radius = 12f // Bordes redondeados más suaves
+                                }
+                            } else if (!hasVotedAny) {
+                                // Usuario NO votó - mostrar mensaje según si es hoy o día anterior
+                                if (isToday) {
+                                    statusMessageTextView.text = "Usted no seleccionó una opción el día de hoy"
+                                } else {
+                                    statusMessageTextView.text = "No seleccionada"
+                                }
+                                statusMessageTextView.setTextColor(androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.food_status_error))
+                                statusMessageTextView.setTypeface(null, android.graphics.Typeface.NORMAL)
+                                
+                                // Restaurar estilo por defecto para opciones no seleccionadas
+                                optionCardView?.let { card ->
+                                    card.setCardBackgroundColor(
+                                        androidx.core.content.ContextCompat.getColor(
+                                            binding.root.context,
+                                            R.color.food_background_card
+                                        )
+                                    )
+                                    card.strokeWidth = 1
+                                    card.strokeColor = androidx.core.content.ContextCompat.getColor(
+                                        binding.root.context,
+                                        R.color.food_divider
+                                    )
+                                    card.alpha = 1.0f
+                                }
                             } else {
-                                // Mostrar mensaje informativo si el menú está cerrado
-                                val message = "El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00)."
-                                onSelectOption(menu.id, option.id, message)
+                                // Usuario votó OTRA opción
+                                statusMessageTextView.text = "No seleccionada"
+                                statusMessageTextView.setTextColor(androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.food_text_secondary))
+                                statusMessageTextView.setTypeface(null, android.graphics.Typeface.NORMAL)
+                                
+                                // Restaurar estilo por defecto para opciones no seleccionadas
+                                optionCardView?.let { card ->
+                                    card.setCardBackgroundColor(
+                                        androidx.core.content.ContextCompat.getColor(
+                                            binding.root.context,
+                                            R.color.food_background_card
+                                        )
+                                    )
+                                    card.strokeWidth = 1
+                                    card.strokeColor = androidx.core.content.ContextCompat.getColor(
+                                        binding.root.context,
+                                        R.color.food_divider
+                                    )
+                                    card.alpha = 1.0f
+                                }
+                            }
+                            
+                            // Mantener indicador si está seleccionado
+                            selectedIndicator.visibility = if (isSelected) View.VISIBLE else View.GONE
+                        
+                    } else {
+                        // ABIERTO
+                        statusMessageTextView.visibility = View.GONE
+                        optionButton.visibility = View.VISIBLE
+                        
+                        if (isSelected) {
+                            // Opción seleccionada -> Botón rojo con texto negro ("Quitar elección")
+                            optionButton.text = binding.root.context.getString(R.string.remove_selection)
+                            optionButton.setIconResource(android.R.drawable.ic_menu_delete)
+                            
+                            optionButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                                androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.food_status_error)
+                            )
+                            optionButton.setTextColor(androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.black))
+                            optionButton.iconTint = android.content.res.ColorStateList.valueOf(
+                                androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.black)
+                            )
+                            
+                            selectedIndicator.visibility = View.VISIBLE
+                            
+                            // Resaltar visualmente la opción seleccionada cuando está abierto también
+                            optionCardView?.let { card ->
+                                val greenLight = 0x0D4CAF50.toInt() // Verde con ~5% opacidad (muy sutil)
+                                card.setCardBackgroundColor(greenLight)
+                                val greenBorder = androidx.core.content.ContextCompat.getColor(
+                                    binding.root.context,
+                                    R.color.food_secondary_green
+                                )
+                                card.strokeWidth = 2 // Borde delgado
+                                card.strokeColor = greenBorder
+                                card.cardElevation = 2f // Elevación muy sutil
+                                card.radius = 12f // Bordes redondeados más suaves
+                            }
+                            
+                            optionButton.setOnClickListener {
+                                onRemoveVote(userVote!!.id, null)
+                            }
+                        } else {
+                            // Opción no seleccionada -> Botón verde ("Elegir esta opción")
+                            optionButton.text = binding.root.context.getString(R.string.choose_option)
+                            optionButton.setIconResource(android.R.drawable.ic_menu_add)
+                            
+                            optionButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                                androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.food_secondary_green)
+                            )
+                            optionButton.setTextColor(androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.white))
+                            optionButton.iconTint = android.content.res.ColorStateList.valueOf(
+                                androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.white)
+                            )
+                            
+                            selectedIndicator.visibility = View.GONE
+                            
+                            // Restaurar estilo por defecto para opciones no seleccionadas cuando está abierto
+                            optionCardView?.let { card ->
+                                card.setCardBackgroundColor(
+                                    androidx.core.content.ContextCompat.getColor(
+                                        binding.root.context,
+                                        R.color.food_background_card
+                                    )
+                                )
+                                card.strokeWidth = 1
+                                card.strokeColor = androidx.core.content.ContextCompat.getColor(
+                                    binding.root.context,
+                                    R.color.food_divider
+                                )
+                            }
+                            
+                            optionButton.setOnClickListener {
+                                onSelectOption(menu.id, option.id, null)
                             }
                         }
                     }

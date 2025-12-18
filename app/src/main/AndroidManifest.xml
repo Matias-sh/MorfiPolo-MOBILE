@@ -5,6 +5,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
+    <!-- Permisos para alarmas exactas (notificaciones a las 9am) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name=".MorfipoloApplication"
@@ -19,7 +25,8 @@
         tools:targetApi="31">
         <activity
             android:name=".ui.login.LoginActivity"
-            android:exported="true">
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -48,6 +55,33 @@
             android:name=".util.widget.MenuWidgetService"
             android:permission="android.permission.BIND_REMOTEVIEWS"
             android:exported="false" />
+
+        <!-- Receiver para las alarmas diarias de notificaciones (9am, 9:30am, 10am) -->
+        <receiver
+            android:name=".util.alarm.AlarmReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.cocido.morfipolo.DAILY_REMINDER_ALARM" />
+                <action android:name="com.cocido.morfipolo.REMINDER_9AM" />
+                <action android:name="com.cocido.morfipolo.REMINDER_930AM" />
+                <action android:name="com.cocido.morfipolo.REMINDER_10AM" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Receiver para reprogramar alarma después de reinicio del dispositivo -->
+        <receiver
+            android:name=".util.alarm.BootReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:directBootAware="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
