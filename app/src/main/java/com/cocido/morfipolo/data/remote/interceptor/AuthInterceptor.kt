@@ -1,6 +1,8 @@
 package com.cocido.morfipolo.data.remote.interceptor
 
 import android.util.Log
+import com.cocido.morfipolo.data.remote.SessionExpiredException
+import com.cocido.morfipolo.data.remote.TemporaryServerException
 import com.cocido.morfipolo.data.remote.TokenManager
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
@@ -13,7 +15,6 @@ class AuthInterceptor(
     
     companion object {
         private const val TAG = "AuthInterceptor"
-        private const val MAX_RETRY_ATTEMPTS = 1 // Solo reintentar una vez después de 401
     }
     
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -25,9 +26,47 @@ class AuthInterceptor(
             return chain.proceed(originalRequest)
         }
         
-        // Obtener token válido (se refresca automáticamente si es necesario)
-        val accessToken = runBlocking {
-            tokenManager.getValidAccessToken()
+        // Obtener token válido usando el nuevo método que retorna TokenResult
+        val tokenResult = runBlocking {
+            tokenManager.getValidAccessTokenResult()
+        }
+        
+        val accessToken = when (tokenResult) {
+            is TokenManager.TokenResult.Success -> tokenResult.accessToken
+            
+            is TokenManager.TokenResult.TokenExpired -> {
+                // Refresh token expiró, limpiar sesión y lanzar excepción
+                Log.e(TAG, "Refresh token expiró, limpiando sesión")
+                runBlocking { tokenManager.clearSession() }
+                throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
+            }
+            
+            is TokenManager.TokenResult.ServerError,
+            is TokenManager.TokenResult.NetworkError -> {
+                // Error temporal - intentar con el access token actual si existe
+                Log.w(TAG, "Error temporal obteniendo token, intentando con token actual")
+                runBlocking { 
+                    // Usar token actual si existe, aunque esté cerca de expirar
+                    val currentToken = tokenManager.getValidAccessToken()
+                    if (currentToken == null) {
+                        // Si no hay token actual, verificar si el refresh token sigue válido localmente
+                        if (tokenManager.isRefreshTokenExpiredLocally()) {
+                            tokenManager.clearSession()
+                            throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
+                        }
+                        // El refresh token sigue válido, dejar pasar sin token
+                        // El servidor devolverá 401 y lo manejaremos abajo
+                        null
+                    } else {
+                        currentToken
+                    }
+                }
+            }
+            
+            is TokenManager.TokenResult.NoCredentials -> {
+                Log.w(TAG, "No hay credenciales, enviando request sin token")
+                null
+            }
         }
         
         if (accessToken == null) {
@@ -42,44 +81,79 @@ class AuthInterceptor(
         
         var response = chain.proceed(authenticatedRequest)
         
-        // Si recibimos 401, intentar refrescar token y reintentar SOLO UNA VEZ
+        // Si recibimos 401, intentar refrescar token y reintentar UNA VEZ
         if (response.code == 401 && !originalRequest.url.toString().contains("/auth/")) {
             Log.w(TAG, "Recibido 401, intentando refrescar token...")
             
-            // Forzar refresh del token (sin cerrar la respuesta aún)
-            val newToken = runBlocking {
-                tokenManager.forceRefreshAccessToken()
+            // Forzar refresh del token usando el nuevo método que retorna TokenResult
+            val refreshResult = runBlocking {
+                tokenManager.forceRefreshAccessTokenResult()
             }
             
-            if (newToken != null && newToken != accessToken) {
-                // Token fue refrescado exitosamente, cerrar respuesta anterior y reintentar
-                response.close()
-                
-                Log.d(TAG, "Token refrescado exitosamente, reintentando request...")
-                authenticatedRequest = originalRequest.newBuilder()
-                    .header("Authorization", "Bearer $newToken")
-                    .build()
-                
-                response = chain.proceed(authenticatedRequest)
-                
-                // Si el reintento también falla con 401, significa que el refresh token expiró o hay otro problema
-                if (response.code == 401) {
-                    Log.e(TAG, "Reintento falló con 401 después de refresh. Refresh token probablemente expirado o error del servidor")
-                } else {
-                    Log.d(TAG, "Reintento exitoso con código ${response.code}")
+            when (refreshResult) {
+                is TokenManager.TokenResult.Success -> {
+                    val newToken = refreshResult.accessToken
+                    if (newToken != accessToken) {
+                        // Token fue refrescado exitosamente, cerrar respuesta anterior y reintentar
+                        response.close()
+                        
+                        Log.d(TAG, "✅ Token refrescado exitosamente, reintentando request...")
+                        authenticatedRequest = originalRequest.newBuilder()
+                            .header("Authorization", "Bearer $newToken")
+                            .build()
+                        
+                        response = chain.proceed(authenticatedRequest)
+                        
+                        // Si el reintento también falla con 401, el refresh token expiró
+                        if (response.code == 401) {
+                            Log.e(TAG, "Reintento falló con 401 después de refresh. Refresh token expirado")
+                            runBlocking { tokenManager.clearSession() }
+                            response.close()
+                            throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
+                        } else {
+                            Log.d(TAG, "✅ Reintento exitoso con código ${response.code}")
+                        }
+                    }
                 }
-            } else {
-                // No se pudo refrescar el token (refresh token expirado o error de conexión)
-                // Devolver la respuesta 401 original sin cerrarla
-                Log.e(TAG, "No se pudo refrescar el token después de 401. Refresh token expirado o error de conexión")
-                // La respuesta 401 original se devuelve sin cerrar para que el error se propague correctamente
+                
+                is TokenManager.TokenResult.TokenExpired -> {
+                    // Refresh token expirado, limpiar sesión
+                    Log.e(TAG, "❌ Refresh token expirado, limpiando sesión")
+                    runBlocking { tokenManager.clearSession() }
+                    response.close()
+                    throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
+                }
+                
+                is TokenManager.TokenResult.ServerError,
+                is TokenManager.TokenResult.NetworkError -> {
+                    // Error temporal - NO limpiar la sesión
+                    // El refresh token puede seguir siendo válido
+                    Log.w(TAG, "⚠️ Error temporal al refrescar token después de 401")
+                    
+                    // Verificar si el refresh token sigue siendo válido localmente
+                    if (tokenManager.isRefreshTokenExpiredLocally()) {
+                        Log.e(TAG, "Refresh token expirado localmente, limpiando sesión")
+                        runBlocking { tokenManager.clearSession() }
+                        response.close()
+                        throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
+                    }
+                    
+                    // El refresh token sigue válido localmente, el problema es temporal del servidor
+                    // Lanzar excepción de error temporal (NO sesión expirada)
+                    Log.w(TAG, "Error temporal del servidor de refresh, lanzando TemporaryServerException")
+                    response.close()
+                    throw TemporaryServerException("El servidor no está disponible en este momento. Por favor, intenta de nuevo.")
+                }
+                
+                is TokenManager.TokenResult.NoCredentials -> {
+                    Log.e(TAG, "No hay credenciales para refrescar")
+                    runBlocking { tokenManager.clearSession() }
+                    response.close()
+                    throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
+                }
             }
         }
         
         return response
     }
 }
-
-
-
-

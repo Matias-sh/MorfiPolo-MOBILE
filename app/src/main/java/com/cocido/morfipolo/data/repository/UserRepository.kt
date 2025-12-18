@@ -56,22 +56,21 @@ class UserRepository(
                     userDao.insertUser(userEntity)
                     Result.success(user)
                 } else {
-                    Result.failure(Exception("Respuesta vacía del servidor"))
+                    Result.failure(Exception("No se pudo iniciar sesión. Intenta de nuevo."))
                 }
             } else {
                 val errorMessage = when (response.code()) {
-                    401 -> "DNI o contraseña incorrectos"
-                    400 -> "Datos inválidos"
-                    else -> "Error al iniciar sesión: ${response.code()}"
+                    401, 404 -> "DNI o contraseña incorrectos"
+                    400 -> "Datos inválidos. Verifica tu DNI y contraseña."
+                    500, 502, 503, 504 -> "El servidor no está disponible en este momento. Por favor, intenta más tarde."
+                    else -> "No se pudo iniciar sesión. Intenta de nuevo más tarde."
                 }
                 Result.failure(Exception(errorMessage))
             }
-        } catch (e: HttpException) {
-            Result.failure(Exception("Error HTTP: ${e.code()} ${e.message()}"))
         } catch (e: IOException) {
-            Result.failure(Exception("Error de conexión: ${e.message}"))
+            Result.failure(Exception("Error de conexión."))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception("No se pudo iniciar sesión. Intenta de nuevo."))
         }
     }
 
@@ -131,26 +130,26 @@ class UserRepository(
             } else {
                 val errorMessage = when (response.code()) {
                     401 -> "Contraseña actual incorrecta"
-                    400 -> "Datos inválidos"
+                    400 -> "Datos inválidos. Verifica que la nueva contraseña cumpla con los requisitos."
                     403 -> "No tienes permiso para realizar esta acción"
-                    404 -> "El endpoint de cambio de contraseña no está disponible. Por favor, contacta al administrador."
-                    else -> "Error al cambiar la contraseña: ${response.code()}"
+                    500, 502, 503, 504 -> "El servidor no está disponible en este momento. Por favor, intenta más tarde."
+                    else -> "No se pudo cambiar la contraseña. Verifica los datos e intenta de nuevo."
                 }
                 Result.failure(Exception(errorMessage))
             }
         } catch (e: HttpException) {
             val errorMessage = when (e.code()) {
                 401 -> "Contraseña actual incorrecta"
-                400 -> "Datos inválidos"
+                400 -> "Datos inválidos. Verifica que la nueva contraseña cumpla con los requisitos."
                 403 -> "No tienes permiso para realizar esta acción"
-                404 -> "El endpoint de cambio de contraseña no está disponible. Por favor, contacta al administrador."
-                else -> "Error HTTP: ${e.code()} ${e.message()}"
+                500, 502, 503, 504 -> "El servidor no está disponible en este momento. Por favor, intenta más tarde."
+                else -> "No se pudo cambiar la contraseña. Verifica tu conexión e intenta de nuevo."
             }
             Result.failure(Exception(errorMessage))
         } catch (e: IOException) {
-            Result.failure(Exception("Error de conexión: ${e.message}"))
+            Result.failure(Exception("No se pudo conectar al servidor. Verifica tu conexión a internet."))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception("No se pudo cambiar la contraseña. Intenta de nuevo."))
         }
     }
 

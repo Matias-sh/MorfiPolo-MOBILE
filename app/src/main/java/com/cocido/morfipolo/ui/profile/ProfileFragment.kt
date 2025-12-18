@@ -6,7 +6,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
+import com.google.android.material.snackbar.Snackbar
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -61,7 +61,8 @@ class ProfileFragment : Fragment() {
                         binding.avatarTextView.text = state.user.name.firstOrNull()?.toString() ?: "U"
                     }
                     is ProfileUiState.Error -> {
-                        Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                        // No mostrar errores técnicos al usuario
+                        // Los errores de carga de perfil son silenciosos
                     }
                 }
             }
@@ -72,15 +73,35 @@ class ProfileFragment : Fragment() {
                 when (state) {
                     is PasswordChangeState.Idle -> {}
                     is PasswordChangeState.Success -> {
-                        Toast.makeText(
-                            requireContext(),
+                        Snackbar.make(
+                            binding.root,
                             getString(R.string.password_changed_success),
-                            Toast.LENGTH_SHORT
+                            Snackbar.LENGTH_SHORT
                         ).show()
                         viewModel.resetPasswordChangeState()
                     }
                     is PasswordChangeState.Error -> {
-                        Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                        // Mostrar mensaje amigable sin información técnica
+                        val friendlyMessage = when {
+                            state.message.contains("conexión", ignoreCase = true) || 
+                            state.message.contains("connection", ignoreCase = true) ||
+                            state.message.contains("conectar", ignoreCase = true) -> {
+                                getString(R.string.error_connection)
+                            }
+                            state.message.contains("servidor", ignoreCase = true) ||
+                            state.message.contains("server", ignoreCase = true) -> {
+                                getString(R.string.error_server)
+                            }
+                            state.message.contains("contraseña") || state.message.contains("incorrecta") -> {
+                                state.message // Mantener mensajes de validación
+                            }
+                            else -> getString(R.string.error_password_change_failed)
+                        }
+                        Snackbar.make(
+                            binding.root,
+                            friendlyMessage,
+                            Snackbar.LENGTH_LONG
+                        ).show()
                         viewModel.resetPasswordChangeState()
                     }
                 }

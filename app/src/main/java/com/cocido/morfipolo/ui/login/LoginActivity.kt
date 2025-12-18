@@ -1,10 +1,13 @@
 package com.cocido.morfipolo.ui.login
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import android.appwidget.AppWidgetManager
 import com.cocido.morfipolo.MorfipoloApplication
@@ -21,20 +24,30 @@ class LoginActivity : AppCompatActivity() {
     private val viewModel: LoginViewModel by viewModels {
         LoginViewModelFactory((application as MorfipoloApplication).userRepository)
     }
+    
+    // Launcher para solicitar permiso de notificaciones
+    private val requestNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            android.util.Log.d("LoginActivity", "✅ Permiso de notificaciones concedido")
+        } else {
+            android.util.Log.w("LoginActivity", "⚠️ Permiso de notificaciones denegado")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Configurar status bar transparente para que se integre con el fondo
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            window.statusBarColor = android.graphics.Color.TRANSPARENT
-        }
+        // Configurar status bar con iconos oscuros (sin fullscreen para que funcione adjustPan)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
-                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            window.statusBarColor = getColor(R.color.comedor_beige_primary)
+            window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
         }
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Solicitar permiso de notificaciones si es necesario (Android 13+)
+        requestNotificationPermissionIfNeeded()
 
         setupObservers()
         setupListeners()
@@ -49,6 +62,17 @@ class LoginActivity : AppCompatActivity() {
                     // Usuario autenticado correctamente, ir a MainActivity
                     navigateToMain()
                 }
+                is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.TemporaryError -> {
+                    // Error temporal (servidor/red), pero la sesión sigue válida localmente
+                    // Verificar si la sesión es válida localmente e ir a MainActivity
+                    if (app.authManager.isSessionLocallyValid()) {
+                        android.util.Log.d("LoginActivity", "Error temporal pero sesión válida localmente, continuando...")
+                        navigateToMain()
+                    } else {
+                        // La sesión expiró localmente, mantener en login
+                        android.util.Log.w("LoginActivity", "Error temporal y sesión expirada localmente")
+                    }
+                }
                 is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.RefreshFailed,
                 is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.NotLoggedIn -> {
                     // Mantener en login, no hacer nada
@@ -62,28 +86,91 @@ class LoginActivity : AppCompatActivity() {
             viewModel.uiState.collect { state ->
                 when (state) {
                     is LoginUiState.Idle -> {
-                        binding.progressBar.visibility = android.view.View.GONE
-                        binding.loginButton.isEnabled = true
+                        setLoading(false)
+                        binding.errorTextView.visibility = android.view.View.GONE
                     }
                     is LoginUiState.Loading -> {
-                        binding.progressBar.visibility = android.view.View.VISIBLE
-                        binding.loginButton.isEnabled = false
+                        setLoading(true)
+                        binding.errorTextView.visibility = android.view.View.GONE
                     }
                     is LoginUiState.Success -> {
-                        binding.progressBar.visibility = android.view.View.GONE
-                        binding.loginButton.isEnabled = true
+                        setLoading(false)
                         // Actualizar widget después del login exitoso
                         updateWidget()
+                        // Programar recordatorio diario después del login
+                        com.cocido.morfipolo.util.work.DailyReminderWorker.scheduleDailyReminder(this@LoginActivity)
                         navigateToMain()
                     }
                     is LoginUiState.Error -> {
-                        binding.progressBar.visibility = android.view.View.GONE
-                        binding.loginButton.isEnabled = true
-                        Toast.makeText(this@LoginActivity, state.message, Toast.LENGTH_LONG).show()
+                        setLoading(false)
+                        handleError(state.message)
                     }
                 }
             }
         }
+    }
+
+    private fun setLoading(isLoading: Boolean) {
+        binding.loginButton.isEnabled = !isLoading
+        if (isLoading) {
+            binding.loginButton.text = "Ingresando..."
+            binding.loginButton.alpha = 0.7f
+        } else {
+            binding.loginButton.text = getString(R.string.login_button)
+            binding.loginButton.alpha = 1.0f
+        }
+    }
+
+    private fun handleError(message: String) {
+        // Limpiar errores previos
+        binding.dniInputLayout.error = null
+        binding.passwordInputLayout.error = null
+        binding.errorTextView.visibility = android.view.View.GONE
+
+        when {
+            // Prioridad 1: Credenciales incorrectas (Error general)
+            message.contains("incorrectos", ignoreCase = true) ||
+            message.contains("inválidos", ignoreCase = true) -> {
+                binding.errorTextView.text = message
+                binding.errorTextView.visibility = android.view.View.VISIBLE
+                shakeView(binding.loginButton)
+            }
+            // Prioridad 2: Errores específicos de campo
+            message.contains("DNI", ignoreCase = true) -> {
+                binding.dniInputLayout.error = message
+                binding.dniEditText.requestFocus()
+            }
+            message.contains("contraseña", ignoreCase = true) || 
+            message.contains("password", ignoreCase = true) -> {
+                binding.passwordInputLayout.error = message
+                binding.passwordEditText.requestFocus()
+            }
+            // Prioridad 3: Errores generales de red/servidor
+            else -> {
+                val friendlyMessage = when {
+                    message.contains("conexión", ignoreCase = true) || 
+                    message.contains("connection", ignoreCase = true) ||
+                    message.contains("conectar", ignoreCase = true) -> {
+                        getString(R.string.error_connection)
+                    }
+                    message.contains("servidor", ignoreCase = true) ||
+                    message.contains("server", ignoreCase = true) -> {
+                        getString(R.string.error_server)
+                    }
+                    else -> getString(R.string.error_login_failed)
+                }
+                binding.errorTextView.text = friendlyMessage
+                binding.errorTextView.visibility = android.view.View.VISIBLE
+            }
+        }
+    }
+
+    private fun shakeView(view: android.view.View) {
+        val rotate = android.view.animation.TranslateAnimation(0f, 10f, 0f, 0f)
+        rotate.duration = 50
+        rotate.repeatCount = 5
+        rotate.repeatMode = android.view.animation.Animation.REVERSE
+        view.startAnimation(rotate)
     }
 
     private fun setupListeners() {
@@ -93,7 +180,7 @@ class LoginActivity : AppCompatActivity() {
             
             // Validar formato de DNI
             if (!ValidationUtils.isValidDni(dni)) {
-                binding.dniEditText.error = getString(R.string.dni_invalid_format)
+                binding.dniInputLayout.error = getString(R.string.dni_invalid_format)
                 return@setOnClickListener
             }
             
@@ -101,10 +188,68 @@ class LoginActivity : AppCompatActivity() {
         }
         
         // Limpiar error cuando el usuario empieza a escribir
+        binding.dniEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                binding.dniInputLayout.error = null
+                binding.errorTextView.visibility = android.view.View.GONE
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
+        binding.passwordEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                binding.passwordInputLayout.error = null
+                binding.errorTextView.visibility = android.view.View.GONE
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+        
+        // Scroll automático al botón cuando los campos reciben foco
         binding.dniEditText.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                binding.dniEditText.error = null
+                scrollToButton()
             }
+        }
+        
+        binding.passwordEditText.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                scrollToButton()
+            }
+        }
+    }
+    
+    private fun scrollToButton() {
+        binding.scrollView.postDelayed({
+            binding.scrollView.smoothScrollTo(0, binding.loginButton.bottom)
+        }, 300) // Esperar a que el teclado aparezca
+    }
+
+    override fun onStart() {
+        super.onStart()
+        startEntryAnimation()
+    }
+
+    private fun startEntryAnimation() {
+        val views = listOf(
+            binding.logoImageView,
+            binding.titleTextView,
+            binding.dniInputLayout,
+            binding.passwordInputLayout,
+            binding.loginButton
+        )
+
+        views.forEachIndexed { index, view ->
+            view.alpha = 0f
+            view.translationY = 50f
+            view.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(index * 100L)
+                .setDuration(500)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
         }
     }
 
@@ -131,6 +276,29 @@ class LoginActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             android.util.Log.e("LoginActivity", "Error al actualizar widget después del login", e)
+        }
+    }
+    
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED -> {
+                    android.util.Log.d("LoginActivity", "✅ Permiso de notificaciones ya concedido")
+                }
+                shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS) -> {
+                    // El usuario denegó el permiso anteriormente, explicar por qué lo necesitamos
+                    android.util.Log.d("LoginActivity", "Solicitando permiso de notificaciones (ya denegado antes)")
+                    requestNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+                else -> {
+                    // Primera vez que se solicita
+                    android.util.Log.d("LoginActivity", "Solicitando permiso de notificaciones por primera vez")
+                    requestNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
         }
     }
 }

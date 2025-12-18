@@ -19,7 +19,13 @@ interface MorfiPoloApiService {
     suspend fun createVote(@Body request: CreateVoteRequest): Response<Vote>
     
     @GET("votes")
-    suspend fun getVotes(): Response<VotesResponse>
+    suspend fun getVotes(
+        @Query("page") page: Int? = null,
+        @Query("limit") limit: Int? = null,
+        @Query("user_id") userId: String? = null,
+        @Query("userId") userIdAlt: String? = null,
+        @Query("menu_id") menuId: String? = null
+    ): Response<VotesResponse>
     
     @DELETE("votes/{voteId}")
     suspend fun deleteVote(@Path("voteId") voteId: String): Response<Unit>

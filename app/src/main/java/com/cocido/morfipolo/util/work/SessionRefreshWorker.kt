@@ -49,14 +49,18 @@ class SessionRefreshWorker(
                     Result.success()
                 }
                 is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.RefreshFailed -> {
-                    Log.w(TAG, "⚠️ No se pudo refrescar la sesión (refresh token expirado o inválido)")
-                    // No es un error crítico, el usuario tendrá que iniciar sesión manualmente
-                    // pero no fallamos el worker para que siga intentando
+                    Log.w(TAG, "⚠️ Refresh token expirado, el usuario debe iniciar sesión manualmente")
+                    // El refresh token expiró, pero no es un error del worker
                     Result.success()
                 }
                 is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.NotLoggedIn -> {
                     Log.d(TAG, "No hay sesión guardada, no se requiere refresh")
                     Result.success()
+                }
+                is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.TemporaryError -> {
+                    Log.w(TAG, "⚠️ Error temporal (servidor/red), reintentando más tarde...")
+                    // Error temporal - la sesión sigue válida, pero hacer retry
+                    Result.retry()
                 }
             }
         } catch (e: Exception) {

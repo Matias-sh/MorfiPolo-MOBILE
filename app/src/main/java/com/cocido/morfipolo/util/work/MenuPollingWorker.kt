@@ -52,6 +52,10 @@ class MenuPollingWorker(
                     is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.Authenticated -> {
                         android.util.Log.d("MenuPollingWorker", "✅ Sesión refrescada, verificando menú...")
                     }
+                    is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.TemporaryError -> {
+                        // Error temporal - continuar intentando verificar menú
+                        android.util.Log.w("MenuPollingWorker", "⚠️ Error temporal de autenticación, intentando verificar menú...")
+                    }
                     is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.RefreshFailed,
                     is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.NotLoggedIn -> {
                         android.util.Log.w("MenuPollingWorker", "⚠️ No hay sesión válida, no se puede verificar menú")

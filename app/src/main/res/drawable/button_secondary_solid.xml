@@ -2,13 +2,13 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
         <shape>
-            <solid android:color="@color/nonna_accent_warm" />
+            <solid android:color="@color/comedor_accent_warm" />
             <corners android:radius="16dp" />
         </shape>
     </item>
     <item>
         <shape>
-            <solid android:color="@color/nonna_accent_gold" />
+            <solid android:color="@color/comedor_accent_gold" />
             <corners android:radius="16dp" />
         </shape>
     </item>
