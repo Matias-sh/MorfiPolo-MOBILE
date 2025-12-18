@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/comedor_beige_primary"
+    android:background="@color/food_background_light"
     tools:context=".ui.main.MainActivity">
 
     <androidx.fragment.app.FragmentContainerView
@@ -23,11 +23,11 @@
         android:id="@+id/nav_view"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="@color/comedor_white_card"
-        android:elevation="8dp"
+        android:background="@color/white"
+        android:elevation="16dp"
         app:itemIconTint="@color/bottom_nav_item_color"
         app:itemTextColor="@color/bottom_nav_item_color"
-        app:itemRippleColor="@color/comedor_beige_dark"
+        app:itemRippleColor="@color/food_ripple"
         app:labelVisibilityMode="labeled"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"

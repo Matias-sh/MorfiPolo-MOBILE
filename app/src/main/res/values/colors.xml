@@ -3,123 +3,81 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     
-    <!-- Comedor Color Palette - Beige, Brown, White -->
-    <!-- Primary Browns -->
-    <color name="comedor_brown_primary">#CA5905</color>
-    <color name="comedor_brown_dark">#CE5906</color>
-    <color name="comedor_brown_light">#A6895F</color>
-    <color name="comedor_brown_accent">#9D7A4F</color>
+    <!-- Modern Food App Palette - Vibrant & Fresh -->
     
-    <!-- Beige Backgrounds -->
-    <color name="comedor_beige_primary">#F5F1EB</color>
-    <color name="comedor_beige_light">#FAF8F5</color>
-    <color name="comedor_beige_dark">#E8E3DB</color>
+    <!-- Primary Brand Colors -->
+    <color name="food_primary_orange">#FF6B35</color>
+    <color name="food_primary_orange_dark">#E65100</color>
+    <color name="food_primary_orange_light">#FF9E6D</color>
     
-    <!-- White Cards -->
-    <color name="comedor_white_card">#FFFFFF</color>
-    <color name="comedor_white_pure">#FFFFFF</color>
-    
-    <!-- Text Colors -->
-    <color name="comedor_text_primary">#3E2723</color>
-    <color name="comedor_text_secondary">#6D4C41</color>
-    <color name="comedor_text_hint">#A1887F</color>
-    <color name="comedor_text_white">#FFFFFF</color>
+    <!-- Secondary Brand Colors (Freshness/Veggie) -->
+    <color name="food_secondary_green">#4CAF50</color>
+    <color name="food_secondary_green_dark">#388E3C</color>
+    <color name="food_secondary_green_light">#C8E6C9</color>
     
     <!-- Accent Colors -->
-    <color name="comedor_accent_warm">#D4A574</color>
-    <color name="comedor_accent_gold">#C9A961</color>
+    <color name="food_accent_yellow">#FFC107</color>
+    <color name="food_accent_red">#F44336</color>
     
-    <!-- Status Colors -->
-    <color name="comedor_success">#6B8E23</color>
-    <color name="comedor_error">#C85A5A</color>
-    <color name="comedor_warning">#D4A574</color>
-    <color name="comedor_info">#8B6F47</color>
-    
-    <!-- Legacy Colors (for compatibility) -->
-    <color name="primary_green">#6B8E23</color>
-    <color name="primary_green_dark">#556B2F</color>
-    <color name="primary_green_light">#8FBC8F</color>
-    <color name="primary_blue">#8B6F47</color>
-    <color name="primary_blue_dark">#6B5435</color>
-    <color name="primary_blue_light">#A6895F</color>
-    <color name="accent_orange">#D4A574</color>
-    <color name="accent_orange_light">#E8C99F</color>
-    
-    <!-- Status Colors -->
-    <color name="status_open">#6B8E23</color>
-    <color name="status_closed">#C85A5A</color>
-    <color name="status_selected">#6B8E23</color>
-    <color name="status_pending">#D4A574</color>
+    <!-- Backgrounds -->
+    <color name="food_background_light">#FAFAFA</color>
+    <color name="food_background_card">#FFFFFF</color>
+    <color name="food_surface_modal">#FFFFFF</color>
     
     <!-- Text Colors -->
-    <color name="text_primary">#3E2723</color>
-    <color name="text_primary_dark">#3E2723</color>
-    <color name="text_secondary">#6D4C41</color>
-    <color name="text_secondary_gray">#6D4C41</color>
-    <color name="text_hint">#A1887F</color>
-    <color name="text_instruction">#8B6F47</color>
-    <color name="text_warning">#C85A5A</color>
-    <color name="text_success">#6B8E23</color>
-    <color name="text_white_primary">#FFFFFF</color>
-    <color name="text_blue_accent">#8B6F47</color>
+    <color name="food_text_primary">#212121</color>
+    <color name="food_text_secondary">#757575</color>
+    <color name="food_text_hint">#BDBDBD</color>
+    <color name="food_text_inverse">#FFFFFF</color>
+    <color name="food_text_error">#D32F2F</color>
     
-    <!-- Background Colors -->
-    <color name="background_light">#F5F1EB</color>
-    <color name="background_card">#FFFFFF</color>
-    <color name="background_card_elevated">#FFFFFF</color>
-    <color name="card_solid_white">#FFFFFF</color>
-    <color name="card_subtle_white">#FAF8F5</color>
-    <color name="divider">#E8E3DB</color>
-    <color name="divider_light">#E8E3DB</color>
-    
-    <!-- Gradient Colors -->
-    <color name="gradient_start">#F5F1EB</color>
-    <color name="gradient_end">#E8E3DB</color>
-    <color name="bg_gradient_start">#F5F1EB</color>
-    <color name="bg_gradient_middle">#FAF8F5</color>
-    <color name="bg_gradient_end">#E8E3DB</color>
-    
-    <!-- Button Colors -->
-    <color name="button_primary">#8B6F47</color>
-    <color name="button_primary_pressed">#6B5435</color>
-    <color name="button_secondary">#D4A574</color>
-    <color name="button_success">#6B8E23</color>
-    <color name="button_danger">#C85A5A</color>
-    
-    <!-- Shadow Colors -->
-    <color name="card_shadow">#20000000</color>
-    <color name="card_shadow_strong">#30000000</color>
-    
-    <!-- Accessibility Colors -->
-    <color name="error_red">#C85A5A</color>
+    <!-- Status Colors -->
+    <color name="food_status_success">#4CAF50</color>
+    <color name="food_status_warning">#FF9800</color>
+    <color name="food_status_error">#F44336</color>
+    <color name="food_status_info">#2196F3</color>
 
-    <color name="error_color">#C85A5A</color>
-    <color name="warning_orange">#D4A574</color>
-    <color name="info_blue">#8B6F47</color>
-    <color name="success_color">#6B8E23</color>
-    <color name="success_green">#6B8E23</color>
-    <color name="success_green_light">#8FBC8F</color>
-    <color name="success_green_dark">#556B2F</color>
+    <!-- UI Elements -->
+    <color name="food_divider">#EEEEEE</color>
+    <color name="food_ripple">#20FF6B35</color>
+    <color name="food_overlay_dark">#80000000</color>
+
+    <!-- Legacy Mappings (backward compatibility) -->
+    <color name="comedor_brown_primary">@color/food_primary_orange</color>
+    <color name="comedor_brown_dark">@color/food_primary_orange_dark</color>
+    <color name="comedor_brown_light">@color/food_primary_orange_light</color>
+    <color name="comedor_brown_accent">@color/food_accent_yellow</color>
     
-    <!-- Bottom Navigation -->
-    <color name="bottom_nav_item_selected">#8B6F47</color>
+    <color name="comedor_beige_primary">@color/food_background_light</color>
+    <color name="comedor_beige_light">@color/white</color>
+    <color name="comedor_beige_dark">@color/food_divider</color>
     
-    <!-- Widget specific colors -->
-    <color name="widget_background">#FFFFFF</color>
+    <color name="comedor_text_primary">@color/food_text_primary</color>
+    <color name="comedor_text_secondary">@color/food_text_secondary</color>
+    <color name="comedor_text_hint">@color/food_text_hint</color>
+    <color name="comedor_text_white">@color/food_text_inverse</color>
+
+    <!-- Legacy / Missing Colors fixed for Build -->
+    <color name="formosa_blue_accent">@color/food_status_info</color>
+    <color name="formosa_blue_light">@color/food_status_info</color> <!-- Mapped to info/blueish or orange if primary-->
+    <color name="food_orange">@color/food_primary_orange</color>
+    <color name="primary_green">@color/food_secondary_green</color>
+    <color name="primary_blue_light">@color/food_primary_orange_light</color>
+    <color name="comedor_accent_warm">@color/food_accent_yellow</color>
+    <color name="comedor_accent_gold">@color/food_accent_yellow</color>
+    <color name="success_green_dark">@color/food_secondary_green_dark</color>
+    <color name="success_green">@color/food_secondary_green</color>
+    <color name="comedor_white_card">@color/food_background_card</color>
+    <color name="card_solid_white">@color/food_background_card</color>
+    <color name="divider_light">@color/food_divider</color>
     
-    <!-- Legacy compatibility -->
-    <color name="text_color">#3E2723</color>
-    <color name="text_secondary_color">#6D4C41</color>
-    <color name="background_color">#F5F1EB</color>
-    
-    <!-- Formosa Government (for reference, not used) -->
-    <color name="formosa_blue_primary">#003662</color>
-    <color name="formosa_blue_light">#1A4C84</color>
-    <color name="formosa_blue_dark">#002447</color>
-    <color name="formosa_blue_accent">#2E5BBA</color>
-    <color name="food_orange">#FF6B35</color>
-    <color name="food_orange_light">#FF8C5A</color>
-    <color name="food_orange_dark">#E55A2B</color>
-    <color name="food_yellow">#F7B801</color>
-    <color name="food_yellow_light">#FFD54F</color>
+    <!-- More Legacy Mappings from Build Failure 2 -->
+    <color name="food_orange_light">@color/food_primary_orange_light</color>
+    <color name="status_open">@color/food_status_success</color>
+    <color name="text_secondary">@color/food_text_secondary</color>
+    <color name="text_primary">@color/food_text_primary</color>
+    <color name="background_card">@color/food_background_card</color>
+
+    <color name="comedor_success">@color/food_status_success</color>
+    <color name="comedor_error">@color/food_status_error</color>
 </resources>
