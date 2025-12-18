@@ -1,59 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.Morfipolo.Card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginStart="0dp"
-    android:layout_marginEnd="0dp"
-    android:layout_marginTop="12dp"
-    android:layout_marginBottom="12dp"
-    app:cardBackgroundColor="@color/comedor_white_card"
-    app:cardCornerRadius="20dp"
-    app:cardElevation="4dp"
-    app:strokeWidth="0dp">
+    android:layout_marginHorizontal="4dp"
+    android:layout_marginVertical="8dp"
+    app:cardElevation="3dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:paddingTop="20dp"
-        android:paddingBottom="20dp">
+        android:padding="16dp">
 
+        <!-- Date Header -->
         <TextView
             android:id="@+id/dateTextView"
+            style="@style/TextAppearance.Morfipolo.Headline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="06/11/2025"
-            android:textColor="@color/comedor_text_primary"
-            android:textSize="20sp"
-            android:textStyle="bold"
+            android:textSize="18sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <TextView
-            android:id="@+id/timeRangeTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="Horario para elegir: 08:00 - 11:00"
-            android:textColor="@color/comedor_text_secondary"
-            android:textSize="13sp"
-            android:visibility="gone"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/dateTextView" />
-
-        <TextView
-            android:id="@+id/menuSubtitleTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="@string/menu_daily"
-            android:textColor="@color/comedor_text_secondary"
-            android:textSize="13sp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/timeRangeTextView" />
-
+        <!-- Status Badges Row -->
         <LinearLayout
             android:id="@+id/badgesLayout"
             android:layout_width="wrap_content"
@@ -61,80 +32,102 @@
             android:orientation="horizontal"
             android:gravity="center_vertical"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            app:layout_constraintTop_toTopOf="@id/dateTextView"
+            app:layout_constraintBottom_toBottomOf="@id/dateTextView">
 
-            <TextView
-                android:id="@+id/alreadySelectedTextView"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/alreadySelectedCard"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/badge_success_modern"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp"
-                android:text="@string/already_selected"
-                android:textColor="@color/comedor_text_white"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:maxLines="1"
-                android:ellipsize="end"
-                android:visibility="gone" />
+                android:layout_marginEnd="8dp"
+                app:cardBackgroundColor="@color/food_secondary_green"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
+                android:visibility="gone">
+                <TextView
+                    android:id="@+id/alreadySelectedTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="4dp"
+                    android:text="@string/already_selected"
+                    android:textColor="@color/white"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </com.google.android.material.card.MaterialCardView>
 
-            <TextView
-                android:id="@+id/statusTextView"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/statusCard"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/badge_success_modern"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp"
-                android:text="@string/open"
-                android:textColor="@color/comedor_text_white"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:maxLines="1" />
+                app:cardBackgroundColor="@color/food_primary_orange"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp">
+                <TextView
+                    android:id="@+id/statusTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="4dp"
+                    android:text="@string/open"
+                    android:textColor="@color/white"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
+        <!-- Divider -->
+        <View
+            android:id="@+id/itemDivider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:background="@color/food_divider"
+            app:layout_constraintTop_toBottomOf="@id/dateTextView" />
+
+        <!-- Menu Content -->
         <TextView
             android:id="@+id/menuDescriptionTextView"
+            style="@style/TextAppearance.Morfipolo.Subhead"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="12dp"
-            android:background="@color/comedor_beige_light"
             android:text="Arrollado de pollo con pure de papas"
-            android:textColor="@color/comedor_text_primary"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:lineSpacingExtra="4dp"
+            android:textSize="16sp"
             android:maxLines="2"
             android:ellipsize="end"
-            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/menuSubtitleTextView" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/removeVoteButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:minHeight="44dp"
-            android:text="@string/remove_selection"
-            android:textColor="@color/comedor_text_white"
-            android:textSize="14sp"
-            android:backgroundTint="@color/comedor_error"
-            android:visibility="gone"
-            android:maxLines="1"
-            android:ellipsize="end"
-            app:cornerRadius="12dp"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/itemDivider" />
+
+        <TextView
+            android:id="@+id/timeRangeTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="08:00 - 11:00"
+            android:textColor="@color/food_primary_orange"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            app:drawableStartCompat="@android:drawable/ic_menu_recent_history"
+            app:drawableTint="@color/food_primary_orange"
+            android:drawablePadding="4dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/menuDescriptionTextView" />
+
+        <!-- Actions -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/removeVoteButton"
+            style="@style/Widget.Morfipolo.Button.Primary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/remove_selection"
+            android:backgroundTint="@color/food_status_error"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/timeRangeTextView" />
 
         <LinearLayout
             android:id="@+id/optionsContainer"
@@ -145,7 +138,7 @@
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/menuDescriptionTextView" />
+            app:layout_constraintTop_toBottomOf="@id/timeRangeTextView" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

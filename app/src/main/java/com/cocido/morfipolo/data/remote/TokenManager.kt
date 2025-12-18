@@ -223,4 +223,45 @@ class TokenManager(
     suspend fun clearSession() {
         sessionManager.logout()
     }
+    
+    /**
+     * Extrae el userId del token JWT.
+     * Intenta obtenerlo de los campos comunes: 'sub', 'id', 'userId', 'user_id'
+     */
+    fun getUserIdFromToken(token: String?): String? {
+        if (token == null) return null
+        return try {
+            val parts = token.split(".")
+            if (parts.size != 3) return null
+            
+            val payload = String(Base64.decode(parts[1], Base64.URL_SAFE or Base64.NO_WRAP))
+            val json = JSONObject(payload)
+            
+            // Intentar obtener userId de diferentes campos comunes en JWT
+            json.optString("sub", null)?.takeIf { it.isNotEmpty() }
+                ?: json.optString("id", null)?.takeIf { it.isNotEmpty() }
+                ?: json.optString("userId", null)?.takeIf { it.isNotEmpty() }
+                ?: json.optString("user_id", null)?.takeIf { it.isNotEmpty() }
+                ?: json.optString("user", null)?.takeIf { it.isNotEmpty() }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error extrayendo userId del token", e)
+            null
+        }
+    }
+    
+    /**
+     * Obtiene el userId del token actual.
+     * Primero intenta desde SessionManager, luego desde el token JWT como fallback.
+     */
+    fun getCurrentUserId(): String? {
+        // Primero intentar desde SessionManager
+        val savedUserId = sessionManager.getCurrentUserId()
+        if (savedUserId != null) {
+            return savedUserId
+        }
+        
+        // Si no hay userId guardado, intentar extraerlo del token
+        val accessToken = sessionManager.getAccessToken()
+        return getUserIdFromToken(accessToken)
+    }
 }

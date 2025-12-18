@@ -1,19 +1,65 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme - Forzado a modo claro. -->
+    <!-- Base application theme -->
     <style name="Base.Theme.Morfipolo" parent="Theme.Material3.Light.NoActionBar">
-        <item name="colorPrimary">@color/comedor_brown_primary</item>
-        <item name="colorPrimaryVariant">@color/comedor_brown_dark</item>
-        <item name="colorSecondary">@color/comedor_accent_warm</item>
-        <item name="colorOnPrimary">@color/comedor_text_white</item>
-        <item name="colorOnSecondary">@color/comedor_text_white</item>
-        <item name="android:windowBackground">@drawable/background_gradient_main</item>
-        <item name="android:textColorPrimary">@color/comedor_text_primary</item>
-        <item name="android:textColorSecondary">@color/comedor_text_secondary</item>
-        <!-- Status bar: transparente para que se integre con el fondo -->
+        <!-- Brand Colors -->
+        <item name="colorPrimary">@color/food_primary_orange</item>
+        <item name="colorPrimaryVariant">@color/food_primary_orange_dark</item>
+        <item name="colorOnPrimary">@color/food_text_inverse</item>
+        
+        <item name="colorSecondary">@color/food_secondary_green</item>
+        <item name="colorSecondaryVariant">@color/food_secondary_green_dark</item>
+        <item name="colorOnSecondary">@color/food_text_inverse</item>
+
+        <item name="colorError">@color/food_status_error</item>
+        <item name="colorOnError">@color/food_text_inverse</item>
+
+        <!-- Background & Surface -->
+        <item name="android:windowBackground">@color/food_background_light</item>
+        <item name="colorSurface">@color/food_background_card</item>
+        <item name="colorOnSurface">@color/food_text_primary</item>
+
+        <!-- Typography & General -->
+        <item name="android:textColorPrimary">@color/food_text_primary</item>
+        <item name="android:textColorSecondary">@color/food_text_secondary</item>
+        
+        <!-- System Bars -->
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">true</item> <!-- Dark icons on light bg -->
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        
+        <!-- Ripple -->
+        <item name="colorControlHighlight">@color/food_ripple</item>
     </style>
 
     <style name="Theme.Morfipolo" parent="Base.Theme.Morfipolo" />
+    
+    <!-- Custom Style for Buttons -->
+    <style name="Widget.Morfipolo.Button.Primary" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/food_primary_orange</item>
+        <item name="android:textColor">@color/food_text_inverse</item>
+        <item name="cornerRadius">12dp</item>
+        <item name="android:stateListAnimator">@null</item> <!-- Remove default shadow lift for cleaner look if desired, or keep it. Keeping default usually better for Material. -->
+    </style>
+    
+    <style name="Widget.Morfipolo.Button.Secondary" parent="Widget.Material3.Button.TonalButton">
+        <item name="backgroundTint">@color/food_secondary_green_light</item>
+        <item name="android:textColor">@color/food_secondary_green_dark</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+    
+    <style name="Widget.Morfipolo.Card" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/food_background_card</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">2dp</item>
+    </style>
+    
+    <style name="TextAppearance.Morfipolo.Headline" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textColor">@color/food_text_primary</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.Morfipolo.Subhead" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">@color/food_text_secondary</item>
+    </style>
+
 </resources>

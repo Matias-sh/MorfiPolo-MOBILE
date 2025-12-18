@@ -237,7 +237,6 @@ class LoginActivity : AppCompatActivity() {
             binding.titleTextView,
             binding.dniInputLayout,
             binding.passwordInputLayout,
-            binding.instructionCard,
             binding.loginButton
         )
 

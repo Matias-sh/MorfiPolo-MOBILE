@@ -77,9 +77,13 @@ class WeeklyMenuFragment : Fragment() {
                 lifecycleScope.launch {
                     try {
                         val app = requireActivity().application as MorfipoloApplication
+                        android.util.Log.d("WeeklyMenuFragment", "🗑️ Iniciando eliminación de voto: $voteId")
                         val result = app.voteRepository.deleteVote(voteId)
                         if (result.isSuccess) {
-                            android.util.Log.d("WeeklyMenuFragment", "Voto eliminado exitosamente")
+                            android.util.Log.d("WeeklyMenuFragment", "✅ Voto eliminado exitosamente")
+                            // Pequeño delay para dar tiempo al servidor de procesar
+                            kotlinx.coroutines.delay(300)
+                            // Recargar menús para sincronizar estado
                             viewModel.loadWeeklyMenus()
                         } else {
                             android.util.Log.e("WeeklyMenuFragment", "Error al eliminar voto")
@@ -132,9 +136,13 @@ class WeeklyMenuFragment : Fragment() {
                         val app = requireActivity().application as MorfipoloApplication
                         val userId = app.sessionManager.getCurrentUserId()
                         if (userId != null) {
+                            android.util.Log.d("WeeklyMenuFragment", "🗳️ Iniciando selección de opción: $optionId para menú: $menuId")
                             val result = app.voteRepository.createVoteOrReplace(optionId, menuId, userId)
                             if (result.isSuccess) {
-                                android.util.Log.d("WeeklyMenuFragment", "Opción seleccionada exitosamente")
+                                android.util.Log.d("WeeklyMenuFragment", "✅ Opción seleccionada exitosamente")
+                                // Pequeño delay para dar tiempo al servidor de procesar
+                                kotlinx.coroutines.delay(300)
+                                // Recargar menús para sincronizar estado
                                 viewModel.loadWeeklyMenus()
                             } else {
                                 android.util.Log.e("WeeklyMenuFragment", "Error al seleccionar opción")
@@ -152,6 +160,15 @@ class WeeklyMenuFragment : Fragment() {
                                 // Mostrar mensaje descriptivo
                                 val infoMessage = when {
                                     errorMessage != null -> errorMessage
+                                    message.contains("already voted", ignoreCase = true) || 
+                                    message.contains("ya tienes un voto", ignoreCase = true) -> {
+                                        // Si el servidor dice que ya hay un voto pero el cliente no lo detecta,
+                                        // recargar para sincronizar estado
+                                        android.util.Log.w("WeeklyMenuFragment", "⚠️ Servidor reporta voto existente, recargando estado...")
+                                        kotlinx.coroutines.delay(500)
+                                        viewModel.loadWeeklyMenus()
+                                        "Ya tienes un voto registrado. Recargando estado..."
+                                    }
                                     message.contains("cerrado", ignoreCase = true) || 
                                     message.contains("horario", ignoreCase = true) || 
                                     message.contains("time", ignoreCase = true) -> {
@@ -160,7 +177,9 @@ class WeeklyMenuFragment : Fragment() {
                                     message.isNotEmpty() -> message
                                     else -> "No se puede seleccionar. Solo puedes votar de 08:00 a 11:00."
                                 }
-                                showInfoBanner(infoMessage)
+                                if (!infoMessage.contains("Recargando estado")) {
+                                    showInfoBanner(infoMessage)
+                                }
                             }
                         }
                     } catch (e: com.cocido.morfipolo.data.remote.SessionExpiredException) {
@@ -211,13 +230,14 @@ class WeeklyMenuFragment : Fragment() {
             R.color.comedor_success
         )
         binding.swipeRefreshLayout.setOnRefreshListener {
-            viewModel.loadWeeklyMenus()
+            // Forzar recarga completa
+            viewModel.loadWeeklyMenus(forceReload = true)
         }
     }
     
     private fun checkNetworkStatus() {
         val isOnline = NetworkUtils.isNetworkAvailable(requireContext())
-        binding.offlineIndicator.visibility = if (!isOnline) View.VISIBLE else View.GONE
+        // binding.offlineIndicator.visibility = if (!isOnline) View.VISIBLE else View.GONE
     }
     
     private var currentSnackbar: Snackbar? = null
@@ -282,7 +302,7 @@ class WeeklyMenuFragment : Fragment() {
                     }
                     is WeeklyMenuUiState.Success -> {
                         binding.progressBar.visibility = View.GONE
-                        binding.offlineIndicator.visibility = View.GONE
+                        // binding.offlineIndicator.visibility = View.GONE
                         
                         if (state.menus.isEmpty()) {
                             binding.menusRecyclerView.visibility = View.GONE
@@ -290,6 +310,7 @@ class WeeklyMenuFragment : Fragment() {
                         } else {
                             binding.menusRecyclerView.visibility = View.VISIBLE
                             binding.emptyStateLayout.visibility = View.GONE
+                            
                             android.util.Log.d("WeeklyMenuFragment", "Menús cargados exitosamente: ${state.menus.size}")
                             adapter.submitList(state.menus) {
                                 android.util.Log.d("WeeklyMenuFragment", "Adapter actualizado con ${state.menus.size} menús")

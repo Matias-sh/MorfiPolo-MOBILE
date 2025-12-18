@@ -4,173 +4,116 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/comedor_beige_primary"
-    android:paddingVertical="30dp"
+    android:background="@color/food_background_light"
     tools:context=".ui.menu.weekly.WeeklyMenuFragment">
 
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/offlineIndicator"
+    <!-- Header Shadow/BG -->
+    <View
         android:layout_width="match_parent"
+        android:layout_height="240dp"
+        android:background="@drawable/background_rect_curved_bottom"
+        android:backgroundTint="@color/food_primary_orange"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/titleTextView"
+        style="@style/TextAppearance.Morfipolo.Headline"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:visibility="gone"
-        app:cardBackgroundColor="@color/comedor_error"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
+        android:layout_marginTop="60dp"
+        android:text="@string/menu_weekly"
+        android:textColor="@color/white"
+        android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="18dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@android:drawable/ic_menu_revert"
-                android:tint="@color/comedor_text_white"
-                android:contentDescription="@string/offline_icon" />
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="12dp"
-                android:text="@string/offline_message"
-                android:textColor="@color/comedor_text_white"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <LinearLayout
-        android:id="@+id/headerLayout"
-        android:layout_width="match_parent"
+    <TextView
+        android:id="@+id/instructionTextView"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:paddingTop="34dp"
-        android:paddingBottom="16dp"
+        android:layout_marginTop="8dp"
+        android:text="@string/select_date_instruction"
+        android:textColor="@color/white"
+        android:alpha="0.8"
+        android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/offlineIndicator">
-
-        <TextView
-            android:id="@+id/titleTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/menu_weekly"
-            android:textColor="@color/comedor_text_primary"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.02"
-            android:gravity="center_horizontal" />
-
-        <TextView
-            android:id="@+id/instructionTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/select_date_instruction"
-            android:textColor="@color/comedor_text_secondary"
-            android:textSize="14sp"
-            android:gravity="center_horizontal" />
-    </LinearLayout>
+        app:layout_constraintTop_toBottomOf="@id/titleTextView" />
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefreshLayout"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:layout_marginTop="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/headerLayout">
+        app:layout_constraintTop_toBottomOf="@id/instructionTextView">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/menusRecyclerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginStart="20dp"
-            android:layout_marginEnd="20dp"
-            android:layout_marginBottom="20dp"
             android:clipToPadding="false"
-            android:paddingTop="12dp"
-            android:paddingBottom="12dp"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="80dp"
             tools:listitem="@layout/item_weekly_menu" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
+    <!-- Empty State -->
     <LinearLayout
         android:id="@+id/emptyStateLayout"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center"
         android:visibility="gone"
-        android:padding="40dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/headerLayout">
+        app:layout_constraintTop_toBottomOf="@id/instructionTextView">
 
         <ImageView
-            android:layout_width="140dp"
-            android:layout_height="140dp"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
             android:src="@android:drawable/ic_menu_view"
-            android:tint="@color/comedor_text_secondary"
-            android:alpha="0.6"
-            android:contentDescription="@string/empty_state_icon"
-            android:layout_marginBottom="28dp" />
-
+            app:tint="@color/food_text_hint" />
+            
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/empty_state_title"
-            android:textColor="@color/comedor_text_primary"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
-
+            style="@style/TextAppearance.Morfipolo.Headline"
+            android:layout_marginTop="16dp" />
+            
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/empty_state_message"
-            android:textColor="@color/comedor_text_secondary"
-            android:textSize="15sp"
             android:gravity="center"
-            android:lineSpacingExtra="4dp" />
+            android:layout_marginTop="8dp" />
     </LinearLayout>
-
+    
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:indeterminateTint="@color/comedor_brown_primary"
+        android:indeterminateTint="@color/food_primary_orange"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Banner informativo flotante en la parte inferior -->
+    <!-- Info Banner -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/infoBanner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
+        android:layout_margin="16dp"
         android:visibility="gone"
-        app:cardBackgroundColor="@color/comedor_accent_warm"
+        app:cardBackgroundColor="@color/food_accent_yellow"
         app:cardCornerRadius="12dp"
         app:cardElevation="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -184,8 +127,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_dialog_info"
-                android:tint="@color/comedor_text_white"
-                android:contentDescription="@string/info_icon" />
+                app:tint="@color/food_text_primary" />
 
             <TextView
                 android:id="@+id/infoBannerText"
@@ -193,9 +135,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="12dp"
-                android:text=""
-                android:textColor="@color/comedor_text_white"
-                android:textSize="14sp"
+                android:textColor="@color/food_text_primary"
                 android:textStyle="bold" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

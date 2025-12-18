@@ -7,6 +7,7 @@ import android.os.PowerManager
 import android.util.Log
 import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.domain.model.Menu
+import com.cocido.morfipolo.domain.model.Vote
 import com.cocido.morfipolo.util.notifications.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -121,7 +122,7 @@ class AlarmReceiver : BroadcastReceiver() {
     
     /**
      * Maneja la alarma de las 9:00 AM.
-     * Solo notifica si hay un menú publicado.
+     * Solo notifica si hay un menú publicado y el usuario no ha votado aún.
      */
     private suspend fun handle9amReminder(context: Context) {
         Log.d(TAG, "📍 Procesando alarma 9:00 AM...")
@@ -137,11 +138,29 @@ class AlarmReceiver : BroadcastReceiver() {
         
         Log.d(TAG, "✅ Menú encontrado: ${menu.description}")
         
-        // 2. Enviar notificación
+        // 2. Verificar si el usuario ya votó (opcional, pero mejor verificar para evitar spam)
+        val app = context.applicationContext as? MorfipoloApplication
+        val userId = app?.sessionManager?.getCurrentUserId()
+        if (userId != null) {
+            try {
+                val userVote = app.voteRepository.getUserVoteForMenu(menu.id, userId)
+                if (userVote != null) {
+                    Log.d(TAG, "✅ Usuario ya votó (opción: ${userVote.option.name}), NO se envía notificación de 9am")
+                    // Marcar como notificado para evitar notificaciones futuras
+                    alarmPrefs.setNotified9am()
+                    return
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "⚠️ Error al verificar voto en 9am, continuando con notificación: ${e.message}")
+                // Continuar con la notificación si hay error (mejor notificar de más que de menos)
+            }
+        }
+        
+        // 3. Enviar notificación
         val menuContent = formatMenuOptions(menu)
         sendNotification(context, isFollowUp = false, menuDescription = menuContent)
         
-        // 3. Marcar que se envió la notificación de 9am
+        // 4. Marcar que se envió la notificación de 9am
         alarmPrefs.setNotified9am()
         Log.d(TAG, "✅ Notificación de 9am enviada y registrada")
     }
@@ -219,7 +238,28 @@ class AlarmReceiver : BroadcastReceiver() {
         }
         
         try {
-            val userVote = app.voteRepository.getUserVoteForMenu(menu.id, userId)
+            Log.d(TAG, "🔍 Verificando si el usuario ya votó para el menú: ${menu.id}")
+            // Intentar obtener el voto con un pequeño retry en caso de error temporal
+            var userVote: Vote? = null
+            var retryCount = 0
+            val maxRetries = 2
+            
+            while (retryCount <= maxRetries && userVote == null) {
+                try {
+                    userVote = app.voteRepository.getUserVoteForMenu(menu.id, userId)
+                    if (userVote != null) {
+                        Log.d(TAG, "✅ Voto encontrado en intento ${retryCount + 1}: ${userVote.id} para opción: ${userVote.option.name}")
+                        break
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "⚠️ Error al obtener voto (intento ${retryCount + 1}): ${e.message}")
+                    if (retryCount < maxRetries) {
+                        // Esperar un poco antes de reintentar
+                        kotlinx.coroutines.delay(500)
+                    }
+                }
+                retryCount++
+            }
             
             if (userVote != null) {
                 Log.d(TAG, "✅ Usuario ya votó (opción: ${userVote.option.name}), NO se envía recordatorio de 10am")
@@ -227,7 +267,7 @@ class AlarmReceiver : BroadcastReceiver() {
             }
             
             // 4. El usuario NO ha votado - enviar recordatorio urgente
-            Log.d(TAG, "⚠️ Usuario NO ha votado, enviando recordatorio urgente de 10am...")
+            Log.d(TAG, "⚠️ Usuario NO ha votado (verificado después de ${retryCount} intentos), enviando recordatorio urgente de 10am...")
             
             val menuContent = formatMenuOptions(menu)
             sendNotification(context, isFollowUp = true, menuDescription = menuContent)
@@ -237,8 +277,9 @@ class AlarmReceiver : BroadcastReceiver() {
             Log.d(TAG, "✅ Recordatorio urgente de 10am enviado y registrado")
             
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error al verificar voto del usuario: ${e.message}", e)
-            // En caso de error, no enviar notificación para evitar spam
+            Log.e(TAG, "❌ Error crítico al verificar voto del usuario: ${e.message}", e)
+            // En caso de error crítico, no enviar notificación para evitar spam
+            // Es mejor no molestar al usuario si no estamos seguros de que no votó
         }
     }
     

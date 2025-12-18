@@ -22,8 +22,15 @@ class WeeklyMenuViewModel(
     // Estado para notificar cuando la sesión expira
     private val _sessionExpired = MutableStateFlow<Boolean>(false)
     val sessionExpired: StateFlow<Boolean> = _sessionExpired
+    
+    private var cachedUserVotes: Map<String, com.cocido.morfipolo.domain.model.Vote> = emptyMap() // Cache de votos del usuario
+    private val maxMenusToShow = 10 // Solo mostrar últimos 10 menús (últimas 2 semanas)
 
-    fun loadWeeklyMenus() {
+    fun loadWeeklyMenus(forceReload: Boolean = false) {
+        // Si se fuerza la recarga, limpiar el cache
+        if (forceReload) {
+            cachedUserVotes = emptyMap()
+        }
         _uiState.value = WeeklyMenuUiState.Loading
 
         viewModelScope.launch {
@@ -50,9 +57,9 @@ class WeeklyMenuViewModel(
                     }
                 }
                 
-                // Intentar cargar menús
-                android.util.Log.d("WeeklyMenuViewModel", "Cargando menús...")
-                val menus = try {
+                // Cargar solo los últimos 10 menús (últimas 2 semanas)
+                android.util.Log.d("WeeklyMenuViewModel", "Cargando últimos $maxMenusToShow menús...")
+                val allMenus = try {
                     menuRepository.getWeeklyMenus()
                 } catch (e: SessionExpiredException) {
                     // Sesión expirada, marcar y propagar
@@ -65,26 +72,89 @@ class WeeklyMenuViewModel(
                     emptyList()
                 }
                 
-                android.util.Log.d("WeeklyMenuViewModel", "Menús cargados: ${menus.size}")
+                // Tomar solo los últimos 10 menús (más recientes primero)
+                val menus = allMenus.take(maxMenusToShow)
+                
+                android.util.Log.d("WeeklyMenuViewModel", "Menús totales disponibles: ${allMenus.size}, mostrando últimos: ${menus.size}")
                 
                 // Obtener votos del usuario para cada menú (solo si hay sesión válida)
-                val userId = sessionManager.getCurrentUserId()
+                val userIdFromSession = sessionManager.getCurrentUserId()
+                
+                // CRÍTICO: El endpoint /votes parece devolver todos los votos de un menú, no del usuario
+                // Intentar extraer userId del token JWT para verificar
+                val accessToken = sessionManager.getAccessToken()
+                val userIdFromToken = if (accessToken != null) {
+                    try {
+                        val parts = accessToken.split(".")
+                        if (parts.size == 3) {
+                            val payload = String(android.util.Base64.decode(parts[1], android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP))
+                            val json = org.json.JSONObject(payload)
+                            // Intentar diferentes campos comunes en JWT
+                            json.optString("sub", null)?.takeIf { it.isNotEmpty() }
+                                ?: json.optString("id", null)?.takeIf { it.isNotEmpty() }
+                                ?: json.optString("userId", null)?.takeIf { it.isNotEmpty() }
+                                ?: json.optString("user_id", null)?.takeIf { it.isNotEmpty() }
+                                ?: json.optString("user", null)?.takeIf { it.isNotEmpty() }
+                        } else null
+                    } catch (e: Exception) {
+                        android.util.Log.w("WeeklyMenuViewModel", "Error extrayendo userId del token: ${e.message}")
+                        null
+                    }
+                } else null
+                
+                val userId = userIdFromToken ?: userIdFromSession
+                
+                android.util.Log.d("WeeklyMenuViewModel", "UserId desde SessionManager: $userIdFromSession")
+                android.util.Log.d("WeeklyMenuViewModel", "UserId desde Token JWT: $userIdFromToken")
+                android.util.Log.d("WeeklyMenuViewModel", "UserId final a usar: $userId")
+                
                 val hasValidSession = authResult is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.Authenticated ||
                     authResult is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.TemporaryError
                 val menusWithVotes = if (userId != null && hasValidSession) {
-                    menus.map { menu ->
-                        try {
-                            val userVote = voteRepository.getUserVoteForMenu(menu.id, userId)
-                            WeeklyMenuItem(menu, userVote)
-                        } catch (e: SessionExpiredException) {
-                            // Sesión expirada al obtener votos
-                            android.util.Log.w("WeeklyMenuViewModel", "Sesión expirada al obtener votos")
-                            _sessionExpired.value = true
-                            WeeklyMenuItem(menu, null)
-                        } catch (e: Exception) {
-                            android.util.Log.e("WeeklyMenuViewModel", "Error al obtener voto para menú ${menu.id}", e)
-                            WeeklyMenuItem(menu, null)
+                    try {
+                        // OPTIMIZACIÓN: Obtener votos solo para los menús que estamos mostrando (últimos 10)
+                        android.util.Log.d("WeeklyMenuViewModel", "Obteniendo votos para ${menus.size} menús (últimos 10)...")
+                        android.util.Log.d("WeeklyMenuViewModel", "UserId actual: $userId")
+                        
+                        // Obtener todos los votos del usuario (el método busca en múltiples páginas si es necesario)
+                        val allVotesResult = voteRepository.getAllUserVotes(userId)
+                        val allVotes = allVotesResult.getOrNull() ?: emptyList()
+                        android.util.Log.d("WeeklyMenuViewModel", "Votos obtenidos del servidor: ${allVotes.size}")
+                        
+                        // Filtrar votos del usuario actual
+                        val userIdNormalized = userId.trim().lowercase()
+                        val userVotes = allVotes.filter { vote ->
+                            vote.user.id.trim().lowercase() == userIdNormalized
                         }
+                        android.util.Log.d("WeeklyMenuViewModel", "Votos del usuario actual: ${userVotes.size}")
+                        
+                        // Crear mapa de votos por menuId (solo para los menús que estamos mostrando)
+                        val menuIds = menus.map { it.id }.toSet()
+                        val votesByMenuId = userVotes
+                            .filter { it.menu.id in menuIds }
+                            .associateBy { it.menu.id }
+                        
+                        android.util.Log.d("WeeklyMenuViewModel", "Mapa de votos creado con ${votesByMenuId.size} entradas")
+                        
+                        // Asignar votos a cada menú
+                        menus.map { menu ->
+                            val userVote = votesByMenuId[menu.id]
+                            if (userVote != null) {
+                                android.util.Log.d("WeeklyMenuViewModel", "✅ Voto encontrado para menú ${menu.id} (${menu.date}): opción ${userVote.option.name}")
+                            } else {
+                                android.util.Log.d("WeeklyMenuViewModel", "❌ No se encontró voto para menú ${menu.id} (${menu.date})")
+                            }
+                            WeeklyMenuItem(menu, userVote)
+                        }
+                    } catch (e: SessionExpiredException) {
+                        // Sesión expirada al obtener votos
+                        android.util.Log.w("WeeklyMenuViewModel", "Sesión expirada al obtener votos")
+                        _sessionExpired.value = true
+                        menus.map { WeeklyMenuItem(it, null) }
+                    } catch (e: Exception) {
+                        android.util.Log.e("WeeklyMenuViewModel", "Error al obtener votos", e)
+                        // En caso de error, mostrar menús sin votos
+                        menus.map { WeeklyMenuItem(it, null) }
                     }
                 } else {
                     // Si no hay sesión válida, mostrar menús sin votos
