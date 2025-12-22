@@ -25,8 +25,25 @@ class MenuRepository(
 
     suspend fun getMenuByDate(date: Date): Menu? {
         val dateString = dateFormat.format(date)
+        val timestamp = date.time
+        
+        // OPTIMIZACIÓN: Intentar primero desde caché local (más rápido)
+        val cachedMenuEntity = menuDao.getMenuByDate(timestamp)
+        if (cachedMenuEntity != null) {
+            val cachedMenu = entityToMenu(cachedMenuEntity)
+            // Filtrar menús "draft" - no mostrar borradores
+            if (cachedMenu.status != "draft") {
+                // OPTIMIZACIÓN: Usar caché si tiene menos de 10 minutos (más tiempo para evitar recargas innecesarias)
+                val cacheAge = System.currentTimeMillis() - cachedMenuEntity.fecha
+                if (cacheAge < 10 * 60 * 1000) { // 10 minutos
+                    return cachedMenu
+                }
+            }
+        }
+        
+        // Si no hay caché o está desactualizado, obtener desde API
         return try {
-            // Obtener todos los menús desde API
+            // OPTIMIZACIÓN: Solo obtener menús recientes (últimos 10) en lugar de todos
             val response = apiService.getMenus()
             
             if (response.isSuccessful) {
@@ -38,53 +55,40 @@ class MenuRepository(
                     if (it.status == "draft") {
                         return null
                     }
-                    // Guardar en base de datos local si es necesario
+                    // Guardar en base de datos local
                     val menuEntity = menuToEntity(it)
                     menuDao.insertMenu(menuEntity)
                     it
-                } ?: null
-            } else {
-                // Si falla, intentar desde base de datos local
-                val timestamp = date.time
-                val menuEntity = menuDao.getMenuByDate(timestamp)
-                menuEntity?.let { 
+                } ?: cachedMenuEntity?.let { 
+                    // Si no se encuentra en API pero hay en caché, usar caché
                     val menu = entityToMenu(it)
-                    // Filtrar menús "draft" - no mostrar borradores
-                    if (menu.status == "draft") {
-                        null
-                    } else {
-                        menu
-                    }
+                    if (menu.status != "draft") menu else null
+                }
+            } else {
+                // Si falla, usar base de datos local
+                cachedMenuEntity?.let { 
+                    val menu = entityToMenu(it)
+                    if (menu.status != "draft") menu else null
                 }
             }
         } catch (e: HttpException) {
-            // Si falla, intentar desde base de datos local
-            val timestamp = date.time
-            val menuEntity = menuDao.getMenuByDate(timestamp)
-            menuEntity?.let { 
+            // Si falla, usar base de datos local
+            cachedMenuEntity?.let { 
                 val menu = entityToMenu(it)
-                // Filtrar menús "draft" - no mostrar borradores
-                if (menu.status == "draft") {
-                    null
-                } else {
-                    menu
-                }
+                if (menu.status != "draft") menu else null
             }
         } catch (e: IOException) {
             // Si no hay conexión, usar base de datos local
-            val timestamp = date.time
-            val menuEntity = menuDao.getMenuByDate(timestamp)
-            menuEntity?.let { 
+            cachedMenuEntity?.let { 
                 val menu = entityToMenu(it)
-                // Filtrar menús "draft" - no mostrar borradores
-                if (menu.status == "draft") {
-                    null
-                } else {
-                    menu
-                }
+                if (menu.status != "draft") menu else null
             }
         } catch (e: Exception) {
-            null
+            // En caso de cualquier otro error, intentar usar caché
+            cachedMenuEntity?.let { 
+                val menu = entityToMenu(it)
+                if (menu.status != "draft") menu else null
+            }
         }
     }
 
@@ -115,11 +119,14 @@ class MenuRepository(
                     }
                 }
                 
-                // Guardar en base de datos local
-                val menuEntities = sortedMenus.map { menuToEntity(it) }
+                // OPTIMIZACIÓN: Limitar a los últimos 10 menús para mejorar rendimiento
+                val limitedMenus = sortedMenus.take(10)
+                
+                // Guardar en base de datos local (solo los últimos 10)
+                val menuEntities = limitedMenus.map { menuToEntity(it) }
                 menuDao.insertMenus(menuEntities)
                 
-                sortedMenus
+                limitedMenus
             } else {
                 // Si es 401, lanzar excepción de sesión expirada
                 if (response.code() == 401) {
@@ -152,7 +159,8 @@ class MenuRepository(
         // Filtrar menús "draft" - no mostrar borradores
         val publishedMenus = menus.filter { it.status != "draft" }
         
-        return publishedMenus
+        // OPTIMIZACIÓN: Limitar a los últimos 10 menús también desde local
+        return publishedMenus.take(10)
     }
 
     fun getWeeklyMenusFlow(): Flow<List<Menu>> {

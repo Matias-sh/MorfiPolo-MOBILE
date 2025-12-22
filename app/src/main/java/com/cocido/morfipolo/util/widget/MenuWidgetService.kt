@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
+import com.cocido.morfipolo.BuildConfig
 import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.R
 import com.cocido.morfipolo.domain.model.MenuOption
@@ -121,7 +122,8 @@ class MenuWidgetFactory(
                     try {
                         // CRÍTICO: Siempre recargar desde el repositorio para obtener datos frescos
                         // No confiar en caché - el voto puede haber cambiado después de una acción
-                        val vote = app.voteRepository.getUserVoteForMenu(menu.id, userId)
+                        // OPTIMIZACIÓN: Limitar búsqueda a 5 páginas (suficiente para votos recientes del menú de hoy)
+                        val vote = app.voteRepository.getUserVoteForMenu(menu.id, userId, maxPagesToSearch = 5)
                         android.util.Log.d("MenuWidgetFactory", "onDataSetChanged: ✅ Voto del usuario: ${if (vote != null) "Sí (voteId=${vote.id}, optionId=${vote.option.id}, optionName=${vote.option.name})" else "No hay voto"}")
                         
                         // Log detallado para diagnóstico
@@ -134,7 +136,7 @@ class MenuWidgetFactory(
                         vote
                     } catch (e: Exception) {
                         android.util.Log.e("MenuWidgetFactory", "Error al obtener voto", e)
-                        e.printStackTrace()
+                        if (BuildConfig.DEBUG) e.printStackTrace()
                         null
                     }
                 }
@@ -146,7 +148,7 @@ class MenuWidgetFactory(
             android.util.Log.d("MenuWidgetFactory", "onDataSetChanged: ✅ Datos cargados exitosamente")
         } catch (e: Exception) {
             android.util.Log.e("MenuWidgetFactory", "Error en onDataSetChanged", e)
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
             options = emptyList()
             userVote = null
             menuId = ""

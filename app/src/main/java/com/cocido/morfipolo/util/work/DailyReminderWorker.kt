@@ -98,9 +98,13 @@ class DailyReminderWorker(
             
             try {
                 val notificationHelper = NotificationHelper(applicationContext)
-                notificationHelper.showDailyReminderNotification(menuDescription)
+                val sent = notificationHelper.showDailyReminderNotification(menuDescription)
                 
-                android.util.Log.d(TAG, "✅✅✅ Recordatorio enviado exitosamente")
+                if (sent) {
+                    android.util.Log.d(TAG, "✅✅✅ Recordatorio enviado exitosamente")
+                } else {
+                    android.util.Log.w(TAG, "⚠️ No se pudo enviar el recordatorio (posible falta de permisos)")
+                }
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "❌ Error al enviar notificación", e)
             }
@@ -276,8 +280,12 @@ class DailyReminderWorker(
             try {
                 android.util.Log.d(TAG, "🧪 Enviando notificación de prueba...")
                 val notificationHelper = com.cocido.morfipolo.util.notifications.NotificationHelper(context)
-                notificationHelper.showDailyReminderNotification("Menú de prueba")
-                android.util.Log.d(TAG, "✅ Notificación de prueba enviada")
+                val sent = notificationHelper.showDailyReminderNotification("Menú de prueba")
+                if (sent) {
+                    android.util.Log.d(TAG, "✅ Notificación de prueba enviada")
+                } else {
+                    android.util.Log.w(TAG, "⚠️ No se pudo enviar notificación de prueba")
+                }
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "❌ Error al enviar notificación de prueba", e)
             }

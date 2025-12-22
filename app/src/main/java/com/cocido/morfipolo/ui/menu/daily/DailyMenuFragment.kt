@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -63,6 +65,35 @@ class DailyMenuFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Configurar insets para el header naranja - extender detrás de la barra de estado
+        // Aplicar padding solo al contenido (dateTextView) para que no quede debajo de la barra de estado
+        ViewCompat.setOnApplyWindowInsetsListener(binding.dateTextView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            // Ajustar marginTop para incluir el espacio de la barra de estado
+            val layoutParams = v.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+            layoutParams?.let {
+                val originalMarginTop = 24 // dp del XML (reducido de 60dp)
+                val marginTopInPx = (originalMarginTop * resources.displayMetrics.density).toInt()
+                it.topMargin = marginTopInPx + systemBars.top
+                v.layoutParams = it
+            }
+            insets
+        }
+
+        // Configurar insets para el ScrollView - aplicar padding inferior para evitar solapamiento con la barra de navegación
+        ViewCompat.setOnApplyWindowInsetsListener(binding.scrollView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            // Obtener insets de navegación (incluye barra de navegación del sistema)
+            val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            // Calcular altura de la BottomNavigationView de la app (aproximadamente 80dp + insets)
+            val bottomNavHeightDp = 80f
+            val bottomNavHeightPx = (bottomNavHeightDp * resources.displayMetrics.density).toInt()
+            // Padding total = insets del sistema + altura de la barra de navegación de la app + margen extra
+            val totalBottomPadding = navigationBars.bottom + bottomNavHeightPx + (16 * resources.displayMetrics.density).toInt()
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, totalBottomPadding)
+            insets
+        }
+
         setupObservers()
         setupPullToRefresh()
         checkNetworkStatus()
@@ -83,6 +114,42 @@ class DailyMenuFragment : Fragment() {
         }
         
         // Cargar menú: usar fecha del argumento si existe, sino usar hoy
+        loadMenuFromArguments()
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // Si no hay argumentos de fecha (viene de la barra de navegación, no del menú semanal),
+        // resetear a la fecha de hoy
+        val menuDateArg = arguments?.getString("menuDate", "") ?: ""
+        if (menuDateArg.isEmpty()) {
+            // Viene de la barra de navegación, mostrar menú de hoy
+            val today = getTodayDate()
+            val currentDate = viewModel.getCurrentDate()
+            // Solo recargar si la fecha actual no es hoy
+            if (!isSameDate(currentDate, today)) {
+                android.util.Log.d("DailyMenuFragment", "🔄 Reseteando a fecha de hoy desde barra de navegación")
+                viewModel.loadMenuForDate(today)
+            }
+        } else {
+            // Hay argumentos, pero si la fecha es diferente a hoy y ya se cargó,
+            // limpiar los argumentos para que la próxima vez muestre hoy
+            val argDate = try {
+                dateFormatApi.parse(menuDateArg)
+            } catch (e: Exception) {
+                null
+            }
+            val today = getTodayDate()
+            if (argDate != null && !isSameDate(argDate, today)) {
+                // La fecha del argumento no es hoy, limpiar argumentos después de cargar
+                // para que la próxima vez que se vuelva desde la barra de navegación muestre hoy
+                android.util.Log.d("DailyMenuFragment", "🧹 Limpiando argumentos de fecha antigua")
+                arguments?.remove("menuDate")
+            }
+        }
+    }
+    
+    private fun loadMenuFromArguments() {
         val menuDateArg = arguments?.getString("menuDate", "") ?: ""
         val dateToLoad = if (menuDateArg.isNotEmpty()) {
             try {
@@ -94,6 +161,13 @@ class DailyMenuFragment : Fragment() {
             getTodayDate()
         }
         viewModel.loadMenuForDate(dateToLoad)
+    }
+    
+    private fun isSameDate(date1: Date, date2: Date): Boolean {
+        val cal1 = Calendar.getInstance().apply { time = date1 }
+        val cal2 = Calendar.getInstance().apply { time = date2 }
+        return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+               cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
     }
     
     private fun getTodayDate(): Date {
@@ -112,8 +186,19 @@ class DailyMenuFragment : Fragment() {
             R.color.comedor_success
         )
         binding.swipeRefreshLayout.setOnRefreshListener {
-            val currentDate = viewModel.getCurrentDate()
-            viewModel.loadMenuForDate(currentDate)
+            // Si no hay argumentos de fecha, usar fecha de hoy
+            // Si hay argumentos, mantener la fecha del argumento
+            val menuDateArg = arguments?.getString("menuDate", "") ?: ""
+            val dateToLoad = if (menuDateArg.isNotEmpty()) {
+                try {
+                    dateFormatApi.parse(menuDateArg) ?: getTodayDate()
+                } catch (e: Exception) {
+                    getTodayDate()
+                }
+            } else {
+                getTodayDate()
+            }
+            viewModel.loadMenuForDate(dateToLoad)
         }
     }
     
@@ -170,68 +255,70 @@ class DailyMenuFragment : Fragment() {
         
         lifecycleScope.launch {
             viewModel.uiState.collect { state ->
-                binding.swipeRefreshLayout.isRefreshing = false
-                
-                when (state) {
-                    is DailyMenuUiState.Loading -> {
-                        if (!binding.swipeRefreshLayout.isRefreshing) {
-                            binding.progressBar.visibility = View.VISIBLE
+                _binding?.let { currentBinding ->
+                    currentBinding.swipeRefreshLayout.isRefreshing = false
+                    
+                    when (state) {
+                        is DailyMenuUiState.Loading -> {
+                            if (!currentBinding.swipeRefreshLayout.isRefreshing) {
+                                currentBinding.progressBar.visibility = View.VISIBLE
+                            }
+                            currentBinding.optionsContainer.visibility = View.GONE
+                            // Mostrar información genérica mientras carga
+                            val today = Date()
+                            currentBinding.dateTextView.text = dateFormat.format(today)
+                            currentBinding.dateTextView.visibility = View.VISIBLE
+                            currentBinding.timeRangeTextView.text = "Horario para elegir: 08:00 - 11:00"
+                            currentBinding.timeRangeTextView.visibility = View.VISIBLE
+                            currentBinding.statusContainer.visibility = View.GONE
+                            // El card siempre está visible, no se oculta
+                            checkNetworkStatus()
                         }
-                        binding.optionsContainer.visibility = View.GONE
-                        // Mostrar información genérica mientras carga
-                        val today = Date()
-                        binding.dateTextView.text = dateFormat.format(today)
-                        binding.dateTextView.visibility = View.VISIBLE
-                        binding.timeRangeTextView.text = "Horario para elegir: 08:00 - 11:00"
-                        binding.timeRangeTextView.visibility = View.VISIBLE
-                        binding.statusContainer.visibility = View.GONE
-                        // El card siempre está visible, no se oculta
-                        checkNetworkStatus()
-                    }
-                    is DailyMenuUiState.Success -> {
-                        binding.progressBar.visibility = View.GONE
-                        binding.optionsContainer.visibility = View.VISIBLE
-                        // El card siempre está visible, no se oculta
-                        // binding.offlineIndicator.visibility = View.GONE
-                        
-                        updateUI(state)
-                    }
-                    is DailyMenuUiState.Error -> {
-                        binding.progressBar.visibility = View.GONE
-                        checkNetworkStatus()
-                        
-                        // Detectar tipo de error
-                        when {
-                            state.message.contains("sesión", ignoreCase = true) || 
-                            state.message.contains("session", ignoreCase = true) -> {
-                                // Error de sesión expirada, redirigir al login
-                                navigateToLogin()
-                                return@collect
-                            }
-                            state.message.contains("No hay menú disponible", ignoreCase = true) ||
-                            state.message.contains("no hay menu", ignoreCase = true) -> {
-                                // No hay menú - mostrar mensaje en el área de opciones en lugar del snackbar
-                                showNoMenuMessage()
-                            }
-                            state.message.contains("08:00", ignoreCase = true) ||
-                            state.message.contains("11:00", ignoreCase = true) ||
-                            state.message.contains("horario", ignoreCase = true) ||
-                            state.message.contains("cerrado", ignoreCase = true) ||
-                            state.message.contains("eliminar el voto", ignoreCase = true) ||
-                            state.message.contains("votar", ignoreCase = true) -> {
-                                // Error de horario - mostrar banner informativo sin reintentar
-                                showInfoBanner(state.message)
-                            }
-                            !NetworkUtils.isNetworkAvailable(requireContext()) -> {
-                                // Error de conexión - mostrar con reintentar
-                                showErrorWithRetry(getString(R.string.error_no_connection)) {
-                                    viewModel.loadMenuForDate(viewModel.getCurrentDate())
+                        is DailyMenuUiState.Success -> {
+                            currentBinding.progressBar.visibility = View.GONE
+                            currentBinding.optionsContainer.visibility = View.VISIBLE
+                            // El card siempre está visible, no se oculta
+                            // currentBinding.offlineIndicator.visibility = View.GONE
+                            
+                            updateUI(state)
+                        }
+                        is DailyMenuUiState.Error -> {
+                            currentBinding.progressBar.visibility = View.GONE
+                            checkNetworkStatus()
+                            
+                            // Detectar tipo de error
+                            when {
+                                state.message.contains("sesión", ignoreCase = true) || 
+                                state.message.contains("session", ignoreCase = true) -> {
+                                    // Error de sesión expirada, redirigir al login
+                                    navigateToLogin()
+                                    return@collect
                                 }
-                            }
-                            else -> {
-                                // Otros errores - mostrar con reintentar
-                                showErrorWithRetry(state.message) {
-                                    viewModel.loadMenuForDate(viewModel.getCurrentDate())
+                                state.message.contains("No hay menú disponible", ignoreCase = true) ||
+                                state.message.contains("no hay menu", ignoreCase = true) -> {
+                                    // No hay menú - mostrar mensaje en el área de opciones en lugar del snackbar
+                                    showNoMenuMessage()
+                                }
+                                state.message.contains("08:00", ignoreCase = true) ||
+                                state.message.contains("11:00", ignoreCase = true) ||
+                                state.message.contains("horario", ignoreCase = true) ||
+                                state.message.contains("cerrado", ignoreCase = true) ||
+                                state.message.contains("eliminar el voto", ignoreCase = true) ||
+                                state.message.contains("votar", ignoreCase = true) -> {
+                                    // Error de horario - mostrar banner informativo sin reintentar
+                                    showInfoBanner(state.message)
+                                }
+                                !NetworkUtils.isNetworkAvailable(requireContext()) -> {
+                                    // Error de conexión - mostrar con reintentar
+                                    showErrorWithRetry(getString(R.string.error_no_connection)) {
+                                        viewModel.loadMenuForDate(viewModel.getCurrentDate())
+                                    }
+                                }
+                                else -> {
+                                    // Otros errores - mostrar con reintentar
+                                    showErrorWithRetry(state.message) {
+                                        viewModel.loadMenuForDate(viewModel.getCurrentDate())
+                                    }
                                 }
                             }
                         }

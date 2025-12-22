@@ -4,9 +4,14 @@ import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.ui.setupWithNavController
 import com.cocido.morfipolo.MorfipoloApplication
@@ -34,17 +39,33 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Configurar status bar transparente para que se integre con el fondo
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            window.statusBarColor = android.graphics.Color.TRANSPARENT
-        }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
-                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-        }
+        
+        // Habilitar edge-to-edge (compatible con Android 15+)
+        enableEdgeToEdge()
+        
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        
+        // NO aplicar padding al root - dejar que el contenido se extienda detrás de la barra de estado
+        // El padding se aplicará solo a los elementos específicos que lo necesiten (como el header naranja)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+            // No aplicar padding aquí - el contenido debe extenderse detrás de la barra de estado
+            insets
+        }
+        
+        // Configurar insets específicamente para el BottomNavigationView
+        // Esto asegura que se ajuste correctamente a la navigation bar sin espacio extra
+        ViewCompat.setOnApplyWindowInsetsListener(binding.navView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            // Aplicar padding inferior solo al BottomNavigationView para que se ajuste a la navigation bar
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, systemBars.bottom)
+            insets
+        }
+        
+        // Configurar status bar transparente con iconos oscuros (compatible con Android 15+)
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController?.isAppearanceLightStatusBars = true
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
 
         // Solicitar permiso de notificaciones si es necesario (Android 13+)
         requestNotificationPermissionIfNeeded()

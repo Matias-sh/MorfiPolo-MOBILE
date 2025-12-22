@@ -187,8 +187,8 @@ class WeeklyMenuAdapter(
                             statusMessageTextView.setTextColor(androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.food_secondary_green))
                             statusMessageTextView.setTypeface(null, android.graphics.Typeface.BOLD)
                         } else if (!hasVotedAny) {
-                            // Usuario NO votó nada hoy
-                            statusMessageTextView.text = "Usted no seleccionó una opción el día de hoy"
+                            // Usuario NO votó nada para este menú
+                            statusMessageTextView.text = "Usted no seleccionó el menú de este día"
                             statusMessageTextView.setTextColor(androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.food_status_error))
                             statusMessageTextView.setTypeface(null, android.graphics.Typeface.NORMAL)
                         } else {

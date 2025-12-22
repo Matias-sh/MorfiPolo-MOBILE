@@ -132,8 +132,8 @@ class NotificationHelper(private val context: Context) {
      * Muestra una notificación de recordatorio diario a las 9am
      * para que el usuario se anote en la comida del día
      */
-    fun showDailyReminderNotification(menuDescription: String? = null) {
-        try {
+    fun showDailyReminderNotification(menuDescription: String? = null): Boolean {
+        return try {
             // Verificar permisos de notificaciones en Android 13+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val hasPermission = android.content.pm.PackageManager.PERMISSION_GRANTED ==
@@ -144,7 +144,7 @@ class NotificationHelper(private val context: Context) {
                 
                 if (!hasPermission) {
                     android.util.Log.e("NotificationHelper", "❌ No hay permiso de notificaciones")
-                    return
+                    return false
                 }
                 android.util.Log.d("NotificationHelper", "✅ Permiso de notificaciones verificado")
             }
@@ -211,8 +211,10 @@ class NotificationHelper(private val context: Context) {
             notificationManager.notify(REMINDER_NOTIFICATION_ID, notification)
             
             android.util.Log.d("NotificationHelper", "📢✅ Recordatorio diario enviado exitosamente (ID: $REMINDER_NOTIFICATION_ID)")
+            true // Notificación enviada exitosamente
         } catch (e: Exception) {
             android.util.Log.e("NotificationHelper", "❌ Error al enviar notificación de recordatorio", e)
+            false // Error al enviar notificación
         }
     }
 
@@ -220,8 +222,10 @@ class NotificationHelper(private val context: Context) {
      * Muestra una notificación de seguimiento a las 10am
      * para recordar al usuario que aún no votó
      */
-    fun showFollowUpReminderNotification(menuDescription: String? = null) {
-        try {
+    fun showFollowUpReminderNotification(menuDescription: String? = null): Boolean {
+        return try {
+            android.util.Log.d("NotificationHelper", "🔔 Intentando enviar notificación de seguimiento (10AM)...")
+            
             // Verificar permisos de notificaciones en Android 13+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val hasPermission = android.content.pm.PackageManager.PERMISSION_GRANTED ==
@@ -231,9 +235,10 @@ class NotificationHelper(private val context: Context) {
                     )
                 
                 if (!hasPermission) {
-                    android.util.Log.e("NotificationHelper", "❌ No hay permiso de notificaciones")
-                    return
+                    android.util.Log.e("NotificationHelper", "❌ No hay permiso de notificaciones (POST_NOTIFICATIONS)")
+                    return false
                 }
+                android.util.Log.d("NotificationHelper", "✅ Permiso de notificaciones verificado")
             }
 
             val intent = Intent(context, MainActivity::class.java).apply {
@@ -297,9 +302,17 @@ class NotificationHelper(private val context: Context) {
 
             notificationManager.notify(FOLLOWUP_NOTIFICATION_ID, notification)
             
-            android.util.Log.d("NotificationHelper", "📢✅ Recordatorio de seguimiento (10AM) enviado exitosamente")
+            android.util.Log.d("NotificationHelper", "📢✅ Recordatorio de seguimiento (10AM) enviado exitosamente (ID: $FOLLOWUP_NOTIFICATION_ID)")
+            android.util.Log.d("NotificationHelper", "   - Título: $title")
+            android.util.Log.d("NotificationHelper", "   - Canal: $CHANNEL_ID")
+            android.util.Log.d("NotificationHelper", "   - NotificationManager: ${notificationManager.javaClass.simpleName}")
+            true // Notificación enviada exitosamente
         } catch (e: Exception) {
             android.util.Log.e("NotificationHelper", "❌ Error al enviar notificación de seguimiento", e)
+            android.util.Log.e("NotificationHelper", "   - Tipo de error: ${e.javaClass.simpleName}")
+            android.util.Log.e("NotificationHelper", "   - Mensaje: ${e.message}")
+            e.printStackTrace()
+            false // Error al enviar notificación
         }
     }
 
