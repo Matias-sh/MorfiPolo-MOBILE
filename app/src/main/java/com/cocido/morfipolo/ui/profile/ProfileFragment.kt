@@ -12,6 +12,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.core.widget.doOnTextChanged
 import com.google.android.material.textfield.TextInputLayout
 import com.cocido.morfipolo.MorfipoloApplication
@@ -143,6 +144,10 @@ class ProfileFragment : Fragment() {
     private fun setupListeners() {
         binding.changePasswordButton.setOnClickListener {
             showChangePasswordDialog()
+        }
+
+        binding.notificationSettingsButton.setOnClickListener {
+            findNavController().navigate(R.id.action_profileFragment_to_notificationSettingsFragment)
         }
 
         binding.logoutButton.setOnClickListener {

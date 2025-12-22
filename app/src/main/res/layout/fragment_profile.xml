@@ -121,6 +121,25 @@
                         android:layout_marginHorizontal="16dp" />
 
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/notificationSettingsButton"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="60dp"
+                        android:text="@string/notification_settings"
+                        android:textColor="@color/food_text_primary"
+                        android:gravity="start|center_vertical"
+                        android:paddingStart="24dp"
+                        app:icon="@android:drawable/ic_lock_idle_alarm"
+                        app:iconTint="@color/food_primary_orange"
+                        app:iconPadding="16dp" />
+                        
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/food_divider"
+                        android:layout_marginHorizontal="16dp" />
+
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/logoutButton"
                         style="@style/Widget.Material3.Button.TextButton"
                         android:layout_width="match_parent"

@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/titleTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/edit_notification"
+        style="@style/TextAppearance.Morfipolo.Headline"
+        android:textSize="20sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TimePicker
+        android:id="@+id/timePicker"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:timePickerMode="clock"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/titleTextView" />
+
+    <TextView
+        android:id="@+id/daysLabelTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Días de la semana:"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/timePicker" />
+
+    <HorizontalScrollView
+        android:id="@+id/daysScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:scrollbars="none"
+        android:fillViewport="false"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/daysLabelTextView">
+
+        <LinearLayout
+            android:id="@+id/daysContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingEnd="8dp">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/mondayChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="L"
+                android:checkable="true"
+                app:chipBackgroundColor="@color/chip_background_selector"
+                app:chipStrokeWidth="0dp"
+                app:chipMinHeight="40dp"
+                android:minWidth="48dp"
+                android:textColor="@color/chip_text_selector"
+                android:layout_marginEnd="6dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/tuesdayChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="M"
+                android:checkable="true"
+                app:chipBackgroundColor="@color/chip_background_selector"
+                app:chipStrokeWidth="0dp"
+                app:chipMinHeight="40dp"
+                android:minWidth="48dp"
+                android:textColor="@color/chip_text_selector"
+                android:layout_marginEnd="6dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/wednesdayChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="X"
+                android:checkable="true"
+                app:chipBackgroundColor="@color/chip_background_selector"
+                app:chipStrokeWidth="0dp"
+                app:chipMinHeight="40dp"
+                android:minWidth="48dp"
+                android:textColor="@color/chip_text_selector"
+                android:layout_marginEnd="6dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/thursdayChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="J"
+                android:checkable="true"
+                app:chipBackgroundColor="@color/chip_background_selector"
+                app:chipStrokeWidth="0dp"
+                app:chipMinHeight="40dp"
+                android:minWidth="48dp"
+                android:textColor="@color/chip_text_selector"
+                android:layout_marginEnd="6dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/fridayChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="V"
+                android:checkable="true"
+                app:chipBackgroundColor="@color/chip_background_selector"
+                app:chipStrokeWidth="0dp"
+                app:chipMinHeight="40dp"
+                android:minWidth="48dp"
+                android:textColor="@color/chip_text_selector"
+                android:layout_marginEnd="6dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/saturdayChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="S"
+                android:checkable="true"
+                app:chipBackgroundColor="@color/chip_background_selector"
+                app:chipStrokeWidth="0dp"
+                app:chipMinHeight="40dp"
+                android:minWidth="48dp"
+                android:textColor="@color/chip_text_selector"
+                android:layout_marginEnd="6dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/sundayChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="D"
+                android:checkable="true"
+                app:chipBackgroundColor="@color/chip_background_selector"
+                app:chipStrokeWidth="0dp"
+                app:chipMinHeight="40dp"
+                android:minWidth="48dp"
+                android:textColor="@color/chip_text_selector" />
+
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/deleteButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/delete"
+        android:textColor="@color/food_status_error"
+        style="@style/Widget.Material3.Button.TextButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/daysScrollView" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
