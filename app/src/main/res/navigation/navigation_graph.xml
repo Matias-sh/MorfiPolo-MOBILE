@@ -31,7 +31,17 @@
         android:id="@+id/profileFragment"
         android:name="com.cocido.morfipolo.ui.profile.ProfileFragment"
         android:label="@string/profile"
-        tools:layout="@layout/fragment_profile" />
+        tools:layout="@layout/fragment_profile">
+        <action
+            android:id="@+id/action_profileFragment_to_notificationSettingsFragment"
+            app:destination="@id/notificationSettingsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/notificationSettingsFragment"
+        android:name="com.cocido.morfipolo.ui.notifications.NotificationSettingsFragment"
+        android:label="@string/notification_settings"
+        tools:layout="@layout/fragment_notification_settings" />
 
 </navigation>
 

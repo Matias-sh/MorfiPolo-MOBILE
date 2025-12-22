@@ -96,4 +96,10 @@
     <string name="confirm_remove_vote_title">Quitar elección</string>
     <string name="confirm_remove_vote_message">¿Estás seguro que deseas quitar tu elección de este menú?</string>
     <string name="confirm">Confirmar</string>
+    
+    <!-- Notification Settings -->
+    <string name="add_notification">Agregar notificación</string>
+    <string name="edit_notification">Editar notificación</string>
+    <string name="delete">Eliminar</string>
+    <string name="notification_settings">Configuración de notificaciones</string>
 </resources>

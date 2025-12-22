@@ -16,6 +16,7 @@ class AlarmPreferences(context: Context) {
         private const val KEY_NOTIFIED_9AM = "notified_9am_"
         private const val KEY_NOTIFIED_930AM = "notified_930am_"
         private const val KEY_NOTIFIED_10AM = "notified_10am_"
+        private const val KEY_CUSTOM_NOTIFICATION = "custom_notification_"
         private const val KEY_LAST_CLEANUP_DATE = "last_cleanup_date"
     }
     
@@ -92,6 +93,53 @@ class AlarmPreferences(context: Context) {
     }
     
     /**
+     * Resetea todas las notificaciones del día actual (útil para testing).
+     */
+    fun resetTodayNotifications() {
+        val today = getTodayString()
+        prefs.edit()
+            .remove("$KEY_NOTIFIED_9AM$today")
+            .remove("$KEY_NOTIFIED_930AM$today")
+            .remove("$KEY_NOTIFIED_10AM$today")
+            .apply()
+        android.util.Log.d("AlarmPreferences", "🔄 Reset de notificaciones para $today")
+    }
+    
+    /**
+     * Resetea solo la notificación de 10am del día actual.
+     * Útil cuando el flag está marcado pero la notificación no se envió realmente.
+     */
+    fun reset10amNotification() {
+        val today = getTodayString()
+        prefs.edit()
+            .remove("$KEY_NOTIFIED_10AM$today")
+            .apply()
+        android.util.Log.d("AlarmPreferences", "🔄 Reset de notificación 10am para $today")
+    }
+    
+    /**
+     * Verifica si se envió una notificación personalizada específica hoy.
+     * @param notificationId ID único de la notificación personalizada
+     */
+    fun wasCustomNotificationSent(notificationId: String): Boolean {
+        val today = getTodayString()
+        val key = "$KEY_CUSTOM_NOTIFICATION${notificationId}_$today"
+        return prefs.getBoolean(key, false)
+    }
+    
+    /**
+     * Marca que se envió una notificación personalizada específica hoy.
+     * @param notificationId ID único de la notificación personalizada
+     */
+    fun setCustomNotificationSent(notificationId: String) {
+        val today = getTodayString()
+        val key = "$KEY_CUSTOM_NOTIFICATION${notificationId}_$today"
+        prefs.edit().putBoolean(key, true).apply()
+        android.util.Log.d("AlarmPreferences", "✅ Marcado: notificación personalizada $notificationId enviada para $today")
+        cleanupOldEntries()
+    }
+    
+    /**
      * Limpia entradas antiguas para evitar que las preferencias crezcan indefinidamente.
      * Solo mantiene los últimos 7 días.
      */
@@ -114,7 +162,8 @@ class AlarmPreferences(context: Context) {
             prefs.all.keys.forEach { key ->
                 if (key.startsWith(KEY_NOTIFIED_9AM) || 
                     key.startsWith(KEY_NOTIFIED_930AM) || 
-                    key.startsWith(KEY_NOTIFIED_10AM)) {
+                    key.startsWith(KEY_NOTIFIED_10AM) ||
+                    key.startsWith(KEY_CUSTOM_NOTIFICATION)) {
                     
                     // Extraer la fecha de la clave
                     val dateStr = key.substringAfterLast("_")
@@ -141,31 +190,6 @@ class AlarmPreferences(context: Context) {
         } catch (e: Exception) {
             android.util.Log.e("AlarmPreferences", "Error al limpiar entradas antiguas", e)
         }
-    }
-    
-    /**
-     * Resetea todas las notificaciones del día actual (útil para testing).
-     */
-    fun resetTodayNotifications() {
-        val today = getTodayString()
-        prefs.edit()
-            .remove("$KEY_NOTIFIED_9AM$today")
-            .remove("$KEY_NOTIFIED_930AM$today")
-            .remove("$KEY_NOTIFIED_10AM$today")
-            .apply()
-        android.util.Log.d("AlarmPreferences", "🔄 Reset de notificaciones para $today")
-    }
-    
-    /**
-     * Resetea solo la notificación de 10am del día actual.
-     * Útil cuando el flag está marcado pero la notificación no se envió realmente.
-     */
-    fun reset10amNotification() {
-        val today = getTodayString()
-        prefs.edit()
-            .remove("$KEY_NOTIFIED_10AM$today")
-            .apply()
-        android.util.Log.d("AlarmPreferences", "🔄 Reset de notificación 10am para $today")
     }
 }
 

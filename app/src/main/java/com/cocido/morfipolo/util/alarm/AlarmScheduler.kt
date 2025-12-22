@@ -217,6 +217,165 @@ object AlarmScheduler {
             else -> "Desconocido"
         }
     }
+    
+    /**
+     * Programa las notificaciones personalizadas configuradas por el usuario.
+     * @param context Contexto de la aplicación
+     * @param notificationConfigRepository Repositorio de configuraciones
+     */
+    fun scheduleCustomNotifications(context: Context, notificationConfigRepository: com.cocido.morfipolo.data.repository.NotificationConfigRepository) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val notifications = notificationConfigRepository.getEnabledNotifications()
+        
+        // Cancelar todas las alarmas personalizadas anteriores
+        cancelAllCustomAlarms(context)
+        
+        // Programar cada notificación habilitada
+        notifications.forEach { notification ->
+            // Programar para cada día de la semana configurado
+            notification.daysOfWeek.forEach { dayOfWeek ->
+                val requestCode = generateRequestCode(notification.id, dayOfWeek)
+                scheduledRequestCodes.add(requestCode) // Registrar el request code usado
+                
+                val nextAlarmTime = calculateNextAlarmTimeForDay(notification.hour, notification.minute, dayOfWeek)
+                val pendingIntent = createCustomAlarmPendingIntent(context, requestCode, notification.id, dayOfWeek)
+                
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        alarmManager.setExactAndAllowWhileIdle(
+                            AlarmManager.RTC_WAKEUP,
+                            nextAlarmTime,
+                            pendingIntent
+                        )
+                    } else {
+                        alarmManager.setExact(
+                            AlarmManager.RTC_WAKEUP,
+                            nextAlarmTime,
+                            pendingIntent
+                        )
+                    }
+                    
+                    val formattedTime = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                        .format(Date(nextAlarmTime))
+                    Log.d(TAG, "✅ Notificación personalizada ${notification.getFormattedTime()} (${com.cocido.morfipolo.domain.model.CustomNotification.getDayNameFull(dayOfWeek)}) programada para: $formattedTime")
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Error al programar notificación personalizada: ${e.message}")
+                }
+            }
+        }
+    }
+    
+    /**
+     * Cancela todas las alarmas personalizadas.
+     * Usa un enfoque más eficiente: guarda los request codes usados y solo cancela esos.
+     */
+    private val scheduledRequestCodes = mutableSetOf<Int>()
+    
+    private fun cancelAllCustomAlarms(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        try {
+            val intent = Intent(context, AlarmReceiver::class.java).apply {
+                action = AlarmReceiver.ACTION_CUSTOM_NOTIFICATION
+            }
+            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            } else {
+                PendingIntent.FLAG_NO_CREATE
+            }
+            
+            // Solo cancelar los request codes que realmente se usaron
+            scheduledRequestCodes.toList().forEach { requestCode ->
+                try {
+                    val pendingIntent = PendingIntent.getBroadcast(context, requestCode, intent, flags)
+                    if (pendingIntent != null) {
+                        alarmManager.cancel(pendingIntent)
+                        pendingIntent.cancel()
+                    }
+                } catch (e: Exception) {
+                    // Ignorar errores
+                }
+            }
+            
+            scheduledRequestCodes.clear()
+            Log.d(TAG, "🛑 Alarmas personalizadas canceladas")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error al cancelar alarmas personalizadas: ${e.message}")
+        }
+    }
+    
+    /**
+     * Calcula el próximo momento para una alarma en un día específico de la semana.
+     */
+    private fun calculateNextAlarmTimeForDay(hour: Int, minute: Int, dayOfWeek: Int): Long {
+        val calendar = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault()).apply {
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        
+        val now = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault())
+        val currentDayOfWeek = now.get(Calendar.DAY_OF_WEEK)
+        
+        // Convertir día de la semana de nuestro formato (1=Lunes) a Calendar (1=Domingo, 2=Lunes...)
+        val calendarDayOfWeek = when (dayOfWeek) {
+            1 -> Calendar.MONDAY
+            2 -> Calendar.TUESDAY
+            3 -> Calendar.WEDNESDAY
+            4 -> Calendar.THURSDAY
+            5 -> Calendar.FRIDAY
+            6 -> Calendar.SATURDAY
+            7 -> Calendar.SUNDAY
+            else -> Calendar.MONDAY
+        }
+        
+        // Calcular días hasta el día objetivo
+        var daysToAdd = (calendarDayOfWeek - currentDayOfWeek + 7) % 7
+        
+        // Si es el mismo día pero ya pasó la hora, avanzar a la próxima semana
+        if (daysToAdd == 0 && calendar.timeInMillis <= now.timeInMillis) {
+            daysToAdd = 7
+        }
+        
+        // Si no hay días que agregar (no debería pasar), agregar 7 días
+        if (daysToAdd == 0) {
+            daysToAdd = 7
+        }
+        
+        calendar.add(Calendar.DAY_OF_MONTH, daysToAdd)
+        
+        return calendar.timeInMillis
+    }
+    
+    /**
+     * Genera un request code único para una notificación y día específico.
+     * Usa un rango más pequeño y predecible para evitar crear demasiados PendingIntents.
+     */
+    private fun generateRequestCode(notificationId: String, dayOfWeek: Int): Int {
+        // Usar un hash más simple y limitado a un rango razonable
+        val baseCode = kotlin.math.abs(notificationId.hashCode() % 1000) // 0-999
+        val dayOffset = (dayOfWeek - 1) * 1000 // 0, 1000, 2000, 3000, 4000, 5000, 6000
+        return 10000 + baseCode + dayOffset // Rango: 10000-16999
+    }
+    
+    /**
+     * Crea el PendingIntent para una notificación personalizada.
+     */
+    private fun createCustomAlarmPendingIntent(context: Context, requestCode: Int, notificationId: String, dayOfWeek: Int): PendingIntent {
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            action = AlarmReceiver.ACTION_CUSTOM_NOTIFICATION
+            putExtra("notification_id", notificationId)
+            putExtra("day_of_week", dayOfWeek)
+        }
+        
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+        
+        return PendingIntent.getBroadcast(context, requestCode, intent, flags)
+    }
 }
 
 

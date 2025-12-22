@@ -44,6 +44,7 @@ class AlarmReceiver : BroadcastReceiver() {
         const val ACTION_REMINDER_10AM = "com.cocido.morfipolo.REMINDER_10AM"
         // Mantener compatibilidad con alarmas anteriores
         const val ACTION_DAILY_REMINDER = "com.cocido.morfipolo.DAILY_REMINDER_ALARM"
+        const val ACTION_CUSTOM_NOTIFICATION = "com.cocido.morfipolo.CUSTOM_NOTIFICATION"
         private const val WAKE_LOCK_TIMEOUT = 30000L // 30 segundos para permitir consulta a API
     }
     
@@ -53,9 +54,22 @@ class AlarmReceiver : BroadcastReceiver() {
         val action = intent?.action
         
         // Validar acción
-        val validActions = listOf(ACTION_REMINDER_9AM, ACTION_REMINDER_930AM, ACTION_REMINDER_10AM, ACTION_DAILY_REMINDER)
+        val validActions = listOf(ACTION_REMINDER_9AM, ACTION_REMINDER_930AM, ACTION_REMINDER_10AM, ACTION_DAILY_REMINDER, ACTION_CUSTOM_NOTIFICATION)
         if (action !in validActions) {
             Log.w(TAG, "Acción desconocida: $action")
+            return
+        }
+        
+        // Si es una notificación personalizada, manejarla de forma diferente
+        if (action == ACTION_CUSTOM_NOTIFICATION) {
+            val notificationId = intent?.getStringExtra("notification_id")
+            val dayOfWeek = intent?.getIntExtra("day_of_week", -1) ?: -1
+            
+            if (notificationId != null && dayOfWeek != -1) {
+                handleCustomNotification(context, notificationId, dayOfWeek)
+            } else {
+                Log.w(TAG, "⚠️ Notificación personalizada sin ID o día de semana")
+            }
             return
         }
         
@@ -433,5 +447,116 @@ class AlarmReceiver : BroadcastReceiver() {
             calendar.get(Calendar.MINUTE),
             calendar.get(Calendar.SECOND)
         )
+    }
+    
+    /**
+     * Maneja una notificación personalizada configurada por el usuario.
+     */
+    private fun handleCustomNotification(context: Context, notificationId: String, dayOfWeek: Int) {
+        val pendingResult = goAsync()
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        val wakeLock = powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "MorfiPolo::CustomNotificationWakeLock"
+        )
+        
+        scope.launch {
+            try {
+                wakeLock.acquire(WAKE_LOCK_TIMEOUT)
+                Log.d(TAG, "📍 Procesando notificación personalizada: $notificationId para día $dayOfWeek")
+                
+                val app = context.applicationContext as? MorfipoloApplication
+                if (app == null) {
+                    Log.w(TAG, "No se pudo obtener MorfipoloApplication")
+                    return@launch
+                }
+                
+                // Obtener la configuración de la notificación
+                val notification = app.notificationConfigRepository.getNotificationById(notificationId)
+                if (notification == null || !notification.isEnabled) {
+                    Log.d(TAG, "⚠️ Notificación $notificationId no encontrada o deshabilitada")
+                    return@launch
+                }
+                
+                // Verificar que sea el día correcto
+                val calendar = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault())
+                val currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+                val expectedCalendarDay = when (dayOfWeek) {
+                    1 -> Calendar.MONDAY
+                    2 -> Calendar.TUESDAY
+                    3 -> Calendar.WEDNESDAY
+                    4 -> Calendar.THURSDAY
+                    5 -> Calendar.FRIDAY
+                    6 -> Calendar.SATURDAY
+                    7 -> Calendar.SUNDAY
+                    else -> return@launch
+                }
+                
+                if (currentDayOfWeek != expectedCalendarDay) {
+                    Log.d(TAG, "⚠️ Día de la semana no coincide (esperado: $dayOfWeek, actual: $currentDayOfWeek)")
+                    return@launch
+                }
+                
+                // Verificar si hay menú publicado
+                val menu = getTodayMenu(context)
+                if (menu == null) {
+                    Log.d(TAG, "❌ No hay menú publicado para hoy, NO se envía notificación personalizada")
+                    return@launch
+                }
+                
+                Log.d(TAG, "✅ Menú encontrado: ${menu.description}")
+                
+                // Verificar si el usuario ya votó (PRIORITARIO: verificar estado real antes que flag de notificación)
+                val userId = app.sessionManager.getCurrentUserId()
+                if (userId != null) {
+                    try {
+                        Log.d(TAG, "🔍 Verificando si el usuario ya votó para el menú: ${menu.id} (búsqueda limitada a 10 páginas)")
+                        val userVote = app.voteRepository.getUserVoteForMenu(menu.id, userId, maxPagesToSearch = 10)
+                        if (userVote != null) {
+                            Log.d(TAG, "✅ Usuario ya votó (opción: ${userVote.option.name}), NO se envía notificación personalizada")
+                            return@launch
+                        }
+                        Log.d(TAG, "ℹ️ Usuario NO ha votado aún")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "⚠️ Error al verificar voto: ${e.message}")
+                        // En caso de error, continuar (mejor notificar de más que de menos)
+                    }
+                } else {
+                    Log.d(TAG, "⚠️ Usuario no logueado, no se puede verificar voto")
+                }
+                
+                // Verificar si ya se envió esta notificación personalizada hoy
+                val alarmPrefs = AlarmPreferences(context)
+                val wasNotifiedBefore = alarmPrefs.wasCustomNotificationSent(notificationId)
+                
+                if (wasNotifiedBefore) {
+                    Log.d(TAG, "⏭️ Ya se envió la notificación personalizada $notificationId hoy, NO se envía de nuevo")
+                    return@launch
+                }
+                
+                // Enviar notificación
+                val menuContent = formatMenuOptions(menu)
+                val notificationSent = sendNotification(context, isFollowUp = false, menuDescription = menuContent)
+                
+                // SOLO marcar que se envió la notificación si realmente se envió exitosamente
+                if (notificationSent) {
+                    alarmPrefs.setCustomNotificationSent(notificationId)
+                    Log.d(TAG, "✅ Notificación personalizada $notificationId enviada y registrada exitosamente")
+                } else {
+                    Log.w(TAG, "⚠️ No se pudo enviar la notificación personalizada $notificationId (posible falta de permisos), NO se marca como enviada")
+                }
+                
+                // Reprogramar para la próxima vez
+                AlarmScheduler.scheduleCustomNotifications(context, app.notificationConfigRepository)
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error al procesar notificación personalizada: ${e.message}", e)
+            } finally {
+                if (wakeLock.isHeld) {
+                    wakeLock.release()
+                }
+                pendingResult.finish()
+            }
+        }
     }
 }

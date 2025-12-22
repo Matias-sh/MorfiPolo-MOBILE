@@ -15,6 +15,7 @@ import com.cocido.morfipolo.data.local.preferences.SessionManager
 import com.cocido.morfipolo.data.remote.RetrofitClient
 import com.cocido.morfipolo.data.remote.TokenManager
 import com.cocido.morfipolo.data.repository.MenuRepository
+import com.cocido.morfipolo.data.repository.NotificationConfigRepository
 import com.cocido.morfipolo.data.repository.UserRepository
 import com.cocido.morfipolo.data.repository.VoteRepository
 import com.cocido.morfipolo.util.alarm.AlarmScheduler
@@ -59,6 +60,10 @@ class MorfipoloApplication : Application() {
     
     val voteRepository: VoteRepository by lazy {
         VoteRepository(apiService)
+    }
+    
+    val notificationConfigRepository: NotificationConfigRepository by lazy {
+        NotificationConfigRepository(applicationContext)
     }
     
     val authManager: com.cocido.morfipolo.data.remote.AuthManager by lazy {
