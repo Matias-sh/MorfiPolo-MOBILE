@@ -7,8 +7,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import com.google.android.material.snackbar.Snackbar
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -45,35 +43,6 @@ class ProfileFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // Configurar insets para el ScrollView - aplicar padding inferior para evitar solapamiento con la barra de navegación
-        // Buscar ScrollView recursivamente en el layout
-        fun findScrollView(parent: ViewGroup): android.widget.ScrollView? {
-            for (i in 0 until parent.childCount) {
-                val child = parent.getChildAt(i)
-                if (child is android.widget.ScrollView) {
-                    return child
-                } else if (child is ViewGroup) {
-                    val result = findScrollView(child)
-                    if (result != null) return result
-                }
-            }
-            return null
-        }
-        
-        val scrollView = if (view is ViewGroup) findScrollView(view) else null
-        scrollView?.let { sv ->
-            ViewCompat.setOnApplyWindowInsetsListener(sv) { v, insets ->
-                val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
-                // Calcular altura de la BottomNavigationView de la app (aproximadamente 80dp + insets)
-                val bottomNavHeightDp = 80f
-                val bottomNavHeightPx = (bottomNavHeightDp * resources.displayMetrics.density).toInt()
-                // Padding total = insets del sistema + altura de la barra de navegación de la app + margen extra
-                val totalBottomPadding = navigationBars.bottom + bottomNavHeightPx + (16 * resources.displayMetrics.density).toInt()
-                v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, totalBottomPadding)
-                insets
-            }
-        }
 
         setupObservers()
         setupListeners()
