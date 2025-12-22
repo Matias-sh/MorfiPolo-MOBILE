@@ -120,8 +120,9 @@ class VoteRepository(
      * 2. Si no funciona, obtiene múltiples páginas y filtra localmente por userId
      * 
      * @param userId ID del usuario para filtrar (opcional, se intenta usar como query param)
+     * @param maxPagesToSearch Máximo de páginas a buscar (null = buscar todas, por defecto 3 para optimización)
      */
-    suspend fun getAllUserVotes(userId: String? = null): Result<List<Vote>> {
+    suspend fun getAllUserVotes(userId: String? = null, maxPagesToSearch: Int? = 3): Result<List<Vote>> {
         return try {
             // Primero intentar con parámetro user_id (si el backend lo soporta)
             val response = if (userId != null) {
@@ -153,7 +154,7 @@ class VoteRepository(
                         // Necesitamos obtener más páginas
                         if (uniqueUserIds.size > 1 || !hasUserVote) {
                             android.util.Log.w("VoteRepository", "⚠️ El backend no filtró por usuario. Obteniendo múltiples páginas...")
-                            getAllVotesPaginated(userId, votesResponse)
+                            getAllVotesPaginated(userId, votesResponse, maxPagesToSearch = maxPagesToSearch)
                         } else {
                             // El backend filtró correctamente o encontramos votos del usuario
                             android.util.Log.d("VoteRepository", "✅ Votos del usuario encontrados en primera página")
@@ -206,13 +207,13 @@ class VoteRepository(
     
     /**
      * Obtiene múltiples páginas de votos y filtra por userId localmente.
-     * WORKAROUND: Necesario porque el backend no filtra por usuario autenticado.
      * 
      * @param userId ID del usuario para filtrar
      * @param firstPageResponse Respuesta de la primera página
+     * @param maxPagesToSearch Máximo de páginas a buscar (null = buscar todas)
      * @return Lista de votos del usuario, obtenidos de múltiples páginas
      */
-    private suspend fun getAllVotesPaginated(userId: String, firstPageResponse: VotesResponse): List<Vote> {
+    private suspend fun getAllVotesPaginated(userId: String, firstPageResponse: VotesResponse, maxPagesToSearch: Int? = null): List<Vote> {
         val allUserVotes = mutableListOf<Vote>()
         val totalPages = firstPageResponse.meta.totalPages
         val userIdNormalized = userId.trim().lowercase()
@@ -224,16 +225,15 @@ class VoteRepository(
         allUserVotes.addAll(firstPageUserVotes)
         android.util.Log.d("VoteRepository", "Página 1: ${firstPageUserVotes.size} votos del usuario de ${firstPageResponse.data.size} totales")
         
-        // Buscar en TODAS las páginas necesarias para encontrar todos los votos del usuario
-        // Estrategia: buscar hasta que no encontremos votos en varias páginas consecutivas
-        val maxConsecutiveEmpty = 5 // Parar después de 5 páginas consecutivas sin votos
-        var consecutiveEmptyPages = 0
+        // Si maxPagesToSearch es null, buscar todas las páginas necesarias
+        // Si está definido, limitar la búsqueda
+        val maxPages = maxPagesToSearch ?: totalPages
         var currentPage = 2
         
-        android.util.Log.d("VoteRepository", "Buscando votos del usuario en todas las páginas (total: $totalPages)...")
+        android.util.Log.d("VoteRepository", "Buscando votos del usuario en páginas 2-${minOf(maxPages, totalPages)} (de $totalPages totales)...")
         
-        // Obtener páginas adicionales hasta encontrar todos los votos
-        while (currentPage <= totalPages && consecutiveEmptyPages < maxConsecutiveEmpty) {
+        // Obtener páginas adicionales
+        while (currentPage <= totalPages && currentPage <= maxPages) {
             try {
                 val response = apiService.getVotes(page = currentPage, limit = 20)
                 if (response.isSuccessful) {
@@ -245,32 +245,16 @@ class VoteRepository(
                         
                         if (pageUserVotes.isNotEmpty()) {
                             allUserVotes.addAll(pageUserVotes)
-                            consecutiveEmptyPages = 0 // Resetear contador
                             android.util.Log.d("VoteRepository", "Página $currentPage: ${pageUserVotes.size} votos del usuario de ${pageResponse.data.size} totales")
-                            android.util.Log.d("VoteRepository", "✅ Encontrados ${pageUserVotes.size} votos del usuario en página $currentPage")
-                        } else {
-                            consecutiveEmptyPages++
-                            android.util.Log.d("VoteRepository", "Página $currentPage: 0 votos del usuario (consecutivos vacíos: $consecutiveEmptyPages)")
-                            
-                            // Si no encontramos votos en varias páginas consecutivas, probablemente ya encontramos todos
-                            if (consecutiveEmptyPages >= maxConsecutiveEmpty) {
-                                android.util.Log.d("VoteRepository", "⏹️ Parando búsqueda: ${consecutiveEmptyPages} páginas consecutivas sin votos del usuario")
-                                break
-                            }
                         }
                     }
                 }
-                // Pequeño delay para no sobrecargar el servidor
-                kotlinx.coroutines.delay(50) // Reducido para ser más rápido
+                // Delay mínimo para no sobrecargar el servidor
+                kotlinx.coroutines.delay(30)
                 currentPage++
             } catch (e: Exception) {
                 android.util.Log.w("VoteRepository", "Error obteniendo página $currentPage: ${e.message}")
-                consecutiveEmptyPages++
                 currentPage++
-                // Continuar con la siguiente página
-                if (consecutiveEmptyPages >= maxConsecutiveEmpty) {
-                    break
-                }
             }
         }
         
@@ -280,31 +264,71 @@ class VoteRepository(
     
     /**
      * Obtiene el voto del usuario para un menú específico.
-     * Este método busca en todos los votos del usuario, no solo los de hoy.
+     * OPTIMIZACIÓN: Usa el parámetro menu_id en la query para obtener solo el voto necesario.
      * 
      * @param menuId ID del menú
      * @param userId ID del usuario
+     * @param maxPagesToSearch Máximo de páginas a buscar (por defecto null = todas las páginas para encontrar votos antiguos)
      * @return El voto del usuario para el menú especificado, o null si no existe
      */
-    suspend fun getUserVoteForMenu(menuId: String, userId: String): Vote? {
+    suspend fun getUserVoteForMenu(menuId: String, userId: String, maxPagesToSearch: Int? = null): Vote? {
         return try {
             android.util.Log.d("VoteRepository", "Buscando voto para menú: $menuId, usuario: $userId")
-            val votesResult = getAllUserVotes(userId)
-            val votes = votesResult.getOrNull() ?: emptyList()
-            android.util.Log.d("VoteRepository", "Buscando en ${votes.size} votos: menú=$menuId, usuario=$userId")
-            val vote = votes.find { vote ->
-                val menuMatch = vote.menu.id == menuId
-                val userMatch = vote.user.id == userId
-                android.util.Log.d("VoteRepository", "  Comparando: menú ${vote.menu.id} == $menuId? $menuMatch, usuario ${vote.user.id} == $userId? $userMatch")
-                menuMatch && userMatch
+            
+            // OPTIMIZACIÓN: Intentar primero con menu_id en la query (mucho más rápido)
+            try {
+                val response = apiService.getVotes(menuId = menuId, userId = userId, userIdAlt = userId)
+                if (response.isSuccessful) {
+                    val votesResponse = response.body()
+                    if (votesResponse != null && votesResponse.data.isNotEmpty()) {
+                        // Filtrar por userId (por si el backend no filtra correctamente)
+                        val userIdNormalized = userId.trim().lowercase()
+                        val vote = votesResponse.data.find { 
+                            it.menu.id == menuId && it.user.id.trim().lowercase() == userIdNormalized
+                        }
+                        if (vote != null) {
+                            android.util.Log.d("VoteRepository", "✅ Voto encontrado con query optimizada: ${vote.id} para opción: ${vote.option.id} (${vote.option.name})")
+                            return vote
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("VoteRepository", "Query optimizada falló, usando método alternativo: ${e.message}")
             }
-            if (vote != null) {
-                android.util.Log.d("VoteRepository", "✅ Voto encontrado: ${vote.id} para opción: ${vote.option.id} (${vote.option.name})")
-            } else {
-                android.util.Log.w("VoteRepository", "❌ No se encontró voto para menú: $menuId, usuario: $userId")
-                android.util.Log.d("VoteRepository", "   Votos disponibles: ${votes.map { "${it.menu.id} (${it.menu.date})" }.joinToString(", ")}")
+            
+            // Fallback: Si la query optimizada no funciona, buscar en todos los votos del usuario
+            // Para búsquedas individuales de menús específicos, buscar en más páginas si es necesario
+            android.util.Log.d("VoteRepository", "Usando método alternativo (búsqueda extendida para menú específico)...")
+            
+            // Para búsquedas individuales, buscar en más páginas para encontrar votos antiguos
+            try {
+                val response = apiService.getVotes(userId = userId, userIdAlt = userId)
+                if (response.isSuccessful) {
+                    val votesResponse = response.body()
+                    if (votesResponse != null) {
+                        // Si maxPagesToSearch es null, buscar en todas las páginas
+                        // Si es un número específico, limitar a ese número
+                        val pagesToSearch = maxPagesToSearch ?: votesResponse.meta.totalPages
+                        
+                        // Buscar en las páginas según el parámetro
+                        val extendedVotes = getAllVotesPaginated(userId, votesResponse, maxPagesToSearch = pagesToSearch)
+                        val vote = extendedVotes.find { 
+                            it.menu.id == menuId && it.user.id.trim().lowercase() == userId.trim().lowercase()
+                        }
+                        if (vote != null) {
+                            android.util.Log.d("VoteRepository", "✅ Voto encontrado: ${vote.id} para opción: ${vote.option.id} (${vote.option.name})")
+                        } else {
+                            android.util.Log.w("VoteRepository", "❌ No se encontró voto para menú: $menuId, usuario: $userId (buscado en ${pagesToSearch ?: votesResponse.meta.totalPages} de ${votesResponse.meta.totalPages} páginas)")
+                        }
+                        return vote
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("VoteRepository", "Error en búsqueda extendida: ${e.message}")
             }
-            vote
+            
+            android.util.Log.w("VoteRepository", "❌ No se encontró voto para menú: $menuId, usuario: $userId")
+            null
         } catch (e: Exception) {
             android.util.Log.e("VoteRepository", "Error al obtener voto para menú: $menuId", e)
             null
@@ -313,8 +337,9 @@ class VoteRepository(
     
     suspend fun createVoteOrReplace(optionId: String, menuId: String, userId: String): Result<Vote> {
         return try {
-            // Primero verificar si ya existe un voto y eliminarlo
-            val existingVote = getUserVoteForMenu(menuId, userId)
+            // OPTIMIZACIÓN: Para el menú del día (reciente), buscar solo en 3 páginas
+            // Esto es mucho más rápido que buscar en todas las páginas
+            val existingVote = getUserVoteForMenu(menuId, userId, maxPagesToSearch = 3)
             existingVote?.let {
                 deleteVote(it.id)
             }

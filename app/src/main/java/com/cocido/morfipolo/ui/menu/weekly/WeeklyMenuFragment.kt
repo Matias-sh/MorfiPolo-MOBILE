@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -62,6 +64,33 @@ class WeeklyMenuFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Configurar insets para el header naranja - extender detrás de la barra de estado
+        // Aplicar padding solo al contenido (titleTextView) para que no quede debajo de la barra de estado
+        ViewCompat.setOnApplyWindowInsetsListener(binding.titleTextView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            // Ajustar marginTop para incluir el espacio de la barra de estado
+            val layoutParams = v.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+            layoutParams?.let {
+                val originalMarginTop = 60 // dp del XML
+                val marginTopInPx = (originalMarginTop * resources.displayMetrics.density).toInt()
+                it.topMargin = marginTopInPx + systemBars.top
+                v.layoutParams = it
+            }
+            insets
+        }
+
+        // Configurar insets para el RecyclerView - aplicar padding inferior para evitar solapamiento con la barra de navegación
+        ViewCompat.setOnApplyWindowInsetsListener(binding.menusRecyclerView) { v, insets ->
+            val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            // Calcular altura de la BottomNavigationView de la app (aproximadamente 80dp + insets)
+            val bottomNavHeightDp = 80f
+            val bottomNavHeightPx = (bottomNavHeightDp * resources.displayMetrics.density).toInt()
+            // Padding total = insets del sistema + altura de la barra de navegación de la app + margen extra
+            val totalBottomPadding = navigationBars.bottom + bottomNavHeightPx + (16 * resources.displayMetrics.density).toInt()
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, totalBottomPadding)
+            insets
+        }
 
         adapter = WeeklyMenuAdapter(
             onMenuClick = { item ->

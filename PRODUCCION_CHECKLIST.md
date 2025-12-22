@@ -9,11 +9,10 @@
   - UserRepository
   - MainActivity
   - VoteRepository
-- [ ] **PENDIENTE**: Eliminar logs en MenuWidgetProvider (329 líneas)
-- [ ] **PENDIENTE**: Eliminar logs en MenuWidgetService (139 líneas)
-- [ ] **PENDIENTE**: Eliminar logs en ProfileViewModel
-- [ ] **PENDIENTE**: Eliminar logs en otros archivos restantes
-- [ ] **PENDIENTE**: Eliminar todos los `printStackTrace()`
+- [x] Condicionados todos los `printStackTrace()` con BuildConfig.DEBUG
+- [ ] **OPCIONAL**: Eliminar logs de debug/info/verbose en MenuWidgetProvider (ProGuard los elimina automáticamente en release)
+- [ ] **OPCIONAL**: Eliminar logs de debug/info/verbose en MenuWidgetService (ProGuard los elimina automáticamente en release)
+- [ ] **OPCIONAL**: Eliminar logs en ProfileViewModel (ProGuard los elimina automáticamente en release)
 
 ### 2. ProGuard/R8
 - [x] Habilitado minifyEnabled en release
@@ -28,8 +27,8 @@
 
 ### 3. Build Configuration
 - [x] Configurado buildType debug con applicationIdSuffix
-- [ ] **PENDIENTE**: Configurar signing config para release
-- [ ] **PENDIENTE**: Verificar versionCode y versionName
+- [x] Configurado signing config para release
+- [x] Verificado versionCode y versionName (versionCode: 1, versionName: "1.0")
 
 ## 🔧 Por Hacer
 
@@ -44,10 +43,11 @@
 - [x] Las consultas ya usan coroutines para no bloquear UI
 
 ### 6. Seguridad
-- [ ] **CRÍTICO**: Configurar signing key para release
-- [ ] Verificar que no haya credenciales hardcodeadas
-- [ ] Verificar permisos en AndroidManifest (ya están correctos)
-- [ ] Verificar allowBackup (ya configurado)
+- [x] **CRÍTICO**: Configurar signing key para release
+- [x] Verificar que no haya credenciales hardcodeadas
+- [x] Verificar permisos en AndroidManifest (ya están correctos)
+- [x] Verificar allowBackup (ya configurado)
+- [x] Condicionados todos los printStackTrace() con BuildConfig.DEBUG
 
 ### 7. Testing
 - [ ] Probar build de release completo

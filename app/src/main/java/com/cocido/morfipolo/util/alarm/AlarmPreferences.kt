@@ -155,7 +155,20 @@ class AlarmPreferences(context: Context) {
             .apply()
         android.util.Log.d("AlarmPreferences", "🔄 Reset de notificaciones para $today")
     }
+    
+    /**
+     * Resetea solo la notificación de 10am del día actual.
+     * Útil cuando el flag está marcado pero la notificación no se envió realmente.
+     */
+    fun reset10amNotification() {
+        val today = getTodayString()
+        prefs.edit()
+            .remove("$KEY_NOTIFIED_10AM$today")
+            .apply()
+        android.util.Log.d("AlarmPreferences", "🔄 Reset de notificación 10am para $today")
+    }
 }
+
 
 
 

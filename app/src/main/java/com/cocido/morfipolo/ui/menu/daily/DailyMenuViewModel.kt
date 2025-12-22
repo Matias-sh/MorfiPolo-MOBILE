@@ -70,10 +70,13 @@ class DailyMenuViewModel(
 
             if (menu != null) {
                 android.util.Log.d("DailyMenuViewModel", "Menú encontrado: ${menu.id}, opciones: ${menu.getOptionsOrEmpty().size}")
-                // Obtener voto del usuario para este menú - FORZAR refresh desde API
-                val userVote = voteRepository.getUserVoteForMenu(menu.id, userId)
-                android.util.Log.d("DailyMenuViewModel", "Voto del usuario: ${if (userVote != null) "Sí (${userVote.id}, opción: ${userVote.option.id})" else "No"}")
+                // Obtener voto del usuario para este menú
+                // Si es el menú de hoy, buscar solo en 3 páginas (más rápido)
+                // Si es un menú antiguo, buscar en todas las páginas necesarias para encontrarlo
                 val isToday = isMenuToday(menu)
+                val maxPages = if (isToday) 3 else null // null = buscar en todas las páginas
+                val userVote = voteRepository.getUserVoteForMenu(menu.id, userId, maxPagesToSearch = maxPages)
+                android.util.Log.d("DailyMenuViewModel", "Voto del usuario: ${if (userVote != null) "Sí (${userVote.id}, opción: ${userVote.option.id})" else "No"}")
                 val isWithinTime = isWithinSelectionTime(menu)
                 val isActuallyOpen = menu.status == "open" && isWithinTime && isToday
                 
@@ -148,6 +151,28 @@ class DailyMenuViewModel(
                     
                     if (result.isSuccess) {
                         android.util.Log.d("DailyMenuViewModel", "✅ Voto registrado exitosamente")
+                        
+                        // OPTIMIZACIÓN: Actualizar estado localmente sin recargar todo el menú
+                        // Solo recargar el voto del usuario (mucho más rápido)
+                        val newVote = result.getOrNull()
+                        val currentState = _uiState.value
+                        if (currentState is DailyMenuUiState.Success && newVote != null) {
+                            // Actualizar el estado con el nuevo voto sin recargar todo
+                            val isToday = isMenuToday(currentState.menu)
+                            val isWithinTime = isWithinSelectionTime(currentState.menu)
+                            val isActuallyOpen = currentState.menu.status == "open" && isWithinTime && isToday
+                            
+                            _uiState.value = currentState.copy(
+                                userVote = newVote,
+                                isActuallyOpen = isActuallyOpen,
+                                infoMessage = null
+                            )
+                            android.util.Log.d("DailyMenuViewModel", "✅ Estado actualizado localmente con nuevo voto")
+                        } else {
+                            // Si no se pudo obtener el voto, recargar solo el voto (no todo el menú)
+                            android.util.Log.d("DailyMenuViewModel", "🔄 Recargando solo el voto del usuario...")
+                            refreshUserVoteOnly(menu.id, userId)
+                        }
                     } else {
                         android.util.Log.w("DailyMenuViewModel", "⚠️ Error al votar: $errorMessage")
                         
@@ -172,11 +197,6 @@ class DailyMenuViewModel(
                             }
                         }
                     }
-                    
-                    // CRÍTICO: Siempre recargar el menú para sincronizar estado con servidor
-                    // Esto soluciona bugs de estado desincronizado
-                    android.util.Log.d("DailyMenuViewModel", "🔄 Recargando menú para sincronizar estado...")
-                    loadMenuForDateInternal(currentDate.time)
                 }
             } catch (e: SessionExpiredException) {
                 android.util.Log.w("DailyMenuViewModel", "Sesión expirada al seleccionar opción")
@@ -227,6 +247,21 @@ class DailyMenuViewModel(
                         
                         if (result.isSuccess) {
                             android.util.Log.d("DailyMenuViewModel", "✅ Voto eliminado exitosamente")
+                            
+                            // OPTIMIZACIÓN: Actualizar estado localmente sin recargar todo el menú
+                            val currentState = _uiState.value
+                            if (currentState is DailyMenuUiState.Success) {
+                                val isToday = isMenuToday(currentState.menu)
+                                val isWithinTime = isWithinSelectionTime(currentState.menu)
+                                val isActuallyOpen = currentState.menu.status == "open" && isWithinTime && isToday
+                                
+                                _uiState.value = currentState.copy(
+                                    userVote = null,
+                                    isActuallyOpen = isActuallyOpen,
+                                    infoMessage = null
+                                )
+                                android.util.Log.d("DailyMenuViewModel", "✅ Estado actualizado localmente (voto eliminado)")
+                            }
                         } else {
                             android.util.Log.w("DailyMenuViewModel", "⚠️ Error al eliminar voto: $errorMessage")
                             
@@ -251,10 +286,6 @@ class DailyMenuViewModel(
                                 }
                             }
                         }
-                        
-                        // CRÍTICO: Siempre recargar el menú para sincronizar estado con servidor
-                        android.util.Log.d("DailyMenuViewModel", "🔄 Recargando menú para sincronizar estado...")
-                        loadMenuForDateInternal(currentDate.time)
                     } else {
                         android.util.Log.w("DailyMenuViewModel", "⚠️ No hay voto para eliminar")
                         // Recargar de todos modos por si hay desincronización
@@ -295,6 +326,32 @@ class DailyMenuViewModel(
         return currentDate.time
     }
 
+    /**
+     * Actualiza solo el voto del usuario sin recargar todo el menú.
+     * Esto es mucho más rápido que recargar todo.
+     */
+    private suspend fun refreshUserVoteOnly(menuId: String, userId: String) {
+        try {
+            val userVote = voteRepository.getUserVoteForMenu(menuId, userId, maxPagesToSearch = 3)
+            val currentState = _uiState.value
+            if (currentState is DailyMenuUiState.Success) {
+                val isToday = isMenuToday(currentState.menu)
+                val isWithinTime = isWithinSelectionTime(currentState.menu)
+                val isActuallyOpen = currentState.menu.status == "open" && isWithinTime && isToday
+                
+                _uiState.value = currentState.copy(
+                    userVote = userVote,
+                    isActuallyOpen = isActuallyOpen
+                )
+                android.util.Log.d("DailyMenuViewModel", "✅ Voto actualizado sin recargar menú completo")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("DailyMenuViewModel", "Error al actualizar voto", e)
+            // Si falla, recargar todo como fallback
+            loadMenuForDateInternal(currentDate.time)
+        }
+    }
+    
     private fun isWithinSelectionTime(menu: Menu): Boolean {
         if (menu.status != "open") return false
 

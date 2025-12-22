@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.view.View
 import android.widget.RemoteViews
+import com.cocido.morfipolo.BuildConfig
 import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.R
 import com.cocido.morfipolo.ui.main.MainActivity
@@ -59,7 +60,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
                     RemoteViews(context.packageName, R.layout.widget_menu_simple)
                 } catch (e: Exception) {
                     android.util.Log.e(TAG, "onUpdate: ERROR al crear RemoteViews", e)
-                    e.printStackTrace()
+                    if (BuildConfig.DEBUG) e.printStackTrace()
                     return@forEach
                 }
                 android.util.Log.d(TAG, "onUpdate: RemoteViews creado exitosamente")
@@ -73,7 +74,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
                     android.util.Log.d(TAG, "onUpdate: Estado inicial configurado")
                 } catch (e: Exception) {
                     android.util.Log.e(TAG, "onUpdate: ERROR al configurar estado inicial", e)
-                    e.printStackTrace()
+                    if (BuildConfig.DEBUG) e.printStackTrace()
                 }
                 
                 // Actualizar widget
@@ -82,12 +83,12 @@ class MenuWidgetProvider : AppWidgetProvider() {
                     android.util.Log.d(TAG, "onUpdate: ✅ Widget $appWidgetId actualizado con estado inicial exitosamente")
                 } catch (e: Exception) {
                     android.util.Log.e(TAG, "onUpdate: ❌ ERROR al actualizar widget $appWidgetId", e)
-                    e.printStackTrace()
+                    if (BuildConfig.DEBUG) e.printStackTrace()
                     throw e // Re-lanzar para que se capture arriba
                 }
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "onUpdate: ❌ ERROR CRÍTICO al procesar widget $appWidgetId", e)
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) e.printStackTrace()
                 // Intentar mostrar un widget de error
                 try {
                     val errorViews = RemoteViews(context.packageName, R.layout.widget_menu_simple)
@@ -98,7 +99,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
                     appWidgetManager.updateAppWidget(appWidgetId, errorViews)
                 } catch (e2: Exception) {
                     android.util.Log.e(TAG, "onUpdate: ❌ ERROR incluso al mostrar widget de error", e2)
-                    e2.printStackTrace()
+                    if (BuildConfig.DEBUG) e2.printStackTrace()
                 }
                 return@forEach
             }
@@ -332,7 +333,8 @@ class MenuWidgetProvider : AppWidgetProvider() {
 
                 val userVote = kotlinx.coroutines.withContext(Dispatchers.IO) {
                     try {
-                        app.voteRepository.getUserVoteForMenu(menu.id, userId)
+                        // OPTIMIZACIÓN: Limitar búsqueda a 5 páginas (suficiente para votos recientes del menú de hoy)
+                        app.voteRepository.getUserVoteForMenu(menu.id, userId, maxPagesToSearch = 5)
                     } catch (e: Exception) {
                         android.util.Log.e(TAG, "updateWidget: Error al obtener voto", e)
                         null
@@ -347,7 +349,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
 
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "updateWidget: ❌ ERROR al actualizar widget", e)
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) e.printStackTrace()
                 showErrorState(context, appWidgetManager, appWidgetId, "Error al cargar datos")
             }
         }
@@ -374,7 +376,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
             android.util.Log.d(TAG, "showLoadingState: ✅ Estado de carga mostrado")
         } catch (e: Exception) {
             android.util.Log.e(TAG, "showLoadingState: ❌ ERROR", e)
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
         }
     }
 
@@ -397,7 +399,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
             appWidgetManager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
             android.util.Log.e(TAG, "showNotLoggedInState: ❌ ERROR", e)
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
         }
     }
 
@@ -418,7 +420,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
             appWidgetManager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
             android.util.Log.e(TAG, "showNoMenuState: ❌ ERROR", e)
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
         }
     }
 
@@ -440,7 +442,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
             appWidgetManager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
             android.util.Log.e(TAG, "showNoOptionsState: ❌ ERROR", e)
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
         }
     }
 
@@ -462,7 +464,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
             appWidgetManager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
             android.util.Log.e(TAG, "showErrorState: ❌ ERROR", e)
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
         }
     }
 
@@ -564,7 +566,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
                 android.util.Log.d(TAG, "showMenuState: ✅ Notificando actualización de datos de ListView (appWidgetId=$appWidgetId, viewId=${R.id.widgetOptionsList})")
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "showMenuState: ❌ ERROR al configurar ListView", e)
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) e.printStackTrace()
             }
             
             configureClickIntent(context, views)
@@ -573,7 +575,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
             android.util.Log.d(TAG, "showMenuState: ✅ Widget actualizado con menú")
         } catch (e: Exception) {
             android.util.Log.e(TAG, "showMenuState: ❌ ERROR", e)
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
         }
     }
 
@@ -700,7 +702,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
             }
         } catch (e: Exception) {
             android.util.Log.e(TAG, "configureOption: ERROR general al configurar botón", e)
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
         }
     }
 
@@ -727,7 +729,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
             android.util.Log.d(TAG, "configureClickIntent: Click intent configurado solo en header del widget")
         } catch (e: Exception) {
             android.util.Log.e(TAG, "configureClickIntent: ERROR al configurar click intent", e)
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
         }
     }
 
@@ -937,7 +939,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
             android.util.Log.d(TAG, "updateAllWidgets: ✅ Todos los widgets actualizados")
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error al actualizar widgets", e)
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
         }
     }
 

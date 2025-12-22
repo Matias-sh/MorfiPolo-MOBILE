@@ -4,10 +4,15 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import android.appwidget.AppWidgetManager
 import com.cocido.morfipolo.MorfipoloApplication
@@ -38,13 +43,24 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Configurar status bar con iconos oscuros (sin fullscreen para que funcione adjustPan)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            window.statusBarColor = getColor(R.color.comedor_beige_primary)
-            window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-        }
+        
+        // Habilitar edge-to-edge (compatible con Android 15+)
+        enableEdgeToEdge()
+        
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        
+        // Configurar insets para que el contenido no quede debajo de las barras del sistema
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(0, systemBars.top, 0, systemBars.bottom)
+            insets
+        }
+        
+        // Configurar status bar con iconos oscuros (compatible con Android 15+)
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController?.isAppearanceLightStatusBars = true
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
 
         // Solicitar permiso de notificaciones si es necesario (Android 13+)
         requestNotificationPermissionIfNeeded()

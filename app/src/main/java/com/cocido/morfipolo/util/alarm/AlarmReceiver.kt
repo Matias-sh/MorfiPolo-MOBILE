@@ -139,11 +139,12 @@ class AlarmReceiver : BroadcastReceiver() {
         Log.d(TAG, "✅ Menú encontrado: ${menu.description}")
         
         // 2. Verificar si el usuario ya votó (opcional, pero mejor verificar para evitar spam)
+        // OPTIMIZACIÓN: Limitar búsqueda a 10 páginas (suficiente para encontrar votos recientes)
         val app = context.applicationContext as? MorfipoloApplication
         val userId = app?.sessionManager?.getCurrentUserId()
         if (userId != null) {
             try {
-                val userVote = app.voteRepository.getUserVoteForMenu(menu.id, userId)
+                val userVote = app.voteRepository.getUserVoteForMenu(menu.id, userId, maxPagesToSearch = 10)
                 if (userVote != null) {
                     Log.d(TAG, "✅ Usuario ya votó (opción: ${userVote.option.name}), NO se envía notificación de 9am")
                     // Marcar como notificado para evitar notificaciones futuras
@@ -158,11 +159,15 @@ class AlarmReceiver : BroadcastReceiver() {
         
         // 3. Enviar notificación
         val menuContent = formatMenuOptions(menu)
-        sendNotification(context, isFollowUp = false, menuDescription = menuContent)
+        val notificationSent = sendNotification(context, isFollowUp = false, menuDescription = menuContent)
         
-        // 4. Marcar que se envió la notificación de 9am
-        alarmPrefs.setNotified9am()
-        Log.d(TAG, "✅ Notificación de 9am enviada y registrada")
+        // 4. SOLO marcar que se envió la notificación si realmente se envió exitosamente
+        if (notificationSent) {
+            alarmPrefs.setNotified9am()
+            Log.d(TAG, "✅ Notificación de 9am enviada y registrada exitosamente")
+        } else {
+            Log.w(TAG, "⚠️ No se pudo enviar la notificación de 9am (posible falta de permisos), NO se marca como enviada")
+        }
     }
     
     /**
@@ -193,11 +198,15 @@ class AlarmReceiver : BroadcastReceiver() {
         
         // 3. Enviar notificación (el menú se cargó entre las 9am y 9:30am)
         val menuContent = formatMenuOptions(menu)
-        sendNotification(context, isFollowUp = false, menuDescription = menuContent)
+        val notificationSent = sendNotification(context, isFollowUp = false, menuDescription = menuContent)
         
-        // 4. Marcar que se envió la notificación de 9:30am
-        alarmPrefs.setNotified930am()
-        Log.d(TAG, "✅ Notificación de 9:30am enviada y registrada (menú cargado tarde)")
+        // 4. SOLO marcar que se envió la notificación si realmente se envió exitosamente
+        if (notificationSent) {
+            alarmPrefs.setNotified930am()
+            Log.d(TAG, "✅ Notificación de 9:30am enviada y registrada exitosamente (menú cargado tarde)")
+        } else {
+            Log.w(TAG, "⚠️ No se pudo enviar la notificación de 9:30am (posible falta de permisos), NO se marca como enviada")
+        }
     }
     
     /**
@@ -211,20 +220,14 @@ class AlarmReceiver : BroadcastReceiver() {
         
         val alarmPrefs = AlarmPreferences(context)
         
-        // 1. Verificar si ya se envió notificación de 10am
-        if (alarmPrefs.wasNotified10am()) {
-            Log.d(TAG, "⏭️ Ya se envió notificación de 10am hoy")
-            return
-        }
-        
-        // 2. Verificar si hay menú publicado
+        // 1. Verificar si hay menú publicado
         val menu = getTodayMenu(context)
         if (menu == null) {
             Log.d(TAG, "❌ No hay menú publicado para hoy, NO se envía recordatorio de 10am")
             return
         }
         
-        // 3. Verificar si el usuario ya votó
+        // 2. Verificar si el usuario está logueado
         val app = context.applicationContext as? MorfipoloApplication
         if (app == null) {
             Log.w(TAG, "No se pudo obtener MorfipoloApplication")
@@ -238,43 +241,88 @@ class AlarmReceiver : BroadcastReceiver() {
         }
         
         try {
-            Log.d(TAG, "🔍 Verificando si el usuario ya votó para el menú: ${menu.id}")
-            // Intentar obtener el voto con un pequeño retry en caso de error temporal
+            // 3. Verificar si el usuario ya votó (PRIORITARIO: verificar estado real antes que flag de notificación)
+            // OPTIMIZACIÓN: Limitar búsqueda a 10 páginas (suficiente para encontrar votos recientes)
+            // Esto evita recorrer las 76 páginas múltiples veces
+            Log.d(TAG, "🔍 Verificando si el usuario ya votó para el menú: ${menu.id} (búsqueda limitada a 10 páginas)")
             var userVote: Vote? = null
-            var retryCount = 0
-            val maxRetries = 2
-            
-            while (retryCount <= maxRetries && userVote == null) {
-                try {
-                    userVote = app.voteRepository.getUserVoteForMenu(menu.id, userId)
-                    if (userVote != null) {
-                        Log.d(TAG, "✅ Voto encontrado en intento ${retryCount + 1}: ${userVote.id} para opción: ${userVote.option.name}")
-                        break
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "⚠️ Error al obtener voto (intento ${retryCount + 1}): ${e.message}")
-                    if (retryCount < maxRetries) {
-                        // Esperar un poco antes de reintentar
-                        kotlinx.coroutines.delay(500)
-                    }
+            try {
+                // Limitar a 10 páginas para optimizar (votos recientes están en las primeras páginas)
+                userVote = app.voteRepository.getUserVoteForMenu(menu.id, userId, maxPagesToSearch = 10)
+                if (userVote != null) {
+                    Log.d(TAG, "✅ Voto encontrado: ${userVote.id} para opción: ${userVote.option.name}")
+                } else {
+                    Log.d(TAG, "ℹ️ No se encontró voto para este menú (buscado en 10 páginas)")
                 }
-                retryCount++
+            } catch (e: Exception) {
+                Log.w(TAG, "⚠️ Error al obtener voto: ${e.message}")
+                // En caso de error, asumir que no hay voto y continuar (mejor notificar de más que de menos)
             }
             
+            // Si el usuario ya votó, no enviar notificación (independientemente del flag)
             if (userVote != null) {
                 Log.d(TAG, "✅ Usuario ya votó (opción: ${userVote.option.name}), NO se envía recordatorio de 10am")
                 return
             }
             
-            // 4. El usuario NO ha votado - enviar recordatorio urgente
-            Log.d(TAG, "⚠️ Usuario NO ha votado (verificado después de ${retryCount} intentos), enviando recordatorio urgente de 10am...")
+            // 4. Usuario NO ha votado - verificar si ya se envió notificación de 10am
+            // IMPORTANTE: Si el flag está marcado pero el usuario NO ha votado, intentar enviar de nuevo
+            // para asegurarnos de que realmente se envió (puede haber fallado silenciosamente antes)
+            val wasNotifiedBefore = alarmPrefs.wasNotified10am()
+            
+            if (wasNotifiedBefore) {
+                Log.d(TAG, "ℹ️ Flag de 10am está marcado, pero usuario NO ha votado. Verificando si realmente se envió...")
+                
+                // Verificar si realmente se puede enviar notificación (tiene permisos)
+                val canSendNotification = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    android.content.pm.PackageManager.PERMISSION_GRANTED ==
+                        androidx.core.content.ContextCompat.checkSelfPermission(
+                            context,
+                            android.Manifest.permission.POST_NOTIFICATIONS
+                        )
+                } else {
+                    true // Android < 13 no requiere permiso explícito
+                }
+                
+                if (!canSendNotification) {
+                    // El flag está marcado pero no hay permisos - resetear flag y intentar de nuevo
+                    Log.w(TAG, "⚠️ Flag de 10am marcado pero no hay permisos de notificaciones. Reseteando flag para reintentar...")
+                    alarmPrefs.reset10amNotification()
+                } else {
+                    // El flag está marcado y hay permisos, pero el usuario NO ha votado
+                    // Esto puede significar que:
+                    // 1. La notificación se envió pero el usuario no la vio/ignoró
+                    // 2. La notificación falló silenciosamente (cambio de hora del sistema, etc.)
+                    // Intentar enviar UNA VEZ MÁS para asegurarnos de que realmente se envió
+                    Log.w(TAG, "⚠️ Flag marcado pero usuario NO ha votado. Reintentando envío para confirmar que realmente se envió...")
+                    // Continuar con el envío más abajo
+                }
+            }
+            
+            // 5. El usuario NO ha votado - enviar recordatorio urgente
+            // (ya sea porque no se envió antes, o porque estamos verificando que realmente se envió)
+            Log.d(TAG, "⚠️ Usuario NO ha votado, enviando recordatorio urgente de 10am...")
             
             val menuContent = formatMenuOptions(menu)
-            sendNotification(context, isFollowUp = true, menuDescription = menuContent)
+            val notificationSent = sendNotification(context, isFollowUp = true, menuDescription = menuContent)
             
-            // 5. Marcar que se envió la notificación de 10am
-            alarmPrefs.setNotified10am()
-            Log.d(TAG, "✅ Recordatorio urgente de 10am enviado y registrado")
+            // 6. SOLO marcar que se envió la notificación si realmente se envió exitosamente
+            if (notificationSent) {
+                alarmPrefs.setNotified10am()
+                if (wasNotifiedBefore) {
+                    Log.d(TAG, "✅ Recordatorio urgente de 10am reenviado y registrado exitosamente (era necesario)")
+                } else {
+                    Log.d(TAG, "✅ Recordatorio urgente de 10am enviado y registrado exitosamente")
+                }
+            } else {
+                // Si falló y el flag estaba marcado, resetearlo para que se intente de nuevo la próxima vez
+                if (wasNotifiedBefore) {
+                    Log.w(TAG, "⚠️ No se pudo enviar la notificación de 10am. Reseteando flag porque estaba marcado incorrectamente...")
+                    alarmPrefs.reset10amNotification()
+                } else {
+                    Log.w(TAG, "⚠️ No se pudo enviar la notificación de 10am (posible falta de permisos), NO se marca como enviada")
+                }
+            }
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error crítico al verificar voto del usuario: ${e.message}", e)
@@ -334,21 +382,43 @@ class AlarmReceiver : BroadcastReceiver() {
      * Envía la notificación del recordatorio.
      * @param isFollowUp Si es true, es el recordatorio urgente (10AM)
      * @param menuDescription Descripción/opciones del menú
+     * @return true si la notificación se envió exitosamente, false en caso contrario
      */
-    private fun sendNotification(context: Context, isFollowUp: Boolean, menuDescription: String?) {
-        try {
+    private fun sendNotification(context: Context, isFollowUp: Boolean, menuDescription: String?): Boolean {
+        return try {
+            // Verificar permisos de notificaciones en Android 13+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                val hasPermission = android.content.pm.PackageManager.PERMISSION_GRANTED ==
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.POST_NOTIFICATIONS
+                    )
+                
+                if (!hasPermission) {
+                    Log.e(TAG, "❌ No hay permiso de notificaciones (POST_NOTIFICATIONS)")
+                    return false
+                }
+                Log.d(TAG, "✅ Permiso de notificaciones verificado")
+            }
+            
             val notificationHelper = NotificationHelper(context)
             
-            if (isFollowUp) {
+            val sent = if (isFollowUp) {
                 notificationHelper.showFollowUpReminderNotification(menuDescription)
             } else {
                 notificationHelper.showDailyReminderNotification(menuDescription)
             }
             
-            Log.d(TAG, "✅✅✅ Notificación ${if (isFollowUp) "urgente (10am)" else "de recordatorio"} enviada exitosamente")
+            if (sent) {
+                Log.d(TAG, "✅✅✅ Notificación ${if (isFollowUp) "urgente (10am)" else "de recordatorio"} enviada exitosamente")
+            } else {
+                Log.w(TAG, "⚠️⚠️⚠️ Notificación ${if (isFollowUp) "urgente (10am)" else "de recordatorio"} NO se pudo enviar")
+            }
+            sent
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error al enviar notificación: ${e.message}", e)
+            false
         }
     }
     

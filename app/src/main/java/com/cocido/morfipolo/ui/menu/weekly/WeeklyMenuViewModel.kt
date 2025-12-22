@@ -7,6 +7,9 @@ import com.cocido.morfipolo.data.repository.MenuRepository
 import com.cocido.morfipolo.domain.model.Menu
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 class WeeklyMenuViewModel(
@@ -24,12 +27,16 @@ class WeeklyMenuViewModel(
     val sessionExpired: StateFlow<Boolean> = _sessionExpired
     
     private var cachedUserVotes: Map<String, com.cocido.morfipolo.domain.model.Vote> = emptyMap() // Cache de votos del usuario
+    private var cacheTimestamp: Long = 0 // Timestamp del caché
+    private val cacheValidityMs = 5 * 60 * 1000L // Cache válido por 5 minutos
     private val maxMenusToShow = 10 // Solo mostrar últimos 10 menús (últimas 2 semanas)
+    private val maxPagesToSearch = 25 // Máximo de páginas a buscar (suficiente para encontrar todos los votos de los últimos 10 menús)
 
     fun loadWeeklyMenus(forceReload: Boolean = false) {
         // Si se fuerza la recarga, limpiar el cache
         if (forceReload) {
             cachedUserVotes = emptyMap()
+            cacheTimestamp = 0
         }
         _uiState.value = WeeklyMenuUiState.Loading
 
@@ -57,9 +64,9 @@ class WeeklyMenuViewModel(
                     }
                 }
                 
-                // Cargar solo los últimos 10 menús (últimas 2 semanas)
+                // Cargar solo los últimos 10 menús (ya limitado en el repositorio)
                 android.util.Log.d("WeeklyMenuViewModel", "Cargando últimos $maxMenusToShow menús...")
-                val allMenus = try {
+                val menus = try {
                     menuRepository.getWeeklyMenus()
                 } catch (e: SessionExpiredException) {
                     // Sesión expirada, marcar y propagar
@@ -72,10 +79,7 @@ class WeeklyMenuViewModel(
                     emptyList()
                 }
                 
-                // Tomar solo los últimos 10 menús (más recientes primero)
-                val menus = allMenus.take(maxMenusToShow)
-                
-                android.util.Log.d("WeeklyMenuViewModel", "Menús totales disponibles: ${allMenus.size}, mostrando últimos: ${menus.size}")
+                android.util.Log.d("WeeklyMenuViewModel", "Menús cargados: ${menus.size}")
                 
                 // Obtener votos del usuario para cada menú (solo si hay sesión válida)
                 val userIdFromSession = sessionManager.getCurrentUserId()
@@ -112,37 +116,78 @@ class WeeklyMenuViewModel(
                     authResult is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.TemporaryError
                 val menusWithVotes = if (userId != null && hasValidSession) {
                     try {
-                        // OPTIMIZACIÓN: Obtener votos solo para los menús que estamos mostrando (últimos 10)
-                        android.util.Log.d("WeeklyMenuViewModel", "Obteniendo votos para ${menus.size} menús (últimos 10)...")
-                        android.util.Log.d("WeeklyMenuViewModel", "UserId actual: $userId")
+                        // OPTIMIZACIÓN: Usar caché si está disponible y es reciente
+                        val now = System.currentTimeMillis()
+                        val isCacheValid = cachedUserVotes.isNotEmpty() && 
+                                         (now - cacheTimestamp) < cacheValidityMs
                         
-                        // Obtener todos los votos del usuario (el método busca en múltiples páginas si es necesario)
-                        val allVotesResult = voteRepository.getAllUserVotes(userId)
-                        val allVotes = allVotesResult.getOrNull() ?: emptyList()
-                        android.util.Log.d("WeeklyMenuViewModel", "Votos obtenidos del servidor: ${allVotes.size}")
-                        
-                        // Filtrar votos del usuario actual
-                        val userIdNormalized = userId.trim().lowercase()
-                        val userVotes = allVotes.filter { vote ->
-                            vote.user.id.trim().lowercase() == userIdNormalized
+                        val votesByMenuId = if (isCacheValid && !forceReload) {
+                            android.util.Log.d("WeeklyMenuViewModel", "✅ Usando caché de votos (edad: ${(now - cacheTimestamp) / 1000}s)")
+                            // Usar caché existente
+                            val menuIds = menus.map { it.id }.toSet()
+                            cachedUserVotes.filterKeys { it in menuIds }
+                        } else {
+                            // OPTIMIZACIÓN: Obtener votos del usuario con búsqueda paginada
+                            // Buscar en suficientes páginas para encontrar todos los votos de los menús mostrados
+                            android.util.Log.d("WeeklyMenuViewModel", "🔄 Obteniendo votos del usuario (máximo $maxPagesToSearch páginas) para ${menus.size} menús...")
+                            android.util.Log.d("WeeklyMenuViewModel", "Menús a buscar: ${menus.map { "${it.id} (${it.date})" }.joinToString(", ")}")
+                            android.util.Log.d("WeeklyMenuViewModel", "UserId actual: $userId")
+                            
+                            // Obtener votos del usuario limitando páginas
+                            val allVotesResult = voteRepository.getAllUserVotes(userId, maxPagesToSearch = maxPagesToSearch)
+                            val allVotes = allVotesResult.getOrNull() ?: emptyList()
+                            android.util.Log.d("WeeklyMenuViewModel", "Votos obtenidos del servidor: ${allVotes.size}")
+                            
+                            // Log de los votos encontrados para debugging
+                            allVotes.take(10).forEach { vote ->
+                                android.util.Log.d("WeeklyMenuViewModel", "  Voto encontrado: menú ${vote.menu.id} (${vote.menu.date}), opción: ${vote.option.name}")
+                            }
+                            
+                            // Crear mapa de votos por menuId y actualizar caché
+                            val menuIds = menus.map { it.id }.toSet()
+                            val votesMap = allVotes
+                                .filter { it.menu.id in menuIds }
+                                .associateBy { it.menu.id }
+                            
+                            // Verificar si encontramos todos los votos esperados
+                            val menusWithoutVotes = menus.filter { it.id !in votesMap.keys }
+                            if (menusWithoutVotes.isNotEmpty()) {
+                                android.util.Log.w("WeeklyMenuViewModel", "⚠️ No se encontraron votos para ${menusWithoutVotes.size} menús: ${menusWithoutVotes.map { "${it.id} (${it.date})" }.joinToString(", ")}")
+                                android.util.Log.w("WeeklyMenuViewModel", "⚠️ Votos totales obtenidos: ${allVotes.size}, buscado en $maxPagesToSearch páginas")
+                            }
+                            
+                            // Actualizar caché
+                            cachedUserVotes = allVotes.associateBy { it.menu.id }
+                            cacheTimestamp = now
+                            
+                            android.util.Log.d("WeeklyMenuViewModel", "Mapa de votos creado con ${votesMap.size} entradas para ${menus.size} menús")
+                            
+                            // Log detallado de qué votos se encontraron
+                            menus.forEach { menu ->
+                                val vote = votesMap[menu.id]
+                                if (vote != null) {
+                                    android.util.Log.d("WeeklyMenuViewModel", "✅ Voto encontrado para menú ${menu.id} (${menu.date}): ${vote.option.name}")
+                                } else {
+                                    android.util.Log.d("WeeklyMenuViewModel", "❌ No se encontró voto para menú ${menu.id} (${menu.date})")
+                                }
+                            }
+                            
+                            votesMap
                         }
-                        android.util.Log.d("WeeklyMenuViewModel", "Votos del usuario actual: ${userVotes.size}")
-                        
-                        // Crear mapa de votos por menuId (solo para los menús que estamos mostrando)
-                        val menuIds = menus.map { it.id }.toSet()
-                        val votesByMenuId = userVotes
-                            .filter { it.menu.id in menuIds }
-                            .associateBy { it.menu.id }
-                        
-                        android.util.Log.d("WeeklyMenuViewModel", "Mapa de votos creado con ${votesByMenuId.size} entradas")
                         
                         // Asignar votos a cada menú
                         menus.map { menu ->
                             val userVote = votesByMenuId[menu.id]
                             if (userVote != null) {
-                                android.util.Log.d("WeeklyMenuViewModel", "✅ Voto encontrado para menú ${menu.id} (${menu.date}): opción ${userVote.option.name}")
+                                android.util.Log.d(
+                                    "WeeklyMenuViewModel",
+                                    "✅ Voto encontrado para menú ${menu.id} (${menu.date}): opción ${userVote.option.name}"
+                                )
                             } else {
-                                android.util.Log.d("WeeklyMenuViewModel", "❌ No se encontró voto para menú ${menu.id} (${menu.date})")
+                                android.util.Log.d(
+                                    "WeeklyMenuViewModel",
+                                    "❌ No se encontró voto para menú ${menu.id} (${menu.date})"
+                                )
                             }
                             WeeklyMenuItem(menu, userVote)
                         }
@@ -153,8 +198,18 @@ class WeeklyMenuViewModel(
                         menus.map { WeeklyMenuItem(it, null) }
                     } catch (e: Exception) {
                         android.util.Log.e("WeeklyMenuViewModel", "Error al obtener votos", e)
-                        // En caso de error, mostrar menús sin votos
-                        menus.map { WeeklyMenuItem(it, null) }
+                        // En caso de error, intentar usar caché si está disponible
+                        val menuIds = menus.map { it.id }.toSet()
+                        val cachedVotes = cachedUserVotes.filterKeys { it in menuIds }
+                        if (cachedVotes.isNotEmpty()) {
+                            android.util.Log.d("WeeklyMenuViewModel", "⚠️ Usando caché como fallback debido a error")
+                            menus.map { menu ->
+                                WeeklyMenuItem(menu, cachedVotes[menu.id])
+                            }
+                        } else {
+                            // Si no hay caché, mostrar menús sin votos
+                            menus.map { WeeklyMenuItem(it, null) }
+                        }
                     }
                 } else {
                     // Si no hay sesión válida, mostrar menús sin votos
