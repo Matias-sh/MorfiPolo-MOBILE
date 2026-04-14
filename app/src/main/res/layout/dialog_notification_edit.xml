@@ -1,58 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:orientation="vertical"
     android:padding="24dp">
 
+    <!-- Title -->
     <TextView
         android:id="@+id/titleTextView"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/edit_notification"
-        style="@style/TextAppearance.Morfipolo.Headline"
+        android:text="@string/edit_alert_title"
+        android:textColor="@color/neutral_900"
         android:textSize="20sp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TimePicker
-        android:id="@+id/timePicker"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:timePickerMode="clock"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/titleTextView" />
-
-    <TextView
-        android:id="@+id/daysLabelTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="Días de la semana:"
-        android:textSize="16sp"
         android:textStyle="bold"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/timePicker" />
+        android:fontFamily="sans-serif-medium" />
 
+    <!-- Subtitle -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/edit_alert_subtitle"
+        android:textColor="@color/neutral_500"
+        android:textSize="13sp" />
+
+    <!-- Time picker container — Slate 600 background card -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        app:cardBackgroundColor="@color/slate_600"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp">
+
+        <TimePicker
+            android:id="@+id/timePicker"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:timePickerMode="spinner"
+            android:theme="@style/TimePickerSpinnerDark" />
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Repeat label -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="@string/repeat_each_week"
+        android:textColor="@color/slate_700"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1" />
+
+    <!-- Day chips row -->
     <HorizontalScrollView
         android:id="@+id/daysScrollView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="10dp"
         android:scrollbars="none"
-        android:fillViewport="false"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/daysLabelTextView">
+        android:fillViewport="false">
 
         <LinearLayout
             android:id="@+id/daysContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:paddingEnd="8dp">
+            android:paddingEnd="4dp">
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/mondayChip"
@@ -62,9 +81,11 @@
                 android:checkable="true"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeWidth="0dp"
-                app:chipMinHeight="40dp"
-                android:minWidth="48dp"
+                app:chipMinHeight="44dp"
+                android:minWidth="52dp"
                 android:textColor="@color/chip_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 android:layout_marginEnd="6dp" />
 
             <com.google.android.material.chip.Chip
@@ -75,9 +96,11 @@
                 android:checkable="true"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeWidth="0dp"
-                app:chipMinHeight="40dp"
-                android:minWidth="48dp"
+                app:chipMinHeight="44dp"
+                android:minWidth="52dp"
                 android:textColor="@color/chip_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 android:layout_marginEnd="6dp" />
 
             <com.google.android.material.chip.Chip
@@ -88,9 +111,11 @@
                 android:checkable="true"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeWidth="0dp"
-                app:chipMinHeight="40dp"
-                android:minWidth="48dp"
+                app:chipMinHeight="44dp"
+                android:minWidth="52dp"
                 android:textColor="@color/chip_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 android:layout_marginEnd="6dp" />
 
             <com.google.android.material.chip.Chip
@@ -101,9 +126,11 @@
                 android:checkable="true"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeWidth="0dp"
-                app:chipMinHeight="40dp"
-                android:minWidth="48dp"
+                app:chipMinHeight="44dp"
+                android:minWidth="52dp"
                 android:textColor="@color/chip_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 android:layout_marginEnd="6dp" />
 
             <com.google.android.material.chip.Chip
@@ -114,9 +141,11 @@
                 android:checkable="true"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeWidth="0dp"
-                app:chipMinHeight="40dp"
-                android:minWidth="48dp"
+                app:chipMinHeight="44dp"
+                android:minWidth="52dp"
                 android:textColor="@color/chip_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 android:layout_marginEnd="6dp" />
 
             <com.google.android.material.chip.Chip
@@ -127,9 +156,11 @@
                 android:checkable="true"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeWidth="0dp"
-                app:chipMinHeight="40dp"
-                android:minWidth="48dp"
+                app:chipMinHeight="44dp"
+                android:minWidth="52dp"
                 android:textColor="@color/chip_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 android:layout_marginEnd="6dp" />
 
             <com.google.android.material.chip.Chip
@@ -140,22 +171,25 @@
                 android:checkable="true"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeWidth="0dp"
-                app:chipMinHeight="40dp"
-                android:minWidth="48dp"
-                android:textColor="@color/chip_text_selector" />
+                app:chipMinHeight="44dp"
+                android:minWidth="52dp"
+                android:textColor="@color/chip_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
         </LinearLayout>
     </HorizontalScrollView>
 
+    <!-- Delete button (text link, red) -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/deleteButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="16dp"
         android:text="@string/delete"
-        android:textColor="@color/food_status_error"
-        style="@style/Widget.Material3.Button.TextButton"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/daysScrollView" />
+        android:textColor="@color/red_600"
+        style="@style/Widget.Material3.Button.TextButton" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <!-- Note: Save / Cancel buttons are added by AlertDialog.Builder — do NOT add them here -->
+
+</LinearLayout>
