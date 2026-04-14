@@ -5,159 +5,238 @@
     android:id="@+id/scrollView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/food_background_light"
+    android:background="@drawable/bg_login_gradient"
     android:fillViewport="true"
     tools:context=".ui.login.LoginActivity">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="24dp">
+        android:paddingHorizontal="24dp"
+        android:paddingTop="56dp"
+        android:paddingBottom="32dp">
 
-        <ImageView
-            android:id="@+id/logoImageView"
-            android:layout_width="200dp"
-            android:layout_height="200dp"
-            android:layout_marginTop="32dp"
-            android:adjustViewBounds="true"
-            android:contentDescription="@string/app_name"
-            android:src="@drawable/comedor_azul"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <TextView
-            android:id="@+id/titleTextView"
-            style="@style/TextAppearance.Morfipolo.Headline"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/login_title"
-            android:textSize="24sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/logoImageView" />
-            
-        <TextView
-            android:id="@+id/subtitleTextView"
-            style="@style/TextAppearance.Morfipolo.Subhead"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Ingresá para ver el menú"
-            android:textSize="14sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/titleTextView" />
-
+        <!-- White card containing the whole form -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/loginFormCard"
-            style="@style/Widget.Morfipolo.Card"
-            android:layout_width="match_parent"
+            android:id="@+id/loginCard"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            app:contentPadding="24dp"
+            app:cardBackgroundColor="@color/white"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="8dp"
+            app:strokeWidth="0dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/subtitleTextView">
+            app:layout_constraintTop_toTopOf="parent">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:padding="32dp">
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/dniInputLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                <!-- Logo: 80dp Slate700 rounded square with white restaurant icon -->
+                <ImageView
+                    android:id="@+id/logoImageView"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:layout_gravity="center_horizontal"
+                    android:background="@drawable/bg_logo_slate"
+                    android:src="@drawable/ic_restaurant"
+                    android:tint="@color/white"
+                    android:padding="20dp"
+                    android:scaleType="fitCenter"
+                    android:contentDescription="@string/app_name" />
+
+                <!-- App name — "Comedor" -->
+                <TextView
+                    android:id="@+id/titleTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/app_name"
+                    android:textColor="@color/slate_700"
+                    android:textSize="28sp"
+                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center" />
+
+                <!-- Subtitle -->
+                <TextView
+                    android:id="@+id/subtitleTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/login_credentials_hint"
+                    android:textColor="@color/neutral_600"
+                    android:textSize="14sp"
+                    android:gravity="center" />
+
+                <!-- DNI label -->
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/dni"
-                    app:boxStrokeColor="@color/food_primary_orange"
+                    android:layout_marginTop="32dp"
+                    android:text="DNI"
+                    android:textColor="@color/neutral_700"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <!-- DNI field -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/dniInputLayout"
+                    style="@style/Widget.Morfipolo.TextInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/dni_hint"
                     app:startIconDrawable="@drawable/ic_person"
-                    app:startIconTint="@color/food_primary_orange">
+                    app:startIconTint="@color/neutral_500">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/dniEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="number"
-                        android:maxLines="1" />
+                        android:maxLines="1"
+                        android:paddingVertical="14dp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/passwordInputLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                <!-- Password label -->
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
+                    android:text="@string/password"
+                    android:textColor="@color/neutral_700"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <!-- Password field -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/passwordInputLayout"
+                    style="@style/Widget.Morfipolo.TextInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
                     android:hint="@string/password"
-                    app:boxStrokeColor="@color/food_primary_orange"
                     app:endIconMode="password_toggle"
-                    app:endIconTint="@color/food_text_secondary"
-                    app:startIconDrawable="@android:drawable/ic_lock_lock"
-                    app:startIconTint="@color/food_primary_orange">
+                    app:endIconTint="@color/neutral_500"
+                    app:startIconDrawable="@drawable/ic_lock"
+                    app:startIconTint="@color/neutral_500">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/passwordEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textPassword"
-                        android:maxLines="1" />
+                        android:maxLines="1"
+                        android:paddingVertical="14dp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.button.MaterialButton
+                <!-- Login button — Slate 700 -->
+                <Button
                     android:id="@+id/loginButton"
-                    style="@style/Widget.Morfipolo.Button.Primary"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:layout_marginTop="24dp"
+                    android:background="@drawable/bg_button_orange_pill"
                     android:text="@string/login_button"
+                    android:textColor="@color/white"
                     android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:stateListAnimator="@null" />
+
+                <!-- Info card — first login instructions -->
+                <LinearLayout
+                    android:id="@+id/infoCardLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:background="@drawable/bg_info_card"
+                    android:orientation="horizontal"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_marginEnd="12dp"
+                        android:layout_gravity="top"
+                        android:layout_marginTop="1dp"
+                        android:src="@android:drawable/ic_dialog_info"
+                        app:tint="@color/slate_600"
+                        android:contentDescription="@string/info_icon" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Primera vez:"
+                            android:textColor="@color/slate_700"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/instructionTextView"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/first_login_instruction"
+                            android:textColor="@color/neutral_700"
+                            android:textSize="11sp"
+                            android:lineSpacingExtra="2dp" />
+                    </LinearLayout>
+                </LinearLayout>
 
             </LinearLayout>
-
         </com.google.android.material.card.MaterialCardView>
-        
-        <!-- Subtle info text instead of big beige card -->
-        <TextView
-            android:id="@+id/instructionTextView"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:gravity="center"
-            android:text="@string/first_login_instruction"
-            android:textColor="@color/food_text_secondary"
-            android:textSize="12sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/loginFormCard" />
-            
-        <TextView
-             android:id="@+id/reminderTextView"
-             android:layout_width="0dp"
-             android:layout_height="wrap_content"
-             android:layout_marginTop="8dp"
-             android:gravity="center"
-             android:text="@string/change_password_reminder"
-             android:textColor="@color/food_primary_orange"
-             android:textSize="12sp"
-             android:textStyle="bold"
-             app:layout_constraintEnd_toEndOf="parent"
-             app:layout_constraintStart_toStartOf="parent"
-             app:layout_constraintTop_toBottomOf="@id/instructionTextView" />
 
+        <!-- Error message (below card) -->
         <TextView
             android:id="@+id/errorTextView"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="12dp"
             android:gravity="center"
-            android:textColor="@color/food_status_error"
-            android:textSize="14sp"
+            android:textColor="@color/red_600"
+            android:textSize="13sp"
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/loginFormCard" /> <!-- Positioned relative to card -->
+            app:layout_constraintTop_toBottomOf="@id/loginCard" />
+
+        <!-- Reminder (hidden, compat) -->
+        <TextView
+            android:id="@+id/reminderTextView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/errorTextView" />
+
+        <!-- Footer -->
+        <TextView
+            android:id="@+id/footerTextView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:text="@string/powered_by"
+            android:textColor="@color/neutral_400"
+            android:textSize="10sp"
+            android:letterSpacing="0.08"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/reminderTextView"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintVertical_bias="1.0" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

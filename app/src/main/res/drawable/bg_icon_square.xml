@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Slate 100 rounded square — icon background for profile/settings rows -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#F1F5F9" />
+    <corners android:radius="10dp" />
+</shape>
