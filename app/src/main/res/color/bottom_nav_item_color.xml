@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Icon tint: white on active indicator (Slate700), neutral_400 when inactive -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:color="@color/food_primary_orange" android:state_checked="true" />
-    <item android:color="@color/food_text_secondary" />
+    <item android:color="#334155" android:state_checked="true" />
+    <item android:color="#A3A3A3" />
 </selector>

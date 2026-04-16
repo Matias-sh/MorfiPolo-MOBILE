@@ -50,7 +50,11 @@ class DailyMenuFragment : Fragment() {
         )
     }
 
-    private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    private val dateFormat = SimpleDateFormat("EEEE d 'de' MMMM", Locale("es", "AR"))
+    
+    private fun capitalizeEs(text: String): String {
+        return text.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("es", "AR")) else it.toString() }
+    }
     private val dateFormatApi = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     override fun onCreateView(
@@ -65,18 +69,11 @@ class DailyMenuFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Configurar insets para el header naranja - extender detrás de la barra de estado
-        // Aplicar padding solo al contenido (dateTextView) para que no quede debajo de la barra de estado
-        ViewCompat.setOnApplyWindowInsetsListener(binding.dateTextView) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            // Ajustar marginTop para incluir el espacio de la barra de estado
-            val layoutParams = v.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
-            layoutParams?.let {
-                val originalMarginTop = 24 // dp del XML (reducido de 60dp)
-                val marginTopInPx = (originalMarginTop * resources.displayMetrics.density).toInt()
-                it.topMargin = marginTopInPx + systemBars.top
-                v.layoutParams = it
-            }
+        // Aplicar inset superior al contenedor del contenido para evitar solape con status bar
+        ViewCompat.setOnApplyWindowInsetsListener(binding.dailyContentContainer) { v, insets ->
+            val topInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
+            val baseTopPadding = (24 * resources.displayMetrics.density).toInt()
+            v.setPadding(v.paddingLeft, baseTopPadding + topInset, v.paddingRight, v.paddingBottom)
             insets
         }
 
@@ -266,9 +263,9 @@ class DailyMenuFragment : Fragment() {
                             currentBinding.optionsContainer.visibility = View.GONE
                             // Mostrar información genérica mientras carga
                             val today = Date()
-                            currentBinding.dateTextView.text = dateFormat.format(today)
+                            currentBinding.dateTextView.text = capitalizeEs(dateFormat.format(today))
                             currentBinding.dateTextView.visibility = View.VISIBLE
-                            currentBinding.timeRangeTextView.text = "Horario para elegir: 08:00 - 11:00"
+                            currentBinding.timeRangeTextView.text = "08:00 - 11:00"
                             currentBinding.timeRangeTextView.visibility = View.VISIBLE
                             currentBinding.statusContainer.visibility = View.GONE
                             // El card siempre está visible, no se oculta
@@ -356,14 +353,10 @@ class DailyMenuFragment : Fragment() {
         } catch (e: Exception) {
             Date()
         }
-        binding.dateTextView.text = dateFormat.format(menuDate)
+        binding.dateTextView.text = capitalizeEs(dateFormat.format(menuDate))
 
         // Horario fijo: 08:00 - 11:00
-        binding.timeRangeTextView.text = getString(
-            R.string.selection_time,
-            "08:00",
-            "11:00"
-        )
+        binding.timeRangeTextView.text = "08:00 - 11:00"
 
         // Estado - usar el valor calculado en el ViewModel
         val isActuallyOpen = state.isActuallyOpen
@@ -373,20 +366,25 @@ class DailyMenuFragment : Fragment() {
             else -> getString(R.string.closed) // Si pasó el horario o no es hoy, mostrar cerrado
         }
         binding.statusTextView.text = statusText
-        binding.statusTextView.setBackgroundResource(
-            if (isActuallyOpen) {
-                R.drawable.badge_success_modern
-            } else {
-                R.drawable.badge_error_modern
-            }
+        // Card background stays Slate 100; text color distinguishes open/closed
+        binding.statusTextView.setTextColor(
+            androidx.core.content.ContextCompat.getColor(
+                requireContext(),
+                if (isActuallyOpen) R.color.slate_700 else R.color.neutral_600
+            )
         )
+        binding.statusCard.setCardBackgroundColor(
+            androidx.core.content.ContextCompat.getColor(
+                requireContext(),
+                if (isActuallyOpen) R.color.slate_100 else R.color.neutral_200
+            )
+        )
+        binding.statusSparklesIcon.visibility = if (isActuallyOpen) View.VISIBLE else View.GONE
 
-        // Ya elegiste
-        binding.alreadySelectedTextView.visibility = if (state.userVote != null) {
-            View.VISIBLE
-        } else {
-            View.GONE
-        }
+        // Ya elegiste — toggle the wrapper card
+        val alreadySelectedVisible = state.userVote != null
+        binding.alreadySelectedTextView.visibility = if (alreadySelectedVisible) View.VISIBLE else View.GONE
+        binding.alreadySelectedCard.visibility = if (alreadySelectedVisible) View.VISIBLE else View.GONE
 
         // El card siempre muestra "Menú de hoy" (estático en el XML)
         // No se modifica el texto del card
@@ -440,11 +438,11 @@ class DailyMenuFragment : Fragment() {
         // Mostrar información genérica pero real cuando no hay menú
         // Fecha de HOY (no estática incorrecta)
         val today = Date()
-        binding.dateTextView.text = dateFormat.format(today)
+        binding.dateTextView.text = capitalizeEs(dateFormat.format(today))
         binding.dateTextView.visibility = View.VISIBLE
         
         // Horario estándar
-        binding.timeRangeTextView.text = "Horario para elegir: 08:00 - 11:00"
+        binding.timeRangeTextView.text = "08:00 - 11:00"
         binding.timeRangeTextView.visibility = View.VISIBLE
         
         // Ocultar estado "Abierto/Cerrado" ya que no hay menú de referencia
@@ -600,14 +598,12 @@ class DailyMenuFragment : Fragment() {
             val optionNameTextView = optionView.findViewById<android.widget.TextView>(R.id.optionNameTextView)
             val optionButton = optionView.findViewById<com.google.android.material.button.MaterialButton>(R.id.optionButton)
             val selectedIndicator = optionView.findViewById<android.widget.ImageView>(R.id.selectedIndicator)
+            val selectedIndicatorContainer = optionView.findViewById<android.widget.FrameLayout>(R.id.selectedIndicatorContainer)
             val statusMessageTextView = optionView.findViewById<android.widget.TextView>(R.id.statusMessageTextView)
+            val optionCard = optionView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.optionCard)
             
             // Nombre de la opción
-            optionNameTextView.text = if (menu.getOptionsOrEmpty().size > 1) {
-                "Opción ${index + 1}: ${option.name}"
-            } else {
-                option.name
-            }
+            optionNameTextView.text = option.name
             
             val canVote = isWithinTime && isMenuOpen
             val isSelected = userVote?.option?.id == option.id
@@ -615,62 +611,129 @@ class DailyMenuFragment : Fragment() {
             
             if (!canVote) {
                 // Estado CERRADO / FUERA DE HORARIO
-                optionButton.visibility = View.GONE
+                optionButton.visibility = View.VISIBLE
+                optionButton.isEnabled = false
+                optionButton.alpha = 0.7f
                 statusMessageTextView.visibility = View.VISIBLE
                 
                 if (isSelected) {
                     // El usuario votó ESTA opción
-                    statusMessageTextView.text = "Usted ya seleccionó esta opción"
-                    statusMessageTextView.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_secondary_green))
-                    statusMessageTextView.setTypeface(null, android.graphics.Typeface.BOLD)
+                    statusMessageTextView.visibility = View.GONE
+                    optionCard.setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    optionCard.setBackgroundResource(R.drawable.bg_card_selected_gradient)
+                    optionNameTextView.setTextColor(
+                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white)
+                    )
+                    statusMessageTextView.setTextColor(
+                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.emerald_100)
+                    )
+                    optionButton.text = getString(R.string.remove_selection)
+                    optionButton.setIconResource(R.drawable.ic_close_circle)
+                    optionButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white)
+                    )
+                    optionButton.setTextColor(
+                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_status_error)
+                    )
+                    optionButton.iconTint = android.content.res.ColorStateList.valueOf(
+                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_status_error)
+                    )
                 } else if (!hasVotedAny) {
                     // El usuario NO votó nada hoy
+                    optionCard.background = null
+                    optionCard.setCardBackgroundColor(
+                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_background_card)
+                    )
+                    optionNameTextView.setTextColor(
+                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_text_primary)
+                    )
                     statusMessageTextView.text = "Usted no seleccionó una opción el día de hoy"
                     statusMessageTextView.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_status_error))
                     statusMessageTextView.setTypeface(null, android.graphics.Typeface.NORMAL)
+                    optionButton.text = "Selección cerrada"
+                    optionButton.setIconResource(android.R.drawable.ic_lock_lock)
+                    optionButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.neutral_200)
+                    )
+                    optionButton.setTextColor(
+                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.neutral_600)
+                    )
+                    optionButton.iconTint = android.content.res.ColorStateList.valueOf(
+                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.neutral_600)
+                    )
                 } else {
                     // votó OTRA opción
+                     optionCard.background = null
+                     optionCard.setCardBackgroundColor(
+                         androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_background_card)
+                     )
+                     optionNameTextView.setTextColor(
+                         androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_text_primary)
+                     )
                      statusMessageTextView.text = "No seleccionada"
                      statusMessageTextView.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_text_secondary))
                      statusMessageTextView.setTypeface(null, android.graphics.Typeface.NORMAL)
+                     optionButton.text = "Selección cerrada"
+                     optionButton.setIconResource(android.R.drawable.ic_lock_lock)
+                     optionButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                         androidx.core.content.ContextCompat.getColor(requireContext(), R.color.neutral_200)
+                     )
+                     optionButton.setTextColor(
+                         androidx.core.content.ContextCompat.getColor(requireContext(), R.color.neutral_600)
+                     )
+                     optionButton.iconTint = android.content.res.ColorStateList.valueOf(
+                         androidx.core.content.ContextCompat.getColor(requireContext(), R.color.neutral_600)
+                     )
                 }
                 
                 // Keep indicator visible if selected even if closed, to confirm selection
                 selectedIndicator.visibility = if (isSelected) View.VISIBLE else View.GONE
+                selectedIndicatorContainer.visibility = if (isSelected) View.VISIBLE else View.GONE
                 
             } else {
                 // Estado ABIERTO / PENDIENTE
-                statusMessageTextView.visibility = View.GONE
+                statusMessageTextView.visibility = View.VISIBLE
+                statusMessageTextView.text = menu.description
                 optionButton.visibility = View.VISIBLE
+                optionButton.isEnabled = true
+                optionButton.alpha = 1f
                 
                 if (isSelected) {
+                    optionCard.setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    optionCard.setBackgroundResource(R.drawable.bg_card_selected_gradient)
                     // Opción seleccionada -> Botón rojo "Quitar"
                     optionButton.text = getString(R.string.remove_selection)
-                    optionButton.setIconResource(android.R.drawable.ic_menu_delete)
-                    optionButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                    optionButton.setIconResource(R.drawable.ic_close_circle)
+                    optionButton.backgroundTintList = android.content.res.ColorStateList.valueOf(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white))
+                    optionButton.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_status_error))
+                    optionButton.iconTint = android.content.res.ColorStateList.valueOf(
                         androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_status_error)
                     )
-                    optionButton.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.black))
-                    optionButton.iconTint = android.content.res.ColorStateList.valueOf(
-                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.black)
-                    )
+                    optionNameTextView.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white))
+                    statusMessageTextView.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.emerald_100))
                     selectedIndicator.visibility = View.VISIBLE
+                    selectedIndicatorContainer.visibility = View.VISIBLE
                     
                     optionButton.setOnClickListener {
                         if (canVote) viewModel.deleteVote()
                     }
                 } else {
+                    optionCard.background = null
+                    optionCard.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_background_card))
                     // Opción no seleccionada -> Botón verde "Elegir"
                     optionButton.text = getString(R.string.choose_option)
                     optionButton.setIconResource(android.R.drawable.ic_menu_add)
                     optionButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_secondary_green)
+                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_primary_orange_dark)
                     )
                     optionButton.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white))
                     optionButton.iconTint = android.content.res.ColorStateList.valueOf(
                         androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white)
                     )
                     selectedIndicator.visibility = View.GONE
+                    selectedIndicatorContainer.visibility = View.GONE
+                    optionNameTextView.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_text_primary))
+                    statusMessageTextView.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_text_secondary))
                     
                     optionButton.setOnClickListener {
                         if (canVote) viewModel.selectOption(option.id)

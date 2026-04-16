@@ -65,18 +65,11 @@ class WeeklyMenuFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Configurar insets para el header naranja - extender detrás de la barra de estado
-        // Aplicar padding solo al contenido (titleTextView) para que no quede debajo de la barra de estado
-        ViewCompat.setOnApplyWindowInsetsListener(binding.titleTextView) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            // Ajustar marginTop para incluir el espacio de la barra de estado
-            val layoutParams = v.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
-            layoutParams?.let {
-                val originalMarginTop = 60 // dp del XML
-                val marginTopInPx = (originalMarginTop * resources.displayMetrics.density).toInt()
-                it.topMargin = marginTopInPx + systemBars.top
-                v.layoutParams = it
-            }
+        // Aplicar inset superior al contenedor completo del header para evitar solape
+        ViewCompat.setOnApplyWindowInsetsListener(binding.headerContainer) { v, insets ->
+            val topInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
+            val baseTopPadding = (24 * resources.displayMetrics.density).toInt()
+            v.setPadding(v.paddingLeft, baseTopPadding + topInset, v.paddingRight, v.paddingBottom)
             insets
         }
 

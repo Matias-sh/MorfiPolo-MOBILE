@@ -1,65 +1,141 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
+
     <!-- Base application theme -->
     <style name="Base.Theme.Morfipolo" parent="Theme.Material3.Light.NoActionBar">
-        <!-- Brand Colors -->
-        <item name="colorPrimary">@color/food_primary_orange</item>
-        <item name="colorPrimaryVariant">@color/food_primary_orange_dark</item>
-        <item name="colorOnPrimary">@color/food_text_inverse</item>
-        
-        <item name="colorSecondary">@color/food_secondary_green</item>
-        <item name="colorSecondaryVariant">@color/food_secondary_green_dark</item>
-        <item name="colorOnSecondary">@color/food_text_inverse</item>
+        <!-- Primary: Slate 700 -->
+        <item name="colorPrimary">@color/slate_700</item>
+        <item name="colorPrimaryVariant">@color/slate_600</item>
+        <item name="colorOnPrimary">@color/white</item>
 
-        <item name="colorError">@color/food_status_error</item>
-        <item name="colorOnError">@color/food_text_inverse</item>
+        <!-- Secondary: Slate 600 -->
+        <item name="colorSecondary">@color/slate_600</item>
+        <item name="colorSecondaryVariant">@color/slate_700</item>
+        <item name="colorOnSecondary">@color/white</item>
 
-        <!-- Background & Surface -->
-        <item name="android:windowBackground">@color/food_background_light</item>
-        <item name="colorSurface">@color/food_background_card</item>
-        <item name="colorOnSurface">@color/food_text_primary</item>
+        <item name="colorError">@color/red_600</item>
+        <item name="colorOnError">@color/white</item>
 
-        <!-- Typography & General -->
-        <item name="android:textColorPrimary">@color/food_text_primary</item>
-        <item name="android:textColorSecondary">@color/food_text_secondary</item>
-        
+        <!-- Surfaces -->
+        <item name="android:windowBackground">@color/neutral_50</item>
+        <item name="colorSurface">@color/white</item>
+        <item name="colorOnSurface">@color/neutral_900</item>
+
+        <!-- Typography -->
+        <item name="android:textColorPrimary">@color/neutral_900</item>
+        <item name="android:textColorSecondary">@color/neutral_500</item>
+        <item name="android:fontFamily">sans-serif</item>
+
         <!-- System Bars -->
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">true</item> <!-- Dark icons on light bg -->
+        <item name="android:windowLightStatusBar" tools:targetApi="23">true</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        
+
         <!-- Ripple -->
         <item name="colorControlHighlight">@color/food_ripple</item>
     </style>
 
     <style name="Theme.Morfipolo" parent="Base.Theme.Morfipolo" />
-    
-    <!-- Custom Style for Buttons -->
+
+    <!-- ============================================================ -->
+    <!-- BUTTONS                                                       -->
+    <!-- ============================================================ -->
+
+    <!-- Primary button — Slate 700 solid, 12dp corners -->
     <style name="Widget.Morfipolo.Button.Primary" parent="Widget.Material3.Button">
-        <item name="backgroundTint">@color/food_primary_orange</item>
-        <item name="android:textColor">@color/food_text_inverse</item>
+        <item name="backgroundTint">@null</item>
+        <item name="android:background">@drawable/bg_button_orange_pill</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.01</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:stateListAnimator">@null</item>
         <item name="cornerRadius">12dp</item>
-        <item name="android:stateListAnimator">@null</item> <!-- Remove default shadow lift for cleaner look if desired, or keep it. Keeping default usually better for Material. -->
     </style>
-    
-    <style name="Widget.Morfipolo.Button.Secondary" parent="Widget.Material3.Button.TonalButton">
-        <item name="backgroundTint">@color/food_secondary_green_light</item>
-        <item name="android:textColor">@color/food_secondary_green_dark</item>
+
+    <!-- Secondary button -->
+    <style name="Widget.Morfipolo.Button.Secondary" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/slate_600</item>
+        <item name="android:textColor">@color/white</item>
         <item name="cornerRadius">12dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:stateListAnimator">@null</item>
     </style>
-    
+
+    <!-- Outline button -->
+    <style name="Widget.Morfipolo.Button.Outline" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">@color/slate_700</item>
+        <item name="strokeWidth">1.5dp</item>
+        <item name="android:textColor">@color/slate_700</item>
+        <item name="cornerRadius">12dp</item>
+        <item name="android:minHeight">40dp</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- CARDS                                                         -->
+    <!-- ============================================================ -->
+
+    <!-- Main card style — white, 16dp corners, subtle elevation -->
     <style name="Widget.Morfipolo.Card" parent="Widget.Material3.CardView.Elevated">
-        <item name="cardBackgroundColor">@color/food_background_card</item>
+        <item name="cardBackgroundColor">@color/white</item>
         <item name="cardCornerRadius">16dp</item>
         <item name="cardElevation">2dp</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="android:stateListAnimator">@null</item>
     </style>
-    
-    <style name="TextAppearance.Morfipolo.Headline" parent="TextAppearance.Material3.HeadlineMedium">
-        <item name="android:textColor">@color/food_text_primary</item>
+
+    <!-- Card with more lift -->
+    <style name="Widget.Morfipolo.Card.Lifted" parent="Widget.Morfipolo.Card">
+        <item name="cardElevation">4dp</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- TYPOGRAPHY                                                    -->
+    <!-- ============================================================ -->
+
+    <style name="TextAppearance.Morfipolo.Display" parent="TextAppearance.Material3.DisplaySmall">
+        <item name="android:textColor">@color/neutral_900</item>
         <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="TextAppearance.Morfipolo.Headline" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textColor">@color/neutral_900</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
     </style>
 
     <style name="TextAppearance.Morfipolo.Subhead" parent="TextAppearance.Material3.TitleMedium">
-        <item name="android:textColor">@color/food_text_secondary</item>
+        <item name="android:textColor">@color/neutral_500</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+
+    <style name="TextAppearance.Morfipolo.Body" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">@color/neutral_500</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- TEXT INPUTS                                                   -->
+    <!-- ============================================================ -->
+
+    <style name="Widget.Morfipolo.TextInput" parent="Widget.Material3.TextInputLayout.OutlinedBox.Dense">
+        <item name="boxStrokeColor">@color/slate_700</item>
+        <item name="boxStrokeWidth">1.5dp</item>
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="hintTextColor">@color/neutral_500</item>
+        <item name="boxBackgroundColor">@color/neutral_50</item>
+        <item name="android:minHeight">56dp</item>
+    </style>
+
+    <!-- TimePicker spinner with white text for use on dark (Slate 600) card -->
+    <style name="TimePickerSpinnerDark" parent="Theme.Material3.Light">
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="colorAccent">@color/emerald_600</item>
     </style>
 
 </resources>

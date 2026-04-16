@@ -1,58 +1,245 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:orientation="vertical"
     android:padding="24dp">
 
+    <!-- Title -->
     <TextView
         android:id="@+id/titleTextView"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/edit_notification"
-        style="@style/TextAppearance.Morfipolo.Headline"
+        android:text="@string/edit_alert_title"
+        android:textColor="@color/neutral_900"
         android:textSize="20sp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium" />
 
-    <TimePicker
-        android:id="@+id/timePicker"
-        android:layout_width="wrap_content"
+    <!-- Subtitle -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/edit_alert_subtitle"
+        android:textColor="@color/neutral_500"
+        android:textSize="13sp" />
+
+    <!-- Time display card — Slate 600 background -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        app:cardBackgroundColor="@color/slate_600"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingHorizontal="24dp"
+            android:paddingVertical="20dp">
+
+            <!-- Large time text -->
+            <TextView
+                android:id="@+id/timeDisplayTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="9:00"
+                android:textColor="@color/white"
+                android:textSize="48sp"
+                android:textStyle="bold"
+                android:fontFamily="sans-serif-medium" />
+
+            <!-- AM badge -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_status_gray_pill"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="4dp"
+                android:text="A.M."
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:alpha="0.9" />
+
+            <!-- Range hint -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/time_range_hint"
+                android:textColor="@color/slate_300"
+                android:textSize="11sp"
+                android:gravity="center" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Hour slider section -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:timePickerMode="clock"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/titleTextView" />
+        android:orientation="vertical">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/label_hour"
+                android:textColor="@color/neutral_700"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/hourValueTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="9:00 AM"
+                android:textColor="@color/neutral_500"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/hourSlider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:valueFrom="8"
+            android:valueTo="11"
+            android:stepSize="1"
+            android:value="9"
+            app:thumbColor="@color/slate_600"
+            app:trackColorActive="@color/slate_600"
+            app:trackColorInactive="@color/neutral_200" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="8 AM"
+                android:textColor="@color/neutral_400"
+                android:textSize="10sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="11 AM"
+                android:textColor="@color/neutral_400"
+                android:textSize="10sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Minute slider section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/label_minutes"
+                android:textColor="@color/neutral_700"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/minuteValueTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=":00"
+                android:textColor="@color/neutral_500"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/minuteSlider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:valueFrom="0"
+            android:valueTo="59"
+            android:stepSize="1"
+            android:value="0"
+            app:thumbColor="@color/slate_600"
+            app:trackColorActive="@color/slate_600"
+            app:trackColorInactive="@color/neutral_200" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text=":00"
+                android:textColor="@color/neutral_400"
+                android:textSize="10sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=":59"
+                android:textColor="@color/neutral_400"
+                android:textSize="10sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Repeat label -->
     <TextView
-        android:id="@+id/daysLabelTextView"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         android:text="Días de la semana:"
-        android:textSize="16sp"
+        android:textColor="@color/slate_700"
+        android:textSize="11sp"
         android:textStyle="bold"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/timePicker" />
+        android:letterSpacing="0.1" />
 
+    <!-- Day chips row -->
     <HorizontalScrollView
         android:id="@+id/daysScrollView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="10dp"
         android:scrollbars="none"
-        android:fillViewport="false"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/daysLabelTextView">
+        android:fillViewport="false">
 
         <LinearLayout
             android:id="@+id/daysContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:paddingEnd="8dp">
+            android:paddingEnd="4dp">
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/mondayChip"
@@ -62,9 +249,11 @@
                 android:checkable="true"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeWidth="0dp"
-                app:chipMinHeight="40dp"
+                app:chipMinHeight="48dp"
                 android:minWidth="48dp"
                 android:textColor="@color/chip_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 android:layout_marginEnd="6dp" />
 
             <com.google.android.material.chip.Chip
@@ -75,9 +264,11 @@
                 android:checkable="true"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeWidth="0dp"
-                app:chipMinHeight="40dp"
+                app:chipMinHeight="48dp"
                 android:minWidth="48dp"
                 android:textColor="@color/chip_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 android:layout_marginEnd="6dp" />
 
             <com.google.android.material.chip.Chip
@@ -88,9 +279,11 @@
                 android:checkable="true"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeWidth="0dp"
-                app:chipMinHeight="40dp"
+                app:chipMinHeight="48dp"
                 android:minWidth="48dp"
                 android:textColor="@color/chip_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 android:layout_marginEnd="6dp" />
 
             <com.google.android.material.chip.Chip
@@ -101,9 +294,11 @@
                 android:checkable="true"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeWidth="0dp"
-                app:chipMinHeight="40dp"
+                app:chipMinHeight="48dp"
                 android:minWidth="48dp"
                 android:textColor="@color/chip_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 android:layout_marginEnd="6dp" />
 
             <com.google.android.material.chip.Chip
@@ -114,9 +309,11 @@
                 android:checkable="true"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeWidth="0dp"
-                app:chipMinHeight="40dp"
+                app:chipMinHeight="48dp"
                 android:minWidth="48dp"
                 android:textColor="@color/chip_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 android:layout_marginEnd="6dp" />
 
             <com.google.android.material.chip.Chip
@@ -127,9 +324,11 @@
                 android:checkable="true"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeWidth="0dp"
-                app:chipMinHeight="40dp"
+                app:chipMinHeight="48dp"
                 android:minWidth="48dp"
                 android:textColor="@color/chip_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 android:layout_marginEnd="6dp" />
 
             <com.google.android.material.chip.Chip
@@ -140,22 +339,25 @@
                 android:checkable="true"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeWidth="0dp"
-                app:chipMinHeight="40dp"
+                app:chipMinHeight="48dp"
                 android:minWidth="48dp"
-                android:textColor="@color/chip_text_selector" />
+                android:textColor="@color/chip_text_selector"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
         </LinearLayout>
     </HorizontalScrollView>
 
+    <!-- Delete button (text link, red) -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/deleteButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="16dp"
         android:text="@string/delete"
-        android:textColor="@color/food_status_error"
-        style="@style/Widget.Material3.Button.TextButton"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/daysScrollView" />
+        android:textColor="@color/red_600"
+        style="@style/Widget.Material3.Button.TextButton" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <!-- Note: Save / Cancel buttons are added by AlertDialog.Builder -->
+
+</LinearLayout>

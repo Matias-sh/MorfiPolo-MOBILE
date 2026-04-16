@@ -1,28 +1,39 @@
 <resources>
     <string name="app_name">Comedor</string>
-    
+    <string name="app_subtitle">Gestión de Comedor</string>
+    <string name="powered_by">POWERED BY COMEDOR TECH ECOSYSTEM</string>
+    <string name="comedor_version">COMEDOR APP V1.0</string>
+
     <!-- Login -->
     <string name="login_title">Iniciar Sesión</string>
+    <string name="login_welcome">Bienvenido</string>
+    <string name="login_credentials_hint">Ingresá tus credenciales para continuar</string>
     <string name="dni">DNI</string>
-    <string name="dni_hint">12345678</string>
+    <string name="dni_hint">Tu número de documento</string>
     <string name="password">Contraseña</string>
     <string name="password_hint">Ingrese su contraseña</string>
     <string name="login_button">Ingresar</string>
-    <string name="first_login_instruction">Para el primer ingreso utilizá como contraseña Ab + tu DNI (Ej. Ab12345678).</string>
+    <string name="forgot_password">Olvidé mi contraseña</string>
+    <string name="first_login_instruction">Para el primer ingreso: Tu contraseña temporal es tu número de DNI. Te pediremos cambiarla inmediatamente por seguridad.</string>
     <string name="change_password_reminder">¡No olvides cambiar tu contraseña!</string>
     <string name="login_error">DNI o contraseña incorrectos</string>
     <string name="dni_empty_error">El DNI no puede estar vacío</string>
     <string name="password_empty_error">La contraseña no puede estar vacía</string>
-    
+
     <!-- Menu -->
-    <string name="menu_daily">Menú del Día</string>
-    <string name="menu_weekly">Menú Semanal</string>
-    <string name="select_date_instruction">Seleccione una fecha para ver el menú</string>
+    <string name="menu_daily">Hoy</string>
+    <string name="menu_weekly">Semana</string>
+    <string name="daily_options_chef">Opciones del Chef</string>
+    <string name="weekly_next_flavors">Menús de la semana</string>
+    <string name="weekly_today_label">Hoy</string>
+    <string name="weekly_upcoming_label">Próximamente</string>
+    <string name="weekly_closed_label">CERRADO</string>
+    <string name="select_date_instruction">Explorá el menú de la semana</string>
     <string name="selection_time">Horario para elegir: %1$s - %2$s</string>
     <string name="already_selected">Ya elegiste</string>
     <string name="open">Abierto</string>
     <string name="closed">Cerrado</string>
-    <string name="choose_option">Elegir esta opción</string>
+    <string name="choose_option">Elegir</string>
     <string name="remove_selection">Quitar elección</string>
     <string name="previous">Anterior</string>
     <string name="next">Siguiente</string>
@@ -31,12 +42,26 @@
     <string name="deselection_success">Has quitado tu elección</string>
     <string name="selection_error">No se pudo realizar la selección</string>
     <string name="time_expired">El horario de selección ha expirado</string>
-    
+
     <!-- Profile -->
     <string name="profile">Perfil</string>
+    <string name="gourmet_member">Gourmet Member</string>
+    <string name="section_account">Cuenta</string>
+    <string name="section_preferences">Preferencias</string>
     <string name="change_password">Cambiar contraseña</string>
-    <string name="dark_mode">Cambiar a oscuro</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="dark_mode_subtitle">Activar modo oscuro</string>
     <string name="logout">Cerrar sesión</string>
+    <string name="toggle_notifications_label">Notificaciones</string>
+    <string name="toggle_notifications_subtitle">Activar notificaciones</string>
+    <string name="notification_config_label">Configuración de Notificaciones</string>
+    <string name="notification_config_subtitle">Elegí qué alertas querés recibir</string>
+    <string name="toggle_new_menus_label">Nuevos Menús</string>
+    <string name="toggle_new_menus_subtitle">Cuando se publique un menú nuevo</string>
+    <string name="toggle_reminders_label">Recordatorios de Reserva</string>
+    <string name="toggle_reminders_subtitle">Recordatorios diarios de almuerzo</string>
+    <string name="toggle_promotions_label">Ofertas y Promociones</string>
+    <string name="toggle_promotions_subtitle">Novedades del comedor</string>
     <string name="current_password">Contraseña actual</string>
     <string name="new_password">Nueva contraseña</string>
     <string name="confirm_password">Confirmar contraseña</string>
@@ -48,7 +73,7 @@
     <string name="password_requirements_message">Debe incluir mayúscula, minúscula, número y al menos 8 caracteres.</string>
     <string name="password_requirements_error">La contraseña debe tener mayúscula, minúscula, número y al menos 8 caracteres.</string>
     <string name="password_current_required">Ingresá tu contraseña actual</string>
-    
+
     <!-- Notifications -->
     <string name="notification_channel_name">Recordatorios de Menú</string>
     <string name="notification_channel_description">Recordatorios diarios para anotarse en el menú</string>
@@ -57,15 +82,24 @@
     <string name="daily_reminder_notification_summary">Comedor - Recordatorio diario</string>
     <string name="menu_loaded_notification_title">¡Nuevo menú disponible!</string>
     <string name="menu_loaded_notification_text">Se subió un nuevo menú del día. ¡Anotate al almuerzo ahora!</string>
-    
+    <string name="my_alerts_title">Tus Alertas</string>
+    <string name="programmed_label">Programadas</string>
+    <string name="notifications_subtitle_desc">Gestioná tus recordatorios de comidas y pedidos automáticos para mantener tu ritmo.</string>
+    <string name="chef_suggestions">Sugerencias del Chef</string>
+    <string name="chef_suggestions_subtitle">Recibí alertas basadas en tus platos favoritos.</string>
+    <string name="edit_alert_title">Editar Alerta</string>
+    <string name="edit_alert_subtitle">Personalizá el horario de tus notificaciones.</string>
+    <string name="repeat_each_week">REPETIR CADA SEMANA</string>
+    <string name="save_changes">Guardar Cambios</string>
+
     <!-- Widget -->
     <string name="widget_title">Menú del Día</string>
     <string name="widget_join">Sumarse</string>
     <string name="widget_remove">Quitarse</string>
     <string name="widget_error">No se puede cargar el widget</string>
-    
+
     <!-- Network & Errors -->
-    <string name="offline_message">Sin conexión a internet. Los datos mostrados pueden estar desactualizados.</string>
+    <string name="offline_message">Sin conexión. Los datos pueden estar desactualizados.</string>
     <string name="offline_icon">Icono de sin conexión</string>
     <string name="info_icon">Icono de información</string>
     <string name="error_no_connection">Sin conexión a internet. Verifica tu conexión e intenta de nuevo.</string>
@@ -86,20 +120,33 @@
     <string name="menu_closed_time_message">El horario de selección ha finalizado. Solo puedes votar entre las 08:00 y las 11:00.</string>
     <string name="dni_invalid_format">El DNI debe tener entre 7 y 8 dígitos numéricos</string>
     <string name="error_already_voted">Ya tienes un voto registrado para este menú</string>
-    
+
     <!-- Empty States -->
     <string name="empty_state_title">No hay menús disponibles</string>
-    <string name="empty_state_message">No se encontraron menús para mostrar. Desliza hacia abajo para actualizar.</string>
+    <string name="empty_state_message">No se encontraron menús para mostrar. Deslizá hacia abajo para actualizar.</string>
     <string name="empty_state_icon">Icono de estado vacío</string>
-    
+
     <!-- Confirmations -->
     <string name="confirm_remove_vote_title">Quitar elección</string>
     <string name="confirm_remove_vote_message">¿Estás seguro que deseas quitar tu elección de este menú?</string>
     <string name="confirm">Confirmar</string>
-    
+
     <!-- Notification Settings -->
     <string name="add_notification">Agregar notificación</string>
     <string name="edit_notification">Editar notificación</string>
     <string name="delete">Eliminar</string>
-    <string name="notification_settings">Configuración de notificaciones</string>
+    <string name="notification_settings">Notificaciones</string>
+
+    <!-- Daily Menu labels -->
+    <string name="menu_of_the_day">Menú del día</string>
+    <string name="time_range_hint">Horario disponible: 8:00 AM - 11:00 AM</string>
+
+    <!-- Notification dialog sliders -->
+    <string name="label_hour">Hora</string>
+    <string name="label_minutes">Minutos</string>
+
+    <!-- Change password hints -->
+    <string name="current_password_hint">Ingresá tu contraseña actual</string>
+    <string name="new_password_hint">Ingresá la nueva contraseña</string>
+    <string name="confirm_password_hint">Confirmá la nueva contraseña</string>
 </resources>
