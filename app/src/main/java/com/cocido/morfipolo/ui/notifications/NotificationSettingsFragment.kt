@@ -5,7 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TimePicker
+import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
@@ -17,6 +17,7 @@ import com.cocido.morfipolo.R
 import com.cocido.morfipolo.databinding.FragmentNotificationSettingsBinding
 import com.cocido.morfipolo.domain.model.CustomNotification
 import com.google.android.material.chip.Chip
+import com.google.android.material.slider.Slider
 import kotlinx.coroutines.launch
 
 class NotificationSettingsFragment : Fragment() {
@@ -143,7 +144,11 @@ class NotificationSettingsFragment : Fragment() {
         val dialogView = LayoutInflater.from(requireContext())
             .inflate(R.layout.dialog_notification_edit, null)
 
-        val timePicker = dialogView.findViewById<TimePicker>(R.id.timePicker)
+        val hourSlider = dialogView.findViewById<Slider>(R.id.hourSlider)
+        val minuteSlider = dialogView.findViewById<Slider>(R.id.minuteSlider)
+        val timeDisplayTextView = dialogView.findViewById<TextView>(R.id.timeDisplayTextView)
+        val hourValueTextView = dialogView.findViewById<TextView>(R.id.hourValueTextView)
+        val minuteValueTextView = dialogView.findViewById<TextView>(R.id.minuteValueTextView)
         val mondayChip = dialogView.findViewById<Chip>(R.id.mondayChip)
         val tuesdayChip = dialogView.findViewById<Chip>(R.id.tuesdayChip)
         val wednesdayChip = dialogView.findViewById<Chip>(R.id.wednesdayChip)
@@ -152,10 +157,6 @@ class NotificationSettingsFragment : Fragment() {
         val saturdayChip = dialogView.findViewById<Chip>(R.id.saturdayChip)
         val sundayChip = dialogView.findViewById<Chip>(R.id.sundayChip)
         val deleteButton = dialogView.findViewById<View>(R.id.deleteButton)
-        
-        // Constantes para el rango permitido
-        val MIN_HOUR = 8
-        val MAX_HOUR = 11
 
         val chips = mapOf(
             CustomNotification.MONDAY to mondayChip,
@@ -167,67 +168,37 @@ class NotificationSettingsFragment : Fragment() {
             CustomNotification.SUNDAY to sundayChip
         )
 
-        // Función helper para validar y ajustar la hora al rango permitido
-        fun validateAndAdjustHour(hour: Int): Int {
-            return when {
-                hour < MIN_HOUR -> MIN_HOUR
-                hour > MAX_HOUR -> MAX_HOUR
-                else -> hour
-            }
+        // Update display whenever sliders change
+        fun updateTimeDisplay() {
+            val h = hourSlider.value.toInt()
+            val m = minuteSlider.value.toInt()
+            val minuteStr = m.toString().padStart(2, '0')
+            timeDisplayTextView.text = "$h:$minuteStr"
+            hourValueTextView.text = "$h:00 AM"
+            minuteValueTextView.text = ":$minuteStr"
         }
-        
-        // Listener para limitar la hora al rango permitido (8:00 AM - 11:00 AM)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            timePicker.setOnTimeChangedListener { _, hour, minute ->
-                val adjustedHour = validateAndAdjustHour(hour)
-                if (hour != adjustedHour) {
-                    timePicker.hour = adjustedHour
-                    android.widget.Toast.makeText(
-                        requireContext(),
-                        "Las notificaciones solo pueden configurarse entre las 8:00 AM y 11:00 AM",
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        }
-        
-        // Si es edición, cargar valores existentes
+
+        hourSlider.addOnChangeListener { _, _, _ -> updateTimeDisplay() }
+        minuteSlider.addOnChangeListener { _, _, _ -> updateTimeDisplay() }
+
+        // Load existing values or defaults
         if (notification != null) {
-            val hour = validateAndAdjustHour(notification.hour)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                timePicker.hour = hour
-                timePicker.minute = notification.minute
-            } else {
-                @Suppress("DEPRECATION")
-                timePicker.currentHour = hour
-                @Suppress("DEPRECATION")
-                timePicker.currentMinute = notification.minute
-            }
-            
-            notification.daysOfWeek.forEach { day ->
-                chips[day]?.isChecked = true
-            }
-            
+            val hour = notification.hour.coerceIn(8, 11)
+            hourSlider.value = hour.toFloat()
+            minuteSlider.value = notification.minute.toFloat()
+            notification.daysOfWeek.forEach { day -> chips[day]?.isChecked = true }
             deleteButton.visibility = View.VISIBLE
         } else {
+            hourSlider.value = 9f
+            minuteSlider.value = 0f
             deleteButton.visibility = View.GONE
-            // Por defecto, 9:00 AM (dentro del rango permitido)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                timePicker.hour = 9
-                timePicker.minute = 0
-            } else {
-                @Suppress("DEPRECATION")
-                timePicker.currentHour = 9
-                @Suppress("DEPRECATION")
-                timePicker.currentMinute = 0
-            }
-            // Por defecto, solo días laborales
             chips[CustomNotification.MONDAY]?.isChecked = true
             chips[CustomNotification.TUESDAY]?.isChecked = true
             chips[CustomNotification.WEDNESDAY]?.isChecked = true
             chips[CustomNotification.THURSDAY]?.isChecked = true
             chips[CustomNotification.FRIDAY]?.isChecked = true
         }
+        updateTimeDisplay()
 
         val dialog = AlertDialog.Builder(requireContext())
             .setView(dialogView)
@@ -237,54 +208,25 @@ class NotificationSettingsFragment : Fragment() {
 
         dialog.setOnShowListener {
             val positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            val negativeButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+            positiveButton.setBackgroundColor(
+                androidx.core.content.ContextCompat.getColor(requireContext(), R.color.slate_600)
+            )
+            positiveButton.setTextColor(
+                androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white)
+            )
+            negativeButton.setTextColor(
+                androidx.core.content.ContextCompat.getColor(requireContext(), R.color.neutral_600)
+            )
             positiveButton.setOnClickListener {
-                var hour = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                    timePicker.hour
-                } else {
-                    @Suppress("DEPRECATION")
-                    timePicker.currentHour
-                }
-                
-                val minute = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                    timePicker.minute
-                } else {
-                    @Suppress("DEPRECATION")
-                    timePicker.currentMinute
-                }
-                
-                // Validar que la hora esté en el rango permitido (8:00 AM - 11:00 AM)
-                if (hour < MIN_HOUR || hour > MAX_HOUR) {
-                    android.widget.Toast.makeText(
-                        requireContext(),
-                        "Las notificaciones solo pueden configurarse entre las 8:00 AM y 11:00 AM",
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
-                    // Ajustar la hora al rango permitido
-                    hour = when {
-                        hour < MIN_HOUR -> MIN_HOUR
-                        hour > MAX_HOUR -> MAX_HOUR
-                        else -> hour
-                    }
-                    // Actualizar el TimePicker
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                        timePicker.hour = hour
-                    } else {
-                        @Suppress("DEPRECATION")
-                        timePicker.currentHour = hour
-                    }
-                    return@setOnClickListener
-                }
-                
+                val hour = hourSlider.value.toInt()
+                val minute = minuteSlider.value.toInt()
+
                 val selectedDays = chips.filter { it.value.isChecked }.keys.toSet()
-                
-                // Log para debugging
-                val selectedDaysStr = selectedDays.sorted().joinToString(", ") { 
-                    CustomNotification.getDayNameFull(it) 
-                }
-                android.util.Log.d("NotificationSettingsFragment", "📅 Días seleccionados para ${hour}:${minute}: [$selectedDaysStr] (valores: ${selectedDays.sorted()})")
-                
+
+                android.util.Log.d("NotificationSettingsFragment", "📅 Días seleccionados para ${hour}:${minute}: [${selectedDays.sorted()}]")
+
                 if (selectedDays.isEmpty()) {
-                    // Mostrar error: debe seleccionar al menos un día
                     android.widget.Toast.makeText(
                         requireContext(),
                         "Debes seleccionar al menos un día de la semana",
@@ -292,7 +234,7 @@ class NotificationSettingsFragment : Fragment() {
                     ).show()
                     return@setOnClickListener
                 }
-                
+
                 val notificationId = notification?.id ?: CustomNotification.generateId(hour, minute)
                 val updatedNotification = CustomNotification(
                     id = notificationId,
@@ -301,11 +243,11 @@ class NotificationSettingsFragment : Fragment() {
                     isEnabled = notification?.isEnabled ?: true,
                     daysOfWeek = selectedDays
                 )
-                
+
                 viewModel.saveNotification(updatedNotification)
                 dialog.dismiss()
             }
-            
+
             if (notification != null) {
                 deleteButton.setOnClickListener {
                     AlertDialog.Builder(requireContext())

@@ -53,12 +53,15 @@ class MainActivity : AppCompatActivity() {
             insets
         }
         
-        // Configurar insets específicamente para el BottomNavigationView
-        // Esto asegura que se ajuste correctamente a la navigation bar sin espacio extra
+        // Ajustar BottomNavigationView para edge-to-edge sin recortar íconos:
+        // altura visible fija (80dp) + inset inferior del sistema.
+        val baseBottomNavHeightPx = (80 * resources.displayMetrics.density).toInt()
         ViewCompat.setOnApplyWindowInsetsListener(binding.navView) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            // Aplicar padding inferior solo al BottomNavigationView para que se ajuste a la navigation bar
-            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, systemBars.bottom)
+            val bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+            v.layoutParams = v.layoutParams.apply {
+                height = baseBottomNavHeightPx + bottomInset
+            }
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, bottomInset)
             insets
         }
         
@@ -153,7 +156,13 @@ class MainActivity : AppCompatActivity() {
     
     private fun setupNavigation() {
         val navView: BottomNavigationView = binding.navView
-        
+
+        // Active indicator: neutral pill to match Figma nav container
+        navView.itemActiveIndicatorColor =
+            android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(this, R.color.slate_100)
+            )
+
         // Esperar a que el FragmentContainerView esté completamente inicializado
         binding.root.post {
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? androidx.navigation.fragment.NavHostFragment

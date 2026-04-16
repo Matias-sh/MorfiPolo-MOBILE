@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.snackbar.Snackbar
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -44,6 +46,14 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Evita superposición con la status bar en edge-to-edge
+        ViewCompat.setOnApplyWindowInsetsListener(binding.profileContentContainer) { v, insets ->
+            val topInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
+            val baseTopPadding = (32 * resources.displayMetrics.density).toInt()
+            v.setPadding(v.paddingLeft, baseTopPadding + topInset, v.paddingRight, v.paddingBottom)
+            insets
+        }
+
         setupObservers()
         setupListeners()
         viewModel.loadUser()
@@ -59,7 +69,6 @@ class ProfileFragment : Fragment() {
                     is ProfileUiState.Success -> {
                         val fullName = "${state.user.name} ${state.user.lastName}"
                         binding.nameTextView.text = fullName
-                        binding.avatarTextView.text = state.user.name.firstOrNull()?.toString() ?: "U"
                     }
                     is ProfileUiState.Error -> {
                         // No mostrar errores técnicos al usuario
