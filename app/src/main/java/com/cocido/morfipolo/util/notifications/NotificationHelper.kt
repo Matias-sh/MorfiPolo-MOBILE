@@ -3,8 +3,6 @@ package com.cocido.morfipolo.util.notifications
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.appwidget.AppWidgetManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
@@ -13,7 +11,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.cocido.morfipolo.R
 import com.cocido.morfipolo.ui.main.MainActivity
-import com.cocido.morfipolo.util.widget.MenuWidgetProvider
 
 class NotificationHelper(private val context: Context) {
 
@@ -93,38 +90,22 @@ class NotificationHelper(private val context: Context) {
 
         notificationManager.notify(NOTIFICATION_ID, notification)
         
-        // Actualizar widget cuando se envía la notificación
-        updateWidget(context)
+        // Avisar a la app para refrescar contenido si está en foreground
+        notifyAppUpdate(context)
     }
 
     /**
      * Actualiza el widget y la app cuando se envía una notificación de nuevo menú
      */
-    private fun updateWidget(context: Context) {
+    private fun notifyAppUpdate(context: Context) {
         try {
-            // Actualizar todos los widgets instalados
-            val appWidgetManager = AppWidgetManager.getInstance(context)
-            val appWidgetIds = appWidgetManager.getAppWidgetIds(
-                ComponentName(context, MenuWidgetProvider::class.java)
-            )
-            if (appWidgetIds.isNotEmpty()) {
-                android.util.Log.d("NotificationHelper", "🔄 Actualizando ${appWidgetIds.size} widget(s) después de notificación")
-                val updateIntent = Intent(context, MenuWidgetProvider::class.java).apply {
-                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
-                }
-                context.sendBroadcast(updateIntent)
-            }
-            
-            // CRÍTICO: También enviar broadcast para actualizar la app si está abierta
-            // Esto permite que los fragments actualicen su contenido automáticamente
             val appUpdateIntent = Intent("com.cocido.morfipolo.MENU_UPDATED").apply {
                 setPackage(context.packageName)
             }
             context.sendBroadcast(appUpdateIntent)
             android.util.Log.d("NotificationHelper", "📱 Broadcast enviado para actualizar la app")
         } catch (e: Exception) {
-            android.util.Log.e("NotificationHelper", "Error al actualizar widget/app", e)
+            android.util.Log.e("NotificationHelper", "Error al enviar actualización de app", e)
         }
     }
 

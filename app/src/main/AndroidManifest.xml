@@ -38,24 +38,6 @@
             android:name=".ui.main.MainActivity"
             android:exported="false" />
 
-        <receiver
-            android:name=".util.widget.MenuWidgetProvider"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.cocido.morfipolo.SELECT_OPTION" />
-                <action android:name="com.cocido.morfipolo.DELETE_VOTE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_menu_info" />
-        </receiver>
-
-        <service
-            android:name=".util.widget.MenuWidgetService"
-            android:permission="android.permission.BIND_REMOTEVIEWS"
-            android:exported="false" />
-
         <!-- Receiver para las alarmas diarias de notificaciones (9am, 9:30am, 10am) -->
         <receiver
             android:name=".util.alarm.AlarmReceiver"

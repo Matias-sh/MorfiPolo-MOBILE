@@ -1,9 +1,9 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("org.jetbrains.kotlin.plugin.compose")
     id("kotlin-kapt")
     id("kotlin-parcelize")
-    id("androidx.navigation.safeargs.kotlin")
 }
 
 // Función auxiliar para cargar propiedades del keystore
@@ -73,8 +73,11 @@ android {
         jvmTarget = "11"
     }
     buildFeatures {
-        viewBinding = true
         buildConfig = true
+        compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.7.5"
     }
 }
 
@@ -84,16 +87,12 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.activity)
-    implementation(libs.androidx.constraintlayout)
     
     // Room
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     kapt(libs.room.compiler)
     
-    // Navigation
-    implementation(libs.navigation.fragment.ktx)
-    implementation(libs.navigation.ui.ktx)
     
     // Lifecycle
     implementation(libs.lifecycle.viewmodel.ktx)
@@ -103,17 +102,22 @@ dependencies {
     // WorkManager
     implementation(libs.work.runtime.ktx)
     
-    // Fragment
-    implementation(libs.fragment.ktx)
     
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
     
-    // RecyclerView
-    implementation(libs.androidx.recyclerview)
-    
-    // SwipeRefreshLayout
-    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    // Jetpack Compose
+    implementation(platform("androidx.compose:compose-bom:2024.10.01"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.runtime:runtime")
+    implementation("androidx.compose.runtime:runtime-livedata")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.navigation:navigation-compose:2.8.2")
     
     // Retrofit
     implementation(libs.retrofit)
