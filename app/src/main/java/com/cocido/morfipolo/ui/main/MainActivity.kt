@@ -1,30 +1,20 @@
 package com.cocido.morfipolo.ui.main
 
-import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.ui.setupWithNavController
 import com.cocido.morfipolo.MorfipoloApplication
-import com.cocido.morfipolo.R
-import com.cocido.morfipolo.databinding.ActivityMainBinding
 import com.cocido.morfipolo.ui.login.LoginActivity
-import com.cocido.morfipolo.util.widget.MenuWidgetProvider
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.cocido.morfipolo.ui.theme.MorfiPoloTheme
 import kotlinx.coroutines.launch
 
-class MainActivity : AppCompatActivity() {
-
-    private lateinit var binding: ActivityMainBinding
+class MainActivity : ComponentActivity() {
     
     // Launcher para solicitar permiso de notificaciones
     private val requestNotificationPermissionLauncher = registerForActivityResult(
@@ -39,32 +29,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Habilitar edge-to-edge (compatible con Android 15+)
-        enableEdgeToEdge()
-        
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        
-        // NO aplicar padding al root - dejar que el contenido se extienda detrás de la barra de estado
-        // El padding se aplicará solo a los elementos específicos que lo necesiten (como el header naranja)
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
-            // No aplicar padding aquí - el contenido debe extenderse detrás de la barra de estado
-            insets
-        }
-        
-        // Ajustar BottomNavigationView para edge-to-edge sin recortar íconos:
-        // altura visible fija (80dp) + inset inferior del sistema.
-        val baseBottomNavHeightPx = (80 * resources.displayMetrics.density).toInt()
-        ViewCompat.setOnApplyWindowInsetsListener(binding.navView) { v, insets ->
-            val bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
-            v.layoutParams = v.layoutParams.apply {
-                height = baseBottomNavHeightPx + bottomInset
-            }
-            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, bottomInset)
-            insets
-        }
-        
+
         // Configurar status bar transparente con iconos oscuros (compatible con Android 15+)
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController?.isAppearanceLightStatusBars = true
@@ -81,16 +46,13 @@ class MainActivity : AppCompatActivity() {
             
             when (authResult) {
                 is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.Authenticated -> {
-                    // Usuario autenticado correctamente, continuar con la app
-                    setupNavigation()
-                    updateWidget()
+                    setComposeContent()
                 }
                 is com.cocido.morfipolo.data.remote.AuthManager.AuthResult.TemporaryError -> {
                     // Error temporal (servidor/red), pero la sesión puede seguir válida localmente
                     if (app.authManager.isSessionLocallyValid()) {
                         android.util.Log.w("MainActivity", "Error temporal pero sesión válida localmente, continuando...")
-                        setupNavigation()
-                        updateWidget()
+                        setComposeContent()
                     } else {
                         android.util.Log.w("MainActivity", "Error temporal y sesión expirada localmente, redirigiendo al login")
                         navigateToLogin()
@@ -112,11 +74,7 @@ class MainActivity : AppCompatActivity() {
     
     override fun onResume() {
         super.onResume()
-        // Actualizar widget cuando la app vuelve al foreground
-        updateWidget()
-        
-        // CRÍTICO: Emitir broadcast para que los fragments refresquen sus datos
-        // Esto soluciona el bug de sincronización cuando el usuario vota desde la web
+        // Emitir broadcast para que las pantallas sincronizadas refresquen sus datos
         notifyMenuUpdated()
     }
     
@@ -136,40 +94,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
     
-    private fun updateWidget() {
-        try {
-            val appWidgetManager = AppWidgetManager.getInstance(this)
-            val appWidgetIds = appWidgetManager.getAppWidgetIds(
-                android.content.ComponentName(this, MenuWidgetProvider::class.java)
-            )
-            if (appWidgetIds.isNotEmpty()) {
-                val updateIntent = Intent(this, MenuWidgetProvider::class.java).apply {
-                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
-                }
-                sendBroadcast(updateIntent)
+    private fun setComposeContent() {
+        setContent {
+            MorfiPoloTheme {
+                MorfiPoloApp(
+                    onNavigateToLogin = { navigateToLogin() }
+                )
             }
-        } catch (e: Exception) {
-            // Error silencioso - no crítico
-        }
-    }
-    
-    private fun setupNavigation() {
-        val navView: BottomNavigationView = binding.navView
-
-        // Active indicator: neutral pill to match Figma nav container
-        navView.itemActiveIndicatorColor =
-            android.content.res.ColorStateList.valueOf(
-                ContextCompat.getColor(this, R.color.slate_100)
-            )
-
-        // Esperar a que el FragmentContainerView esté completamente inicializado
-        binding.root.post {
-            val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? androidx.navigation.fragment.NavHostFragment
-            val navController = navHostFragment?.navController ?: return@post
-
-            // Configurar BottomNavigationView con NavController
-            navView.setupWithNavController(navController)
         }
     }
     
