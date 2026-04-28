@@ -1,42 +1,31 @@
 package com.cocido.morfipolo.ui.menu.weekly
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cocido.morfipolo.MorfipoloApplication
-import com.cocido.morfipolo.ui.theme.FoodTextError
-import com.cocido.morfipolo.ui.theme.FoodTextPrimary
-import com.cocido.morfipolo.ui.theme.FoodTextSecondary
-import kotlinx.coroutines.launch
+import com.cocido.morfipolo.R
+import com.cocido.morfipolo.ui.menu.daily.HeaderRow
+import com.cocido.morfipolo.ui.theme.*
 import java.text.SimpleDateFormat
-import java.util.Locale
+import java.util.*
 
 @Composable
-fun WeeklyMenuRoute(
+fun WeeklyRoute(
     onOpenDailyForDate: (String) -> Unit,
     onSessionExpired: () -> Unit
 ) {
@@ -51,8 +40,6 @@ fun WeeklyMenuRoute(
     )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val sessionExpired by viewModel.sessionExpired.collectAsStateWithLifecycle()
-    var localMessage by androidx.compose.runtime.remember { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         viewModel.loadWeeklyMenus()
@@ -63,131 +50,184 @@ fun WeeklyMenuRoute(
 
     WeeklyMenuScreen(
         state = state,
-        message = localMessage,
         onRetry = { viewModel.loadWeeklyMenus(forceReload = true) },
-        onOpenDaily = onOpenDailyForDate,
-        onDeleteVote = { voteId ->
-            scope.launch {
-                val result = app.voteRepository.deleteVote(voteId)
-                if (result.isSuccess) {
-                    viewModel.loadWeeklyMenus(forceReload = true)
-                    localMessage = null
-                } else {
-                    localMessage = result.exceptionOrNull()?.message ?: "No se pudo eliminar el voto"
-                }
-            }
-        },
-        onSelectOption = { menuId, optionId ->
-            scope.launch {
-                val userId = app.sessionManager.getCurrentUserId()
-                if (userId == null) {
-                    localMessage = "No hay usuario logueado"
-                    return@launch
-                }
-                val result = app.voteRepository.createVoteOrReplace(optionId, menuId, userId)
-                if (result.isSuccess) {
-                    viewModel.loadWeeklyMenus(forceReload = true)
-                    localMessage = null
-                } else {
-                    localMessage = result.exceptionOrNull()?.message ?: "No se pudo registrar el voto"
-                }
-            }
-        }
+        onOpenDaily = onOpenDailyForDate
     )
 }
 
 @Composable
 private fun WeeklyMenuScreen(
     state: WeeklyMenuUiState,
-    message: String?,
     onRetry: () -> Unit,
-    onOpenDaily: (String) -> Unit,
-    onDeleteVote: (String) -> Unit,
-    onSelectOption: (String, String) -> Unit
+    onOpenDaily: (String) -> Unit
 ) {
-    when (state) {
-        is WeeklyMenuUiState.Loading -> {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) { CircularProgressIndicator() }
-        }
-        is WeeklyMenuUiState.Error -> {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(state.message, color = FoodTextError)
-                Spacer(Modifier.height(12.dp))
-                Button(onClick = onRetry) { Text("Reintentar") }
+    Box(modifier = Modifier.fillMaxSize().background(MorfiBackground)) {
+        when (state) {
+            is WeeklyMenuUiState.Loading -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = MorfiOrange)
             }
-        }
-        is WeeklyMenuUiState.Success -> {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                item {
-                    Text("Vista semanal", color = FoodTextSecondary, style = MaterialTheme.typography.labelSmall)
-                    Text("Menús de la semana", style = MaterialTheme.typography.displaySmall)
-                    message?.let {
-                        Spacer(Modifier.height(8.dp))
-                        Text(it, color = FoodTextError)
-                    }
+            is WeeklyMenuUiState.Error -> {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(32.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(state.message, style = MorfiTypography.bodyLarge, color = MorfiRed)
+                    Spacer(Modifier.height(16.dp))
+                    Button(onClick = onRetry) { Text("Reintentar") }
                 }
-                items(state.menus) { item ->
-                    val date = runCatching {
-                        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(item.menu.date)
-                    }.getOrNull()
-                    val label = date?.let {
-                        SimpleDateFormat("EEEE d MMM", Locale("es", "AR")).format(it)
-                    } ?: item.menu.date
-
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpenDaily(item.menu.date) }
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(label.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("es", "AR")) else it.toString() })
-                                Text(if (item.userVote != null) "Elegido" else "Sin voto")
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                text = item.userVote?.option?.name ?: item.menu.description,
-                                color = FoodTextPrimary
-                            )
-                            Spacer(Modifier.height(10.dp))
-                            if (item.userVote != null) {
-                                Button(
-                                    onClick = { onDeleteVote(item.userVote.id) },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) { Text("Quitar selección") }
-                            } else {
-                                val firstOption = item.menu.getOptionsOrEmpty().firstOrNull()
-                                if (firstOption != null) {
-                                    Button(
-                                        onClick = { onSelectOption(item.menu.id, firstOption.id) },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) { Text("Elegir ${firstOption.name}") }
-                                }
-                            }
-                        }
-                    }
-                }
-                item { Spacer(Modifier.height(32.dp)) }
+            }
+            is WeeklyMenuUiState.Success -> {
+                SuccessContent(state, onOpenDaily)
             }
         }
     }
 }
 
+@Composable
+private fun SuccessContent(
+    state: WeeklyMenuUiState.Success,
+    onOpenDaily: (String) -> Unit
+) {
+    val arLocale = Locale.Builder().setLanguage("es").setRegion("AR").build()
+    val menusSorted = state.menus.sortedByDescending { it.menu.date }
+    
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        item {
+            Spacer(Modifier.height(16.dp))
+            HeaderRow()
+            Spacer(Modifier.height(24.dp))
+            Text(
+                "CALENDARIO GOURMET",
+                style = MorfiTypography.labelMedium.copy(color = Color(0xFFA0522D), letterSpacing = 1.sp)
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+
+        items(menusSorted) { item ->
+            val date = runCatching {
+                SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(item.menu.date)
+            }.getOrNull()
+            val dateLabel = date?.let {
+                SimpleDateFormat("EEEE, d MMM", arLocale).format(it)
+            } ?: item.menu.date
+            val dateTitle = date?.let {
+                SimpleDateFormat("EEEE", arLocale).format(it)
+            } ?: item.menu.date
+            val status = when {
+                item.userVote != null -> "Ya votaste"
+                item.menu.status == "open" -> "Abierto"
+                else -> "Cerrado"
+            }
+            val buttonText = when {
+                item.userVote != null -> "Ver detalles"
+                item.menu.status == "open" -> "Votar menú"
+                else -> "Ver menú"
+            }
+
+            WeeklyMenuCardRedesign(
+                dateLabel = dateLabel.replaceFirstChar { it.uppercase() },
+                title = dateTitle.replaceFirstChar { it.uppercase() },
+                status = status,
+                description = item.menu.description,
+                userVoteOption = item.userVote?.option?.name,
+                buttonText = buttonText,
+                onOpenMenu = { onOpenDaily(item.menu.date) }
+            )
+        }
+        
+        item { Spacer(Modifier.height(100.dp)) }
+    }
+}
+
+@Composable
+fun WeeklyMenuCardRedesign(
+    dateLabel: String,
+    title: String,
+    status: String,
+    description: String,
+    userVoteOption: String?,
+    buttonText: String,
+    onOpenMenu: () -> Unit
+) {
+    val isVoted = status == "Ya votaste"
+    val isOpen = status == "Abierto"
+    
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable { onOpenMenu() },
+        shape = RoundedCornerShape(32.dp),
+        color = MorfiWhite,
+        shadowElevation = 2.dp
+    ) {
+        Column(modifier = Modifier.padding(24.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = dateLabel,
+                    style = MorfiTypography.bodyMedium.copy(color = MorfiIndigo, fontWeight = FontWeight.Medium)
+                )
+                Badge(
+                    containerColor = when {
+                        isOpen -> MorfiOrange
+                        isVoted -> MorfiIndigoLight
+                        status == "Cerrado" -> MorfiGrayLight
+                        else -> MorfiIndigoLight
+                    },
+                    contentColor = when {
+                        isOpen -> MorfiWhite
+                        isVoted -> MorfiIndigo
+                        status == "Cerrado" -> MorfiGrayMedium
+                        else -> MorfiIndigo
+                    }
+                ) {
+                    Text(
+                        status, 
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        style = MorfiTypography.labelSmall
+                    )
+                }
+            }
+
+            Text(
+                text = title,
+                style = MorfiTypography.headlineMedium.copy(fontSize = 28.sp),
+                modifier = Modifier.padding(top = 4.dp)
+            )
+
+            if (isVoted) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                    Icon(painterResource(R.drawable.ic_check_circle), null, tint = Color(0xFFA0522D), modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Ya votaste", style = MorfiTypography.labelMedium.copy(color = Color(0xFFA0522D)))
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            if (userVoteOption != null) {
+                Text(userVoteOption, style = MorfiTypography.titleMedium.copy(fontSize = 14.sp))
+            } else {
+                Text(description, style = MorfiTypography.bodyMedium, color = MorfiGrayMedium)
+            }
+
+            Spacer(Modifier.height(14.dp))
+            Button(
+                onClick = onOpenMenu,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(100.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isOpen) MorfiIndigo else MorfiGrayLight,
+                    contentColor = if (isOpen) MorfiWhite else MorfiGrayDark
+                )
+            ) {
+                Text(buttonText, style = MorfiTypography.titleMedium)
+            }
+        }
+    }
+}
