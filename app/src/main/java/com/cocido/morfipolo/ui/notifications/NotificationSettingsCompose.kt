@@ -1,42 +1,31 @@
 package com.cocido.morfipolo.ui.notifications
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cocido.morfipolo.MorfipoloApplication
+import com.cocido.morfipolo.R
 import com.cocido.morfipolo.domain.model.CustomNotification
-import com.cocido.morfipolo.ui.theme.FoodTextError
+import com.cocido.morfipolo.ui.components.MorfiButton
+import com.cocido.morfipolo.ui.theme.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationSettingsRoute(
     onBack: () -> Unit
@@ -57,9 +46,8 @@ fun NotificationSettingsRoute(
         onBack = onBack,
         onCreate = { creating = true },
         onEdit = { editing = it },
-        onToggle = { notification, enabled ->
-            viewModel.toggleNotification(notification, enabled)
-        }
+        onDelete = { viewModel.deleteNotification(it) },
+        onToggle = { notification, enabled -> viewModel.toggleNotification(notification, enabled) }
     )
 
     if (creating || editing != null) {
@@ -69,13 +57,8 @@ fun NotificationSettingsRoute(
                 creating = false
                 editing = null
             },
-            onSave = { notification ->
-                viewModel.saveNotification(notification)
-                creating = false
-                editing = null
-            },
-            onDelete = { notification ->
-                viewModel.deleteNotification(notification)
+            onSave = {
+                viewModel.saveNotification(it)
                 creating = false
                 editing = null
             }
@@ -83,66 +66,87 @@ fun NotificationSettingsRoute(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NotificationSettingsScreen(
     state: NotificationSettingsUiState,
     onBack: () -> Unit,
     onCreate: () -> Unit,
     onEdit: (CustomNotification) -> Unit,
+    onDelete: (CustomNotification) -> Unit,
     onToggle: (CustomNotification, Boolean) -> Unit
 ) {
-    androidx.compose.material3.Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = onCreate) {
-                Text("+")
-            }
+    Scaffold(
+        containerColor = MorfiBackground,
+        topBar = {
+            TopAppBar(
+                title = { Text("Notificaciones", style = MorfiTypography.titleMedium) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = null, tint = MorfiOrange, modifier = Modifier.size(24.dp))
+                    }
+                },
+                actions = {
+                    Spacer(modifier = Modifier.size(8.dp))
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MorfiBackground)
+            )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(24.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(horizontal = 24.dp)
             ) {
-                TextButton(onClick = onBack) { Text("Volver") }
-                Text("Notificaciones", style = MaterialTheme.typography.displaySmall)
-            }
-            Spacer(Modifier.height(12.dp))
-            when (state) {
-                is NotificationSettingsUiState.Loading -> CircularProgressIndicator()
-                is NotificationSettingsUiState.Error -> Text(state.message, color = FoodTextError)
-                is NotificationSettingsUiState.Success -> {
-                    if (state.notifications.isEmpty()) {
-                        Text("No hay notificaciones configuradas")
-                    } else {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Tus Alertas",
+                    style = MorfiTypography.headlineLarge.copy(fontSize = 32.sp)
+                )
+                Text(
+                    text = "Programadas",
+                    style = MorfiTypography.headlineLarge.copy(fontSize = 32.sp, color = MorfiOrange)
+                )
+                Text(
+                    text = "Gestiona tus recordatorios de comidas y pedidos automáticos para mantener tu ritmo gourmet.",
+                    style = MorfiTypography.bodyMedium,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+
+                Spacer(Modifier.height(32.dp))
+
+                when (state) {
+                    is NotificationSettingsUiState.Loading -> Box(Modifier.fillMaxSize()) { CircularProgressIndicator(Modifier.align(Alignment.Center), color = MorfiOrange) }
+                    is NotificationSettingsUiState.Error -> Text(state.message, color = MorfiRed)
+                    is NotificationSettingsUiState.Success -> {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            contentPadding = PaddingValues(bottom = 120.dp)
+                        ) {
                             items(state.notifications) { notification ->
+                                NotificationCardRedesign(
+                                    notification = notification,
+                                    onToggle = { onToggle(notification, it) },
+                                    onEdit = { onEdit(notification) },
+                                    onDelete = { onDelete(notification) }
+                                )
+                            }
+                            
+                            item {
                                 Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 2.dp),
-                                    onClick = { onEdit(notification) }
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(32.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MorfiIndigo),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                                 ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column {
-                                            Text(notification.getFormattedTime24(), style = MaterialTheme.typography.headlineMedium)
-                                            Text(notification.getFormattedDays(), style = MaterialTheme.typography.bodyMedium)
+                                    Row(modifier = Modifier.padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text("Sugerencias del Chef", style = MorfiTypography.titleMedium.copy(color = MorfiWhite))
+                                            Text("Recibe alertas basadas en tus platos favoritos.", style = MorfiTypography.bodyMedium.copy(color = MorfiWhite.copy(alpha = 0.8f), fontSize = 12.sp))
                                         }
-                                        Switch(
-                                            checked = notification.isEnabled,
-                                            onCheckedChange = { onToggle(notification, it) }
-                                        )
+                                        Icon(painterResource(R.drawable.ic_restaurant), null, tint = MorfiWhite.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
                                     }
                                 }
                             }
@@ -150,83 +154,187 @@ private fun NotificationSettingsScreen(
                     }
                 }
             }
+            
+            // Large FAB matching redesign
+            FloatingActionButton(
+                onClick = onCreate,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(20.dp)
+                    .size(64.dp),
+                shape = CircleShape,
+                containerColor = MorfiOrange,
+                contentColor = MorfiWhite,
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
+            ) {
+                Text("+", style = MorfiTypography.displaySmall.copy(color = MorfiWhite))
+            }
         }
     }
 }
 
 @Composable
-private fun NotificationEditDialog(
-    current: CustomNotification?,
-    onDismiss: () -> Unit,
-    onSave: (CustomNotification) -> Unit,
-    onDelete: (CustomNotification) -> Unit
+private fun NotificationCardRedesign(
+    notification: CustomNotification,
+    onToggle: (Boolean) -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
-    var hour by remember { mutableStateOf((current?.hour ?: 9).toFloat()) }
-    var minute by remember { mutableStateOf((current?.minute ?: 0).toFloat()) }
-    var selectedDays by remember {
-        mutableStateOf(current?.daysOfWeek ?: setOf(1, 2, 3, 4, 5))
+    val title = when (notification.hour) {
+        9 -> "Desayuno Saludable"
+        13 -> "Almuerzo Ejecutivo"
+        20 -> "Cena Gourmet"
+        else -> "Recordatorio"
     }
-    val dayValues = listOf(1, 2, 3, 4, 5, 6, 7)
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (current == null) "Nueva notificación" else "Editar notificación") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Hora: ${hour.toInt().toString().padStart(2, '0')}:${minute.toInt().toString().padStart(2, '0')}")
-                Text("Hora")
-                Slider(
-                    value = hour,
-                    onValueChange = { hour = it },
-                    valueRange = 8f..11f,
-                    steps = 2
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(32.dp),
+        color = MorfiWhite,
+        shadowElevation = 2.dp
+    ) {
+        Column(Modifier.padding(24.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = notification.getFormattedTime(),
+                    style = MorfiTypography.displayMedium.copy(fontSize = 32.sp)
                 )
-                Text("Minutos")
-                Slider(
-                    value = minute,
-                    onValueChange = { minute = it },
-                    valueRange = 0f..59f,
-                    steps = 58
+                Switch(
+                    checked = notification.isEnabled,
+                    onCheckedChange = onToggle,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MorfiWhite,
+                        checkedTrackColor = MorfiOrange,
+                        uncheckedThumbColor = MorfiWhite,
+                        uncheckedTrackColor = MorfiGrayLight
+                    )
                 )
-                Text("Días")
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    dayValues.forEach { day ->
-                        FilterChip(
-                            selected = selectedDays.contains(day),
-                            onClick = {
-                                selectedDays = if (selectedDays.contains(day)) {
-                                    selectedDays - day
-                                } else {
-                                    selectedDays + day
-                                }
-                            },
-                            label = { Text(CustomNotification.getDayName(day)) }
-                        )
-                    }
-                }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                if (selectedDays.isEmpty()) return@TextButton
-                val notification = CustomNotification(
-                    id = current?.id ?: CustomNotification.generateId(hour.toInt(), minute.toInt()),
-                    hour = hour.toInt(),
-                    minute = minute.toInt(),
-                    isEnabled = current?.isEnabled ?: true,
-                    daysOfWeek = selectedDays
-                )
-                onSave(notification)
-            }) { Text("Guardar") }
-        },
-        dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (current != null) {
-                    TextButton(onClick = { onDelete(current) }) { Text("Eliminar") }
+            
+            Text(
+                text = notification.getFormattedDays().uppercase(),
+                style = MorfiTypography.labelSmall.copy(letterSpacing = 1.sp, color = MorfiGrayMedium)
+            )
+            
+            Spacer(Modifier.height(8.dp))
+            
+            Text(title, style = MorfiTypography.bodyMedium.copy(color = MorfiIndigo, fontWeight = FontWeight.Medium))
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                TextButton(onClick = onEdit, contentPadding = PaddingValues(0.dp)) {
+                    Text("Editar", style = MorfiTypography.labelLarge, color = MorfiIndigo)
                 }
-                TextButton(onClick = onDismiss) { Text("Cancelar") }
+                TextButton(onClick = onDelete, contentPadding = PaddingValues(0.dp)) {
+                    Text("Eliminar", style = MorfiTypography.labelLarge, color = MorfiRed)
+                }
             }
         }
-    )
+    }
 }
 
+@Composable
+fun NotificationEditDialog(
+    current: CustomNotification?,
+    onDismiss: () -> Unit,
+    onSave: (CustomNotification) -> Unit
+) {
+    var hour by remember(current) { mutableStateOf((current?.hour ?: 8).toFloat()) }
+    var minute by remember(current) { mutableStateOf((current?.minute ?: 30).toFloat()) }
+    var selectedDays by remember(current) { mutableStateOf(current?.daysOfWeek ?: setOf(1, 2, 3, 4, 5)) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(32.dp),
+            color = MorfiWhite,
+            modifier = Modifier.fillMaxWidth().wrapContentHeight()
+        ) {
+            Column(modifier = Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onDismiss) { Icon(painterResource(R.drawable.ic_arrow_back), null, tint = MorfiOrange) }
+                    Text("Notificaciones", style = MorfiTypography.titleMedium)
+                    Spacer(Modifier.size(40.dp))
+                }
+                
+                Spacer(Modifier.height(24.dp))
+                
+                Text(
+                    text = "Editar Alerta",
+                    style = MorfiTypography.headlineMedium.copy(fontSize = 30.sp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = "Personaliza el horario de tus notificaciones gourmet.",
+                    style = MorfiTypography.bodyMedium,
+                    color = MorfiGrayMedium,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                )
+                
+                Spacer(Modifier.height(32.dp))
+                Text(
+                    text = String.format("Hora: %02d:%02d", hour.toInt(), minute.toInt()),
+                    style = MorfiTypography.displayMedium.copy(fontSize = 34.sp)
+                )
+                Spacer(Modifier.height(12.dp))
+                Slider(value = hour, onValueChange = { hour = it }, valueRange = 0f..23f, steps = 22)
+                Slider(value = minute, onValueChange = { minute = it }, valueRange = 0f..59f, steps = 58)
+
+                Spacer(Modifier.height(20.dp))
+                
+                Text("REPETIR CADA SEMANA", style = MorfiTypography.labelSmall.copy(letterSpacing = 1.sp))
+                
+                Spacer(Modifier.height(16.dp))
+                
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val days = listOf(
+                        1 to "L",
+                        2 to "M",
+                        3 to "X",
+                        4 to "J",
+                        5 to "V",
+                        6 to "S",
+                        7 to "D"
+                    )
+                    days.forEach { (day, label) ->
+                        val isSelected = selectedDays.contains(day)
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(if (isSelected) Color(0xFF8B4513) else MorfiGrayLight, CircleShape)
+                                .clickable {
+                                    selectedDays = if (isSelected) selectedDays - day else selectedDays + day
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(label, style = MorfiTypography.labelSmall, color = if (isSelected) Color.White else MorfiGrayMedium)
+                        }
+                    }
+                }
+                
+                Spacer(Modifier.height(40.dp))
+                
+                MorfiButton(
+                    text = "Guardar Cambios",
+                    onClick = {
+                        onSave(
+                            CustomNotification(
+                                id = current?.id ?: CustomNotification.generateId(hour.toInt(), minute.toInt()),
+                                hour = hour.toInt(),
+                                minute = minute.toInt(),
+                                isEnabled = current?.isEnabled ?: true,
+                                daysOfWeek = if (selectedDays.isEmpty()) setOf(1, 2, 3, 4, 5) else selectedDays
+                            )
+                        )
+                    }
+                )
+                
+                TextButton(onClick = onDismiss, modifier = Modifier.padding(top = 16.dp)) {
+                    Text("Cancelar", style = MorfiTypography.bodyLarge.copy(color = MorfiGrayMedium))
+                }
+            }
+        }
+    }
+}
