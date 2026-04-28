@@ -9,68 +9,55 @@
     app:strokeWidth="1dp"
     app:strokeColor="@color/food_divider">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:padding="16dp">
 
-        <ImageView
-            android:id="@+id/selectedIndicator"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_check_bold"
-            android:visibility="gone"
-            app:tint="@color/food_secondary_green"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            android:contentDescription="Seleccionado" />
-
-        <LinearLayout
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/optionNameTextView"
+            style="@style/TextAppearance.Morfipolo.Subhead"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center_vertical"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="12dp"
-            app:layout_constraintStart_toEndOf="@id/selectedIndicator"
-            app:layout_constraintEnd_toStartOf="@id/optionButton"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent">
+            android:layout_marginBottom="2dp"
+            android:text="Opción 1: Hamburguesas con arroz"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/food_text_primary"
+            android:lineSpacingExtra="2dp"
+            android:maxLines="4"
+            android:ellipsize="end" />
 
-            <TextView
-                android:id="@+id/optionNameTextView"
-                style="@style/TextAppearance.Morfipolo.Subhead"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Opción 1: Hamburguesas con arroz"
-                android:textSize="15sp" />
-
-            <TextView
-                android:id="@+id/statusMessageTextView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Usted no selecciono una opcion el dia de hoy"
-                android:textSize="12sp"
-                android:textColor="@color/food_text_secondary"
-                android:visibility="gone"
-                android:layout_marginTop="4dp" />
-        </LinearLayout>
+        <TextView
+            android:id="@+id/statusMessageTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Usted no selecciono una opcion el dia de hoy"
+            android:textSize="13sp"
+            android:textColor="@color/food_text_secondary"
+            android:visibility="gone"
+            android:layout_marginTop="4dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/optionButton"
             style="@style/Widget.Material3.Button"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_marginTop="14dp"
+            android:minWidth="0dp"
+            android:minHeight="48dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
             android:text="@string/choose_option"
-            android:textSize="12sp"
+            android:textAllCaps="false"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.01"
             android:textColor="@color/white"
-            app:icon="@android:drawable/ic_menu_add"
-            app:iconTint="@color/white"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            app:cornerRadius="14dp" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

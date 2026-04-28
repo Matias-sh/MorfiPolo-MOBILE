@@ -4,6 +4,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -16,7 +17,7 @@ import java.util.*
 
 class WeeklyMenuAdapter(
     private val onMenuClick: (WeeklyMenuItem) -> Unit = {},
-    private val onRemoveVote: (String, String?) -> Unit = { _, _ -> }, // voteId, errorMessage
+    private val onRemoveVote: (String, String, String?) -> Unit = { _, _, _ -> }, // voteId, menuId, errorMessage
     private val onSelectOption: (String, String, String?) -> Unit = { _, _, _ -> } // menuId, optionId, errorMessage
 ) : ListAdapter<WeeklyMenuItem, WeeklyMenuAdapter.MenuViewHolder>(MenuDiffCallback()) {
 
@@ -36,7 +37,7 @@ class WeeklyMenuAdapter(
     class MenuViewHolder(
         private val binding: ItemWeeklyMenuBinding,
         private val onMenuClick: (WeeklyMenuItem) -> Unit,
-        private val onRemoveVote: (String, String?) -> Unit,
+        private val onRemoveVote: (String, String, String?) -> Unit,
         private val onSelectOption: (String, String, String?) -> Unit
     ) : RecyclerView.ViewHolder(binding.root) {
 
@@ -109,13 +110,8 @@ class WeeklyMenuAdapter(
             // Configurar fecha
             binding.dateTextView.text = dateFormat.format(menuDate)
             
-            // Configurar horario fijo: 08:00 - 11:00
-            binding.timeRangeTextView.text = binding.root.context.getString(
-                R.string.selection_time,
-                "08:00",
-                "11:00"
-            )
-            binding.timeRangeTextView.visibility = View.VISIBLE
+            // En vista semanal no mostramos el texto "MENÚ DEL DÍA"
+            binding.menuDescriptionTextView.visibility = View.GONE
             
             // Configurar estado - validar si realmente está abierto según el horario (08:00 - 11:00) y si es el menú de hoy
             val isToday = isMenuToday(menu)
@@ -151,9 +147,6 @@ class WeeklyMenuAdapter(
                 optionsContainer?.removeAllViews()
                 optionsContainer?.visibility = View.VISIBLE
                 
-                // Mostrar descripción del menú
-                binding.menuDescriptionTextView.text = menu.description
-                
                 // Agregar opciones con botones
                 options.forEachIndexed { index, option ->
                     val optionView = LayoutInflater.from(binding.root.context)
@@ -161,14 +154,17 @@ class WeeklyMenuAdapter(
                     
                     val optionNameTextView = optionView.findViewById<TextView>(R.id.optionNameTextView)
                     val optionButton = optionView.findViewById<com.google.android.material.button.MaterialButton>(R.id.optionButton)
-                    val selectedIndicator = optionView.findViewById<android.widget.ImageView>(R.id.selectedIndicator)
                     val statusMessageTextView = optionView.findViewById<TextView>(R.id.statusMessageTextView)
                     
-                    // Nombre de la opción
+                    // Nombre de la opción (normalizado para mejorar legibilidad)
+                    val normalizedOptionName = option.name
+                        .replace(Regex("\\s*,\\s*"), ", ")
+                        .replace(Regex("\\s+"), " ")
+                        .trim()
                     optionNameTextView.text = if (options.size > 1) {
-                        "Opción ${index + 1}: ${option.name}"
+                        "Opción ${index + 1} · $normalizedOptionName"
                     } else {
-                        option.name
+                        normalizedOptionName
                     }
                     
                     // Verificar si esta opción está seleccionada
@@ -198,46 +194,35 @@ class WeeklyMenuAdapter(
                             statusMessageTextView.setTypeface(null, android.graphics.Typeface.NORMAL)
                         }
                         
-                        // Mantener indicador si está seleccionado
-                        selectedIndicator.visibility = if (isSelected) View.VISIBLE else View.GONE
-                        
                     } else {
                         // ABIERTO
                         statusMessageTextView.visibility = View.GONE
                         optionButton.visibility = View.VISIBLE
                         
                         if (isSelected) {
-                            // Opción seleccionada -> Botón rojo con texto negro ("Quitar elección")
+                            // Opción seleccionada -> Botón rojo sin icono y texto blanco ("Quitar elección")
                             optionButton.text = binding.root.context.getString(R.string.remove_selection)
-                            optionButton.setIconResource(android.R.drawable.ic_menu_delete)
+                            optionButton.icon = null
                             
-                            optionButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                                androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.food_status_error)
+                            optionButton.backgroundTintList = AppCompatResources.getColorStateList(binding.root.context, R.color.vote_button_negative_tint)
+                            optionButton.rippleColor = android.content.res.ColorStateList.valueOf(
+                                androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.food_ripple)
                             )
-                            optionButton.setTextColor(androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.black))
-                            optionButton.iconTint = android.content.res.ColorStateList.valueOf(
-                                androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.black)
-                            )
-                            
-                            selectedIndicator.visibility = View.VISIBLE
+                            optionButton.setTextColor(androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.white))
                             
                             optionButton.setOnClickListener {
-                                onRemoveVote(userVote!!.id, null)
+                                onRemoveVote(userVote!!.id, menu.id, null)
                             }
                         } else {
                             // Opción no seleccionada -> Botón verde ("Elegir esta opción")
                             optionButton.text = binding.root.context.getString(R.string.choose_option)
-                            optionButton.setIconResource(android.R.drawable.ic_menu_add)
+                            optionButton.icon = null
                             
-                            optionButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                                androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.food_secondary_green)
+                            optionButton.backgroundTintList = AppCompatResources.getColorStateList(binding.root.context, R.color.vote_button_positive_tint)
+                            optionButton.rippleColor = android.content.res.ColorStateList.valueOf(
+                                androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.food_ripple)
                             )
                             optionButton.setTextColor(androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.white))
-                            optionButton.iconTint = android.content.res.ColorStateList.valueOf(
-                                androidx.core.content.ContextCompat.getColor(binding.root.context, R.color.white)
-                            )
-                            
-                            selectedIndicator.visibility = View.GONE
                             
                             optionButton.setOnClickListener {
                                 onSelectOption(menu.id, option.id, null)
@@ -248,7 +233,7 @@ class WeeklyMenuAdapter(
                     optionsContainer?.addView(optionView)
                 }
             } else {
-                binding.menuDescriptionTextView.text = binding.root.context.getString(R.string.no_menu_available)
+                binding.menuDescriptionTextView.visibility = View.GONE
                 optionsContainer?.visibility = View.GONE
             }
             

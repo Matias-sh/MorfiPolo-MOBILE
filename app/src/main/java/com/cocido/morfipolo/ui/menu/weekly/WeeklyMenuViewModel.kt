@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.cocido.morfipolo.data.remote.SessionExpiredException
 import com.cocido.morfipolo.data.repository.MenuRepository
 import com.cocido.morfipolo.domain.model.Menu
+import com.cocido.morfipolo.domain.model.Vote
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -174,6 +175,16 @@ class WeeklyMenuViewModel(
                 _uiState.value = WeeklyMenuUiState.Error("No se pudo cargar el menú. Intenta de nuevo.")
             }
         }
+    }
+
+    fun updateMenuVoteLocally(menuId: String, vote: Vote?) {
+        val currentState = _uiState.value
+        if (currentState !is WeeklyMenuUiState.Success) return
+
+        val updatedMenus = currentState.menus.map { item ->
+            if (item.menu.id == menuId) item.copy(userVote = vote) else item
+        }
+        _uiState.value = WeeklyMenuUiState.Success(updatedMenus)
     }
 }
 
