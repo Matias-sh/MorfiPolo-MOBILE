@@ -58,7 +58,6 @@ class ProfileFragment : Fragment() {
                     is ProfileUiState.Success -> {
                         val fullName = "${state.user.name} ${state.user.lastName}"
                         binding.nameTextView.text = fullName
-                        binding.avatarTextView.text = state.user.name.firstOrNull()?.toString() ?: "U"
                     }
                     is ProfileUiState.Error -> {
                         // No mostrar errores técnicos al usuario
