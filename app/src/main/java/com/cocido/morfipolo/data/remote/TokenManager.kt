@@ -3,7 +3,6 @@ package com.cocido.morfipolo.data.remote
 import android.util.Log
 import com.cocido.morfipolo.data.local.preferences.SessionManager
 import com.cocido.morfipolo.data.remote.api.MorfiPoloApiService
-import com.cocido.morfipolo.domain.model.LoginResponse
 import com.cocido.morfipolo.domain.model.RefreshTokenRequest
 import android.util.Base64
 import kotlinx.coroutines.sync.Mutex
@@ -12,7 +11,7 @@ import org.json.JSONObject
 
 class TokenManager(
     private val sessionManager: SessionManager,
-    private val apiServiceProvider: (String, String) -> MorfiPoloApiService
+    private val refreshApiServiceProvider: () -> MorfiPoloApiService
 ) {
     private val mutex = Mutex()
     
@@ -139,7 +138,7 @@ class TokenManager(
             Log.d(TAG, "Intentando refrescar access token...")
             
             // Usar el servicio temporal para refresh (sin interceptor de auth)
-            val refreshApiService = apiServiceProvider("", "")
+            val refreshApiService = refreshApiServiceProvider()
             val request = RefreshTokenRequest(refreshToken)
             val response = refreshApiService.refreshToken(request)
             
@@ -263,5 +262,13 @@ class TokenManager(
         // Si no hay userId guardado, intentar extraerlo del token
         val accessToken = sessionManager.getAccessToken()
         return getUserIdFromToken(accessToken)
+    }
+
+    /**
+     * Retorna el access token almacenado sin intentar refresh.
+     * Útil como fallback en fallos temporales de red/servidor.
+     */
+    fun getStoredAccessToken(): String? {
+        return sessionManager.getAccessToken()
     }
 }
