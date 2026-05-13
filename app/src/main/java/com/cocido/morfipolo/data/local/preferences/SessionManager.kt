@@ -11,18 +11,16 @@ class SessionManager(context: Context) {
         private const val KEY_USER_ID = "user_id"
         private const val KEY_USER_DNI = "user_dni"
         private const val KEY_USER_NAME = "user_name"
-        private const val KEY_USER_PASSWORD = "user_password" // Temporal para refresh token
         private const val KEY_ACCESS_TOKEN = "access_token"
         private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
     }
 
-    fun saveSession(userId: String, dni: String, name: String, password: String? = null) {
+    fun saveSession(userId: String, dni: String, name: String) {
         prefs.edit().apply {
             putString(KEY_USER_ID, userId)
             putString(KEY_USER_DNI, dni)
             putString(KEY_USER_NAME, name)
-            password?.let { putString(KEY_USER_PASSWORD, it) }
             putBoolean(KEY_IS_LOGGED_IN, true)
             apply()
         }
@@ -50,10 +48,6 @@ class SessionManager(context: Context) {
 
     fun getCurrentUserName(): String? {
         return prefs.getString(KEY_USER_NAME, null)
-    }
-    
-    fun getCurrentUserPassword(): String? {
-        return prefs.getString(KEY_USER_PASSWORD, null)
     }
     
     fun getAccessToken(): String? {

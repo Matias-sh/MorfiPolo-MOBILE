@@ -32,7 +32,7 @@ android {
         applicationId = "com.cocido.morfipolo"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
+        versionCode = 10
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -113,6 +113,9 @@ dependencies {
     
     // SwipeRefreshLayout
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+
+    // Google Play In-App Updates
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
     
     // Retrofit
     implementation(libs.retrofit)

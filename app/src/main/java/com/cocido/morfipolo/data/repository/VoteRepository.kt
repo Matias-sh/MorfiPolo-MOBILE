@@ -5,12 +5,33 @@ import com.cocido.morfipolo.data.remote.api.MorfiPoloApiService
 import com.cocido.morfipolo.domain.model.CreateVoteRequest
 import com.cocido.morfipolo.domain.model.Vote
 import com.cocido.morfipolo.domain.model.VotesResponse
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import retrofit2.HttpException
 import java.io.IOException
 
 class VoteRepository(
     private val apiService: MorfiPoloApiService
 ) {
+    private data class CachedVotes(
+        val timestampMs: Long,
+        val votes: List<Vote>
+    )
+
+    private val cacheLock = Any()
+    private val cachedVotesByUser = mutableMapOf<String, CachedVotes>()
+    private val inFlightVotesRequests = mutableMapOf<String, Deferred<Result<List<Vote>>>>()
+    private val votesCacheTtlMs = 15_000L
+
+    private fun normalizeUserId(userId: String): String = userId.trim().lowercase()
+
+    private fun clearVotesCache() {
+        synchronized(cacheLock) {
+            cachedVotesByUser.clear()
+        }
+    }
     
     suspend fun createVote(optionId: String, menuId: String): Result<Vote> {
         return try {
@@ -70,6 +91,7 @@ class VoteRepository(
             val response = apiService.deleteVote(voteId)
             
             if (response.isSuccessful) {
+                clearVotesCache()
                 Result.success(true)
             } else {
                 val errorBody = response.errorBody()?.string() ?: ""
@@ -122,6 +144,60 @@ class VoteRepository(
      * @param userId ID del usuario para filtrar (opcional, se intenta usar como query param)
      */
     suspend fun getAllUserVotes(userId: String? = null): Result<List<Vote>> {
+        if (userId == null) {
+            return fetchAllUserVotesFromApi(null)
+        }
+
+        val normalizedUserId = normalizeUserId(userId)
+        val now = System.currentTimeMillis()
+        val inFlightRequest: Deferred<Result<List<Vote>>>?
+
+        synchronized(cacheLock) {
+            val cached = cachedVotesByUser[normalizedUserId]
+            if (cached != null && (now - cached.timestampMs) <= votesCacheTtlMs) {
+                android.util.Log.d("VoteRepository", "♻️ Usando cache de votos para usuario $normalizedUserId (${cached.votes.size} votos)")
+                return Result.success(cached.votes)
+            }
+            inFlightRequest = inFlightVotesRequests[normalizedUserId]
+        }
+
+        if (inFlightRequest != null) {
+            android.util.Log.d("VoteRepository", "⏳ Reutilizando request de votos en curso para usuario $normalizedUserId")
+            return inFlightRequest.await()
+        }
+
+        return coroutineScope {
+            val request = async(start = CoroutineStart.LAZY) {
+                fetchAllUserVotesFromApi(userId)
+            }
+
+            synchronized(cacheLock) {
+                inFlightVotesRequests[normalizedUserId] = request
+            }
+
+            try {
+                val result = request.await()
+                result.getOrNull()?.let { votes ->
+                    synchronized(cacheLock) {
+                        cachedVotesByUser[normalizedUserId] = CachedVotes(
+                            timestampMs = System.currentTimeMillis(),
+                            votes = votes
+                        )
+                    }
+                }
+                result
+            } finally {
+                synchronized(cacheLock) {
+                    val current = inFlightVotesRequests[normalizedUserId]
+                    if (current === request) {
+                        inFlightVotesRequests.remove(normalizedUserId)
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun fetchAllUserVotesFromApi(userId: String?): Result<List<Vote>> {
         return try {
             // Primero intentar con parámetro user_id (si el backend lo soporta)
             val response = if (userId != null) {
@@ -320,7 +396,11 @@ class VoteRepository(
             }
             
             // Crear nuevo voto
-            createVote(optionId, menuId)
+            val result = createVote(optionId, menuId)
+            if (result.isSuccess) {
+                clearVotesCache()
+            }
+            result
         } catch (e: Exception) {
             Result.failure(e)
         }

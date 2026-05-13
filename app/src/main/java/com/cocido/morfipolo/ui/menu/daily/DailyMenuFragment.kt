@@ -8,10 +8,12 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.R
@@ -158,80 +160,84 @@ class DailyMenuFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        lifecycleScope.launch {
-            // Observar cuando la sesión expira
-            viewModel.sessionExpired.collect { expired ->
-                if (expired) {
-                    android.util.Log.w("DailyMenuFragment", "Sesión expirada, redirigiendo al login")
-                    navigateToLogin()
-                }
-            }
-        }
-        
-        lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
-                binding.swipeRefreshLayout.isRefreshing = false
-                
-                when (state) {
-                    is DailyMenuUiState.Loading -> {
-                        if (!binding.swipeRefreshLayout.isRefreshing) {
-                            binding.progressBar.visibility = View.VISIBLE
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                launch {
+                    // Observar cuando la sesión expira
+                    viewModel.sessionExpired.collect { expired ->
+                        if (expired) {
+                            android.util.Log.w("DailyMenuFragment", "Sesión expirada, redirigiendo al login")
+                            navigateToLogin()
                         }
-                        binding.optionsContainer.visibility = View.GONE
-                        // Mostrar información genérica mientras carga
-                        val today = Date()
-                        binding.dateTextView.text = dateFormat.format(today)
-                        binding.dateTextView.visibility = View.VISIBLE
-                        binding.timeRangeTextView.text = "Horario para elegir: 08:00 - 11:00"
-                        binding.timeRangeTextView.visibility = View.VISIBLE
-                        binding.statusContainer.visibility = View.GONE
-                        // El card siempre está visible, no se oculta
-                        checkNetworkStatus()
                     }
-                    is DailyMenuUiState.Success -> {
-                        binding.progressBar.visibility = View.GONE
-                        binding.optionsContainer.visibility = View.VISIBLE
-                        // El card siempre está visible, no se oculta
-                        // binding.offlineIndicator.visibility = View.GONE
-                        
-                        updateUI(state)
-                    }
-                    is DailyMenuUiState.Error -> {
-                        binding.progressBar.visibility = View.GONE
-                        checkNetworkStatus()
-                        
-                        // Detectar tipo de error
-                        when {
-                            state.message.contains("sesión", ignoreCase = true) || 
-                            state.message.contains("session", ignoreCase = true) -> {
-                                // Error de sesión expirada, redirigir al login
-                                navigateToLogin()
-                                return@collect
-                            }
-                            state.message.contains("No hay menú disponible", ignoreCase = true) ||
-                            state.message.contains("no hay menu", ignoreCase = true) -> {
-                                // No hay menú - mostrar mensaje en el área de opciones en lugar del snackbar
-                                showNoMenuMessage()
-                            }
-                            state.message.contains("08:00", ignoreCase = true) ||
-                            state.message.contains("11:00", ignoreCase = true) ||
-                            state.message.contains("horario", ignoreCase = true) ||
-                            state.message.contains("cerrado", ignoreCase = true) ||
-                            state.message.contains("eliminar el voto", ignoreCase = true) ||
-                            state.message.contains("votar", ignoreCase = true) -> {
-                                // Error de horario - mostrar banner informativo sin reintentar
-                                showInfoBanner(state.message)
-                            }
-                            !NetworkUtils.isNetworkAvailable(requireContext()) -> {
-                                // Error de conexión - mostrar con reintentar
-                                showErrorWithRetry(getString(R.string.error_no_connection)) {
-                                    viewModel.loadMenuForDate(viewModel.getCurrentDate())
+                }
+
+                launch {
+                    viewModel.uiState.collect { state ->
+                        binding.swipeRefreshLayout.isRefreshing = false
+
+                        when (state) {
+                            is DailyMenuUiState.Loading -> {
+                                if (!binding.swipeRefreshLayout.isRefreshing) {
+                                    binding.progressBar.visibility = View.VISIBLE
                                 }
+                                binding.optionsContainer.visibility = View.GONE
+                                // Mostrar información genérica mientras carga
+                                val today = Date()
+                                binding.dateTextView.text = dateFormat.format(today)
+                                binding.dateTextView.visibility = View.VISIBLE
+                                binding.timeRangeTextView.text = "Horario para elegir: 08:00 - 11:00"
+                                binding.timeRangeTextView.visibility = View.VISIBLE
+                                binding.statusContainer.visibility = View.GONE
+                                // El card siempre está visible, no se oculta
+                                checkNetworkStatus()
                             }
-                            else -> {
-                                // Otros errores - mostrar con reintentar
-                                showErrorWithRetry(state.message) {
-                                    viewModel.loadMenuForDate(viewModel.getCurrentDate())
+                            is DailyMenuUiState.Success -> {
+                                binding.progressBar.visibility = View.GONE
+                                binding.optionsContainer.visibility = View.VISIBLE
+                                // El card siempre está visible, no se oculta
+                                // binding.offlineIndicator.visibility = View.GONE
+
+                                updateUI(state)
+                            }
+                            is DailyMenuUiState.Error -> {
+                                binding.progressBar.visibility = View.GONE
+                                checkNetworkStatus()
+
+                                // Detectar tipo de error
+                                when {
+                                    state.message.contains("sesión", ignoreCase = true) ||
+                                        state.message.contains("session", ignoreCase = true) -> {
+                                        // Error de sesión expirada, redirigir al login
+                                        navigateToLogin()
+                                        return@collect
+                                    }
+                                    state.message.contains("No hay menú disponible", ignoreCase = true) ||
+                                        state.message.contains("no hay menu", ignoreCase = true) -> {
+                                        // No hay menú - mostrar mensaje en el área de opciones en lugar del snackbar
+                                        showNoMenuMessage()
+                                    }
+                                    state.message.contains("08:00", ignoreCase = true) ||
+                                        state.message.contains("11:00", ignoreCase = true) ||
+                                        state.message.contains("horario", ignoreCase = true) ||
+                                        state.message.contains("cerrado", ignoreCase = true) ||
+                                        state.message.contains("eliminar el voto", ignoreCase = true) ||
+                                        state.message.contains("votar", ignoreCase = true) -> {
+                                        // Error de horario - mostrar banner informativo sin reintentar
+                                        showInfoBanner(state.message)
+                                    }
+                                    !NetworkUtils.isNetworkAvailable(requireContext()) -> {
+                                        // Error de conexión - mostrar con reintentar
+                                        showErrorWithRetry(getString(R.string.error_no_connection)) {
+                                            viewModel.loadMenuForDate(viewModel.getCurrentDate())
+                                        }
+                                    }
+                                    else -> {
+                                        // Otros errores - mostrar con reintentar
+                                        showErrorWithRetry(state.message) {
+                                            viewModel.loadMenuForDate(viewModel.getCurrentDate())
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -512,14 +518,17 @@ class DailyMenuFragment : Fragment() {
             
             val optionNameTextView = optionView.findViewById<android.widget.TextView>(R.id.optionNameTextView)
             val optionButton = optionView.findViewById<com.google.android.material.button.MaterialButton>(R.id.optionButton)
-            val selectedIndicator = optionView.findViewById<android.widget.ImageView>(R.id.selectedIndicator)
             val statusMessageTextView = optionView.findViewById<android.widget.TextView>(R.id.statusMessageTextView)
             
-            // Nombre de la opción
+            // Nombre de la opción (normalizado para mejorar legibilidad)
+            val normalizedOptionName = option.name
+                .replace(Regex("\\s*,\\s*"), ", ")
+                .replace(Regex("\\s+"), " ")
+                .trim()
             optionNameTextView.text = if (menu.getOptionsOrEmpty().size > 1) {
-                "Opción ${index + 1}: ${option.name}"
+                "Opción ${index + 1} · $normalizedOptionName"
             } else {
-                option.name
+                normalizedOptionName
             }
             
             val canVote = isWithinTime && isMenuOpen
@@ -548,9 +557,6 @@ class DailyMenuFragment : Fragment() {
                      statusMessageTextView.setTypeface(null, android.graphics.Typeface.NORMAL)
                 }
                 
-                // Keep indicator visible if selected even if closed, to confirm selection
-                selectedIndicator.visibility = if (isSelected) View.VISIBLE else View.GONE
-                
             } else {
                 // Estado ABIERTO / PENDIENTE
                 statusMessageTextView.visibility = View.GONE
@@ -559,15 +565,12 @@ class DailyMenuFragment : Fragment() {
                 if (isSelected) {
                     // Opción seleccionada -> Botón rojo "Quitar"
                     optionButton.text = getString(R.string.remove_selection)
-                    optionButton.setIconResource(android.R.drawable.ic_menu_delete)
-                    optionButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_status_error)
+                    optionButton.icon = null
+                    optionButton.backgroundTintList = AppCompatResources.getColorStateList(requireContext(), R.color.vote_button_negative_tint)
+                    optionButton.rippleColor = android.content.res.ColorStateList.valueOf(
+                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_ripple)
                     )
-                    optionButton.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.black))
-                    optionButton.iconTint = android.content.res.ColorStateList.valueOf(
-                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.black)
-                    )
-                    selectedIndicator.visibility = View.VISIBLE
+                    optionButton.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white))
                     
                     optionButton.setOnClickListener {
                         if (canVote) viewModel.deleteVote()
@@ -575,15 +578,12 @@ class DailyMenuFragment : Fragment() {
                 } else {
                     // Opción no seleccionada -> Botón verde "Elegir"
                     optionButton.text = getString(R.string.choose_option)
-                    optionButton.setIconResource(android.R.drawable.ic_menu_add)
-                    optionButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_secondary_green)
+                    optionButton.icon = null
+                    optionButton.backgroundTintList = AppCompatResources.getColorStateList(requireContext(), R.color.vote_button_positive_tint)
+                    optionButton.rippleColor = android.content.res.ColorStateList.valueOf(
+                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_ripple)
                     )
                     optionButton.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white))
-                    optionButton.iconTint = android.content.res.ColorStateList.valueOf(
-                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white)
-                    )
-                    selectedIndicator.visibility = View.GONE
                     
                     optionButton.setOnClickListener {
                         if (canVote) viewModel.selectOption(option.id)

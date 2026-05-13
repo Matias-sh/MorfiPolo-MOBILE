@@ -43,22 +43,18 @@ class AuthInterceptor(
             
             is TokenManager.TokenResult.ServerError,
             is TokenManager.TokenResult.NetworkError -> {
-                // Error temporal - intentar con el access token actual si existe
+                // Error temporal - intentar con el último access token almacenado si existe
                 Log.w(TAG, "Error temporal obteniendo token, intentando con token actual")
-                runBlocking { 
-                    // Usar token actual si existe, aunque esté cerca de expirar
-                    val currentToken = tokenManager.getValidAccessToken()
-                    if (currentToken == null) {
-                        // Si no hay token actual, verificar si el refresh token sigue válido localmente
+                runBlocking {
+                    val currentToken = tokenManager.getStoredAccessToken()
+                    if (currentToken != null) {
+                        currentToken
+                    } else {
                         if (tokenManager.isRefreshTokenExpiredLocally()) {
                             tokenManager.clearSession()
                             throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
                         }
-                        // El refresh token sigue válido, dejar pasar sin token
-                        // El servidor devolverá 401 y lo manejaremos abajo
                         null
-                    } else {
-                        currentToken
                     }
                 }
             }

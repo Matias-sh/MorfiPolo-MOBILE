@@ -8,6 +8,7 @@ import com.cocido.morfipolo.data.remote.api.MorfiPoloApiService
 import com.cocido.morfipolo.domain.model.ChangePasswordRequest
 import com.cocido.morfipolo.domain.model.LoginRequest
 import com.cocido.morfipolo.domain.model.User
+import com.squareup.moshi.JsonDataException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import retrofit2.HttpException
@@ -28,8 +29,10 @@ class UserRepository(
             
             if (response.isSuccessful) {
                 val loginResponse = response.body()
-                if (loginResponse != null) {
-                    val user = loginResponse.user
+                if (loginResponse?.user != null) {
+                    val user = loginResponse.user ?: return Result.failure(
+                        Exception("No se pudo iniciar sesión. Intenta de nuevo.")
+                    )
                     
                     // Guardar tokens
                     sessionManager.saveTokens(
@@ -37,12 +40,11 @@ class UserRepository(
                         loginResponse.refreshToken
                     )
                     
-                    // Guardar sesión con password temporal para refresh token
+                    // Guardar sesión local del usuario autenticado
                     sessionManager.saveSession(
                         user.id,
                         user.dni,
-                        "${user.name} ${user.lastName}",
-                        password
+                        "${user.name} ${user.lastName}"
                     )
                     
                     // Guardar en base de datos local
@@ -69,6 +71,8 @@ class UserRepository(
             }
         } catch (e: IOException) {
             Result.failure(Exception("Error de conexión."))
+        } catch (e: JsonDataException) {
+            Result.failure(Exception("La respuesta del servidor no se pudo procesar. Intenta actualizar la app."))
         } catch (e: Exception) {
             Result.failure(Exception("No se pudo iniciar sesión. Intenta de nuevo."))
         }
@@ -119,12 +123,11 @@ class UserRepository(
             val response = apiService.changePassword(request)
             
             if (response.isSuccessful) {
-                // Actualizar la contraseña guardada en SessionManager para el refresh token
+                // Mantener sincronizada la identidad local de la sesión
                 sessionManager.saveSession(
                     userId = userId,
                     dni = sessionManager.getCurrentUserDni() ?: "",
-                    name = sessionManager.getCurrentUserName() ?: "",
-                    password = newPassword
+                    name = sessionManager.getCurrentUserName() ?: ""
                 )
                 Result.success(true)
             } else {
