@@ -16,11 +16,17 @@ import com.cocido.morfipolo.databinding.ActivityLoginBinding
 import com.cocido.morfipolo.ui.main.MainActivity
 import com.cocido.morfipolo.util.ValidationUtils
 import com.cocido.morfipolo.util.widget.MenuWidgetProvider
+import com.google.android.play.core.appupdate.AppUpdateManager
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.UpdateAvailability
 import kotlinx.coroutines.launch
 
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
+    private lateinit var appUpdateManager: AppUpdateManager
+    private var immediateUpdateLaunched = false
     private val viewModel: LoginViewModel by viewModels {
         LoginViewModelFactory((application as MorfipoloApplication).userRepository)
     }
@@ -36,6 +42,20 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    private val immediateUpdateLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        immediateUpdateLaunched = false
+        if (result.resultCode != RESULT_OK) {
+            Toast.makeText(
+                this,
+                "Debes actualizar la app para continuar.",
+                Toast.LENGTH_LONG
+            ).show()
+            finishAffinity()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Configurar status bar con iconos oscuros (sin fullscreen para que funcione adjustPan)
@@ -45,9 +65,11 @@ class LoginActivity : AppCompatActivity() {
         }
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        appUpdateManager = AppUpdateManagerFactory.create(this)
 
         // Solicitar permiso de notificaciones si es necesario (Android 13+)
         requestNotificationPermissionIfNeeded()
+        checkForImmediateUpdate()
 
         setupObservers()
         setupListeners()
@@ -231,6 +253,11 @@ class LoginActivity : AppCompatActivity() {
         startEntryAnimation()
     }
 
+    override fun onResume() {
+        super.onResume()
+        checkForImmediateUpdate()
+    }
+
     private fun startEntryAnimation() {
         val views = listOf(
             binding.logoImageView,
@@ -258,6 +285,29 @@ class LoginActivity : AppCompatActivity() {
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
+    }
+
+    private fun checkForImmediateUpdate() {
+        if (immediateUpdateLaunched) return
+
+        appUpdateManager.appUpdateInfo
+            .addOnSuccessListener { appUpdateInfo ->
+                val updateAvailable = appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+                val updateInProgress = appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS
+                val immediateAllowed = appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
+
+                if ((updateAvailable && immediateAllowed) || updateInProgress) {
+                    immediateUpdateLaunched = true
+                    appUpdateManager.startUpdateFlowForResult(
+                        appUpdateInfo,
+                        immediateUpdateLauncher,
+                        com.google.android.play.core.appupdate.AppUpdateOptions.newBuilder(AppUpdateType.IMMEDIATE).build()
+                    )
+                }
+            }
+            .addOnFailureListener {
+                android.util.Log.w("LoginActivity", "No se pudo consultar In-App Update: ${it.message}")
+            }
     }
     
     private fun updateWidget() {
