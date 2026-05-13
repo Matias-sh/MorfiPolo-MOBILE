@@ -139,15 +139,40 @@ class DailyMenuViewModel(
                     }
                     
                     android.util.Log.d("DailyMenuViewModel", "🗳️ Iniciando selección de opción: $optionId")
-                    
-                    // Usar createVoteOrReplace que elimina el voto existente si hay uno
-                    val result = voteRepository.createVoteOrReplace(optionId, menu.id, userId)
+
+                    // Si ya está seleccionada la misma opción, evitar llamadas innecesarias
+                    if (state.userVote?.option?.id == optionId) {
+                        android.util.Log.d("DailyMenuViewModel", "Opción ya seleccionada, evitando request")
+                        isOperationInProgress = false
+                        return@launch
+                    }
+
+                    // Optimización: evitar búsqueda remota de voto actual.
+                    // Si ya tenemos voto en estado, lo reemplazamos directamente.
+                    val result = if (state.userVote != null) {
+                        val deleteResult = voteRepository.deleteVote(state.userVote.id)
+                        if (deleteResult.isSuccess) {
+                            voteRepository.createVote(optionId, menu.id)
+                        } else {
+                            Result.failure(deleteResult.exceptionOrNull() ?: Exception("No se pudo actualizar tu elección."))
+                        }
+                    } else {
+                        voteRepository.createVote(optionId, menu.id)
+                    }
                     
                     val exception = result.exceptionOrNull()
                     val errorMessage = exception?.message
                     
                     if (result.isSuccess) {
                         android.util.Log.d("DailyMenuViewModel", "✅ Voto registrado exitosamente")
+                        val updatedVote = result.getOrNull()
+                        val currentState = _uiState.value
+                        if (currentState is DailyMenuUiState.Success) {
+                            _uiState.value = currentState.copy(
+                                userVote = updatedVote,
+                                infoMessage = null
+                            )
+                        }
                     } else {
                         android.util.Log.w("DailyMenuViewModel", "⚠️ Error al votar: $errorMessage")
                         
@@ -173,10 +198,12 @@ class DailyMenuViewModel(
                         }
                     }
                     
-                    // CRÍTICO: Siempre recargar el menú para sincronizar estado con servidor
-                    // Esto soluciona bugs de estado desincronizado
-                    android.util.Log.d("DailyMenuViewModel", "🔄 Recargando menú para sincronizar estado...")
-                    loadMenuForDateInternal(currentDate.time)
+                    // Fallback puntual: si el backend reporta estado de voto desincronizado,
+                    // recargar solo en ese caso.
+                    if (errorMessage?.contains("already voted", ignoreCase = true) == true) {
+                        android.util.Log.d("DailyMenuViewModel", "🔄 Estado desincronizado, recargando menú...")
+                        loadMenuForDateInternal(currentDate.time)
+                    }
                 }
             } catch (e: SessionExpiredException) {
                 android.util.Log.w("DailyMenuViewModel", "Sesión expirada al seleccionar opción")
@@ -184,8 +211,6 @@ class DailyMenuViewModel(
                 _uiState.value = DailyMenuUiState.Error(e.message ?: "Sesión expirada. Por favor, inicia sesión nuevamente.")
             } catch (e: Exception) {
                 android.util.Log.e("DailyMenuViewModel", "Error al seleccionar opción", e)
-                // Aún así recargar para sincronizar estado
-                loadMenuForDateInternal(currentDate.time)
             } finally {
                 isOperationInProgress = false
             }
@@ -227,6 +252,13 @@ class DailyMenuViewModel(
                         
                         if (result.isSuccess) {
                             android.util.Log.d("DailyMenuViewModel", "✅ Voto eliminado exitosamente")
+                            val currentState = _uiState.value
+                            if (currentState is DailyMenuUiState.Success) {
+                                _uiState.value = currentState.copy(
+                                    userVote = null,
+                                    infoMessage = null
+                                )
+                            }
                         } else {
                             android.util.Log.w("DailyMenuViewModel", "⚠️ Error al eliminar voto: $errorMessage")
                             
@@ -252,13 +284,8 @@ class DailyMenuViewModel(
                             }
                         }
                         
-                        // CRÍTICO: Siempre recargar el menú para sincronizar estado con servidor
-                        android.util.Log.d("DailyMenuViewModel", "🔄 Recargando menú para sincronizar estado...")
-                        loadMenuForDateInternal(currentDate.time)
                     } else {
                         android.util.Log.w("DailyMenuViewModel", "⚠️ No hay voto para eliminar")
-                        // Recargar de todos modos por si hay desincronización
-                        loadMenuForDateInternal(currentDate.time)
                     }
                 }
             } catch (e: SessionExpiredException) {
@@ -267,8 +294,6 @@ class DailyMenuViewModel(
                 _uiState.value = DailyMenuUiState.Error(e.message ?: "Sesión expirada. Por favor, inicia sesión nuevamente.")
             } catch (e: Exception) {
                 android.util.Log.e("DailyMenuViewModel", "Error al eliminar voto", e)
-                // Aún así recargar para sincronizar estado
-                loadMenuForDateInternal(currentDate.time)
             } finally {
                 isOperationInProgress = false
             }

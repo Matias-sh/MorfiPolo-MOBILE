@@ -46,7 +46,6 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="0dp"
-                        android:text="Matías Federico"
                         android:textSize="22sp"
                         android:gravity="center" />
                         
@@ -117,38 +116,6 @@
             </com.google.android.material.card.MaterialCardView>
 
             <!-- Footer -->
-            <LinearLayout
-                android:id="@+id/developmentFooter"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="40dp"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:alpha="0.7">
-
-                <ImageView
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
-                    android:src="@drawable/di_logo"
-                    android:contentDescription="Logo Dirección de Ingeniería" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="Desarrollado por la\nDirección de Ingeniería"
-                    android:gravity="center"
-                    android:textColor="@color/food_text_secondary"
-                    android:textSize="12sp" />
-
-                 <ImageView
-                    android:layout_width="150dp"
-                    android:layout_height="50dp"
-                    android:src="@drawable/sello_gobierno_02"
-                    android:layout_marginTop="12dp"
-                    android:scaleType="fitCenter"/>
-
-            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>

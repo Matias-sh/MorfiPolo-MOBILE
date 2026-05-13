@@ -39,7 +39,7 @@ class MorfipoloApplication : Application() {
     }
     
     val tokenManager: TokenManager by lazy {
-        TokenManager(sessionManager) { dni, password ->
+        TokenManager(sessionManager) {
             // Crear un servicio temporal sin interceptor para refresh token
             RetrofitClient.createApiServiceForRefresh(sessionManager)
         }

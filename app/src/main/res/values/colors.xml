@@ -80,4 +80,47 @@
 
     <color name="comedor_success">@color/food_status_success</color>
     <color name="comedor_error">@color/food_status_error</color>
+
+    <!-- Material-like semantic aliases required by styles -->
+    <color name="primary">@color/food_primary_orange</color>
+    <color name="on_primary">@color/food_text_inverse</color>
+    <color name="primary_container">@color/food_primary_orange_light</color>
+    <color name="surface">@color/food_background_card</color>
+    <color name="surface_variant">@color/food_background_light</color>
+    <color name="on_surface">@color/food_text_primary</color>
+    <color name="on_surface_variant">@color/food_text_secondary</color>
+    <color name="outline_variant">@color/food_divider</color>
+    <color name="error">@color/food_status_error</color>
+
+    <!-- Badge text colors used by badge styles -->
+    <color name="badge_open_text">@color/food_text_inverse</color>
+    <color name="badge_closed_text">@color/food_text_inverse</color>
+    <color name="badge_selected_text">@color/food_text_primary</color>
+
+    <!-- Additional aliases required by new drawables/selectors -->
+    <color name="primary_dark">@color/food_primary_orange_dark</color>
+    <color name="primary_light">@color/food_primary_orange_light</color>
+    <color name="primary_20">#33FF6B35</color>
+    <color name="accent">@color/food_accent_yellow</color>
+    <color name="divider">@color/food_divider</color>
+    <color name="card_border">@color/food_divider</color>
+    <color name="white_90">#E6FFFFFF</color>
+
+    <color name="nav_active">@color/food_primary_orange</color>
+    <color name="nav_inactive">@color/food_text_secondary</color>
+    <color name="nav_background">@color/food_background_card</color>
+    <color name="glass_border">#33FFFFFF</color>
+
+    <color name="badge_open_bg">@color/food_status_success</color>
+    <color name="badge_closed_bg">@color/food_status_error</color>
+    <color name="badge_selected_bg">@color/food_accent_yellow</color>
+    <color name="success_light">@color/food_secondary_green_light</color>
+    <color name="success">@color/food_status_success</color>
+    <color name="warning">@color/food_status_warning</color>
+    <color name="info">@color/food_status_info</color>
+    <color name="background">@color/food_background_light</color>
+    <color name="gradient_primary_start">@color/food_primary_orange</color>
+    <color name="gradient_hero_start">@color/food_primary_orange</color>
+    <color name="gradient_hero_middle">@color/food_primary_orange_light</color>
+    <color name="gradient_hero_end">@color/food_accent_yellow</color>
 </resources>
