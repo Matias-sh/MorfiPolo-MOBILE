@@ -72,8 +72,8 @@ class WeeklyMenuFragment : Fragment() {
                 }
                 findNavController().navigate(R.id.action_weeklyMenuFragment_to_dailyMenuFragment, bundle)
             },
-            onRemoveVote = { voteId, errorMessage ->
-                // Eliminar voto y recargar menús
+            onRemoveVote = { voteId, menuId, errorMessage ->
+                // Eliminar voto y actualizar solo el card afectado
                 lifecycleScope.launch {
                     try {
                         val app = requireActivity().application as MorfipoloApplication
@@ -81,10 +81,7 @@ class WeeklyMenuFragment : Fragment() {
                         val result = app.voteRepository.deleteVote(voteId)
                         if (result.isSuccess) {
                             android.util.Log.d("WeeklyMenuFragment", "✅ Voto eliminado exitosamente")
-                            // Pequeño delay para dar tiempo al servidor de procesar
-                            kotlinx.coroutines.delay(300)
-                            // Recargar menús para sincronizar estado
-                            viewModel.loadWeeklyMenus()
+                            viewModel.updateMenuVoteLocally(menuId, null)
                         } else {
                             android.util.Log.e("WeeklyMenuFragment", "Error al eliminar voto")
                             val exception = result.exceptionOrNull()
@@ -130,7 +127,7 @@ class WeeklyMenuFragment : Fragment() {
                 }
             },
             onSelectOption = { menuId, optionId, errorMessage ->
-                // Seleccionar opción y recargar menús
+                // Seleccionar opción y actualizar solo el card afectado
                 lifecycleScope.launch {
                     try {
                         val app = requireActivity().application as MorfipoloApplication
@@ -140,10 +137,13 @@ class WeeklyMenuFragment : Fragment() {
                             val result = app.voteRepository.createVoteOrReplace(optionId, menuId, userId)
                             if (result.isSuccess) {
                                 android.util.Log.d("WeeklyMenuFragment", "✅ Opción seleccionada exitosamente")
-                                // Pequeño delay para dar tiempo al servidor de procesar
-                                kotlinx.coroutines.delay(300)
-                                // Recargar menús para sincronizar estado
-                                viewModel.loadWeeklyMenus()
+                                val createdVote = result.getOrNull()
+                                if (createdVote != null) {
+                                    viewModel.updateMenuVoteLocally(menuId, createdVote)
+                                } else {
+                                    // Fallback defensivo, debería no ocurrir con éxito.
+                                    viewModel.loadWeeklyMenus()
+                                }
                             } else {
                                 android.util.Log.e("WeeklyMenuFragment", "Error al seleccionar opción")
                                 val exception = result.exceptionOrNull()
@@ -165,7 +165,6 @@ class WeeklyMenuFragment : Fragment() {
                                         // Si el servidor dice que ya hay un voto pero el cliente no lo detecta,
                                         // recargar para sincronizar estado
                                         android.util.Log.w("WeeklyMenuFragment", "⚠️ Servidor reporta voto existente, recargando estado...")
-                                        kotlinx.coroutines.delay(500)
                                         viewModel.loadWeeklyMenus()
                                         "Ya tienes un voto registrado. Recargando estado..."
                                     }

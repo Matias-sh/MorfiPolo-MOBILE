@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Gradient base -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="135"
+                android:startColor="@color/gradient_hero_start"
+                android:centerColor="@color/gradient_hero_middle"
+                android:endColor="@color/gradient_hero_end" />
+        </shape>
+    </item>
+    <!-- Bottom rounded corners -->
+    <item android:top="160dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/background" />
+            <corners
+                android:topLeftRadius="@dimen/radius_3xl"
+                android:topRightRadius="@dimen/radius_3xl" />
+        </shape>
+    </item>
+</layer-list>

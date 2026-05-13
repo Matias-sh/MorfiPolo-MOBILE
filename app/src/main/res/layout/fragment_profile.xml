@@ -24,7 +24,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingHorizontal="24dp"
-            android:paddingTop="80dp"
+            android:paddingTop="96dp"
             android:paddingBottom="40dp">
 
             <!-- Profile Card -->
@@ -40,32 +40,12 @@
                     android:orientation="vertical"
                     android:gravity="center">
 
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/avatarCardView"
-                        android:layout_width="100dp"
-                        android:layout_height="100dp"
-                        app:cardBackgroundColor="@color/food_secondary_green_light"
-                        app:cardCornerRadius="50dp"
-                        app:cardElevation="0dp">
-                        
-                        <TextView
-                            android:id="@+id/avatarTextView"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:gravity="center"
-                            android:text="M"
-                            android:textColor="@color/food_secondary_green_dark"
-                            android:textSize="40sp"
-                            android:textStyle="bold" />
-                    </com.google.android.material.card.MaterialCardView>
-
                     <TextView
                         android:id="@+id/nameTextView"
                         style="@style/TextAppearance.Morfipolo.Headline"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        android:text="Matías Federico"
+                        android:layout_marginTop="0dp"
                         android:textSize="22sp"
                         android:gravity="center" />
                         
@@ -136,38 +116,6 @@
             </com.google.android.material.card.MaterialCardView>
 
             <!-- Footer -->
-            <LinearLayout
-                android:id="@+id/developmentFooter"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="40dp"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:alpha="0.7">
-
-                <ImageView
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
-                    android:src="@drawable/di_logo"
-                    android:contentDescription="Logo Dirección de Ingeniería" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="Desarrollado por la\nDirección de Ingeniería"
-                    android:gravity="center"
-                    android:textColor="@color/food_text_secondary"
-                    android:textSize="12sp" />
-
-                 <ImageView
-                    android:layout_width="150dp"
-                    android:layout_height="50dp"
-                    android:src="@drawable/sello_gobierno_02"
-                    android:layout_marginTop="12dp"
-                    android:scaleType="fitCenter"/>
-
-            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>

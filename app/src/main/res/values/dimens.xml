@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spacing Scale -->
+    <dimen name="spacing_xxs">2dp</dimen>
+    <dimen name="spacing_xs">4dp</dimen>
+    <dimen name="spacing_sm">8dp</dimen>
+    <dimen name="spacing_md">12dp</dimen>
+    <dimen name="spacing_lg">16dp</dimen>
+    <dimen name="spacing_xl">20dp</dimen>
+    <dimen name="spacing_2xl">24dp</dimen>
+    <dimen name="spacing_3xl">32dp</dimen>
+    <dimen name="spacing_4xl">40dp</dimen>
+    <dimen name="spacing_5xl">48dp</dimen>
+    
+    <!-- Corner Radius -->
+    <dimen name="radius_sm">8dp</dimen>
+    <dimen name="radius_md">12dp</dimen>
+    <dimen name="radius_lg">16dp</dimen>
+    <dimen name="radius_xl">20dp</dimen>
+    <dimen name="radius_2xl">24dp</dimen>
+    <dimen name="radius_3xl">32dp</dimen>
+    <dimen name="radius_full">999dp</dimen>
+    
+    <!-- Typography -->
+    <dimen name="text_xs">12sp</dimen>
+    <dimen name="text_sm">14sp</dimen>
+    <dimen name="text_base">16sp</dimen>
+    <dimen name="text_lg">18sp</dimen>
+    <dimen name="text_xl">20sp</dimen>
+    <dimen name="text_2xl">24sp</dimen>
+    <dimen name="text_3xl">30sp</dimen>
+    <dimen name="text_4xl">36sp</dimen>
+    <dimen name="text_5xl">48sp</dimen>
+    
+    <!-- Touch Targets -->
+    <dimen name="touch_target_min">40dp</dimen>
+    <dimen name="button_height">56dp</dimen>
+    <dimen name="input_height">56dp</dimen>
+    <dimen name="nav_item_height">56dp</dimen>
+    
+    <!-- Component Sizes -->
+    <dimen name="avatar_small">48dp</dimen>
+    <dimen name="avatar_medium">80dp</dimen>
+    <dimen name="avatar_large">96dp</dimen>
+    <dimen name="avatar_hero">112dp</dimen>
+    <dimen name="icon_small">14dp</dimen>
+    <dimen name="icon_medium">20dp</dimen>
+    <dimen name="icon_large">24dp</dimen>
+    <dimen name="icon_xl">40dp</dimen>
+    <dimen name="logo_size">112dp</dimen>
+    
+    <!-- Elevation -->
+    <dimen name="elevation_none">0dp</dimen>
+    <dimen name="elevation_xs">1dp</dimen>
+    <dimen name="elevation_sm">2dp</dimen>
+    <dimen name="elevation_md">4dp</dimen>
+    <dimen name="elevation_lg">8dp</dimen>
+    <dimen name="elevation_xl">12dp</dimen>
+    <dimen name="elevation_2xl">16dp</dimen>
+    
+    <!-- Bottom Nav -->
+    <dimen name="bottom_nav_height">80dp</dimen>
+    <dimen name="bottom_nav_margin">16dp</dimen>
+    <dimen name="bottom_nav_radius">24dp</dimen>
+    
+    <!-- Hero Header -->
+    <dimen name="hero_header_height">220dp</dimen>
+    <dimen name="hero_header_height_expanded">240dp</dimen>
+    
+    <!-- Cards -->
+    <dimen name="card_min_height">80dp</dimen>
+    <dimen name="menu_card_height">124dp</dimen>
+    <dimen name="screen_padding_horizontal">20dp</dimen>
+    <dimen name="card_padding">20dp</dimen>
+    <dimen name="card_corner_radius">16dp</dimen>
+    <dimen name="card_corner_radius_large">24dp</dimen>
+    <dimen name="card_elevation">4dp</dimen>
+    <dimen name="card_elevation_pressed">8dp</dimen>
+    <dimen name="button_height_small">48dp</dimen>
+    <dimen name="button_corner_radius">16dp</dimen>
+    <dimen name="button_padding_horizontal">24dp</dimen>
+    <dimen name="input_corner_radius">12dp</dimen>
+    <dimen name="icon_size_xs">14dp</dimen>
+    <dimen name="icon_size_sm">16dp</dimen>
+    <dimen name="icon_size_md">20dp</dimen>
+    <dimen name="icon_size_lg">24dp</dimen>
+    <dimen name="icon_size_xl">32dp</dimen>
+    <dimen name="icon_size_xxl">40dp</dimen>
+    <dimen name="icon_container_sm">40dp</dimen>
+    <dimen name="icon_container_md">48dp</dimen>
+    <dimen name="icon_container_lg">56dp</dimen>
+    <dimen name="avatar_size_sm">48dp</dimen>
+    <dimen name="avatar_size_md">72dp</dimen>
+    <dimen name="avatar_size_lg">96dp</dimen>
+    <dimen name="bottom_nav_icon_size">24dp</dimen>
+    <dimen name="bottom_nav_corner_radius">24dp</dimen>
+    <dimen name="bottom_nav_elevation">8dp</dimen>
+    <dimen name="content_bottom_safe_space">124dp</dimen>
+</resources>
