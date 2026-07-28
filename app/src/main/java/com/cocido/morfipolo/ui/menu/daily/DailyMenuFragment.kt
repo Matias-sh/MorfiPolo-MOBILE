@@ -361,7 +361,6 @@ class DailyMenuFragment : Fragment() {
         // Horario fijo: 08:00 - 11:00
         binding.timeRangeTextView.text = getString(
             R.string.selection_time,
-            "08:00",
             "11:00"
         )
 

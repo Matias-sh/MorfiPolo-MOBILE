@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Escala de formas (rework 2026) -->
+    <dimen name="radius_small">8dp</dimen>
+    <dimen name="radius_medium">12dp</dimen>
+    <dimen name="radius_large">20dp</dimen>
+    <dimen name="radius_pill">100dp</dimen>
+
+    <!-- Escala de espaciado -->
+    <dimen name="space_xs">4dp</dimen>
+    <dimen name="space_sm">8dp</dimen>
+    <dimen name="space_md">12dp</dimen>
+    <dimen name="space_lg">16dp</dimen>
+    <dimen name="space_xl">20dp</dimen>
+    <dimen name="space_2xl">24dp</dimen>
+    <dimen name="space_3xl">32dp</dimen>
+
+    <!-- Objetivos táctiles -->
+    <dimen name="touch_target_min">48dp</dimen>
+    <dimen name="button_height">48dp</dimen>
+    <dimen name="button_height_large">56dp</dimen>
+    <dimen name="input_height">52dp</dimen>
+
+    <!-- Tipografía (sp definidos en estilos; acá solo medidas de layout) -->
+    <dimen name="avatar_size">72dp</dimen>
+    <dimen name="day_badge_size">44dp</dimen>
+    <dimen name="bottom_nav_height">64dp</dimen>
+</resources>

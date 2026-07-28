@@ -2,83 +2,131 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    
-    <!-- Modern Food App Palette - Vibrant & Fresh -->
-    
-    <!-- Primary Brand Colors -->
-    <color name="food_primary_orange">#FF6B35</color>
-    <color name="food_primary_orange_dark">#E65100</color>
-    <color name="food_primary_orange_light">#FF9E6D</color>
-    
-    <!-- Secondary Brand Colors (Freshness/Veggie) -->
-    <color name="food_secondary_green">#4CAF50</color>
-    <color name="food_secondary_green_dark">#388E3C</color>
-    <color name="food_secondary_green_light">#C8E6C9</color>
-    
-    <!-- Accent Colors -->
-    <color name="food_accent_yellow">#FFC107</color>
-    <color name="food_accent_red">#F44336</color>
-    
-    <!-- Backgrounds -->
-    <color name="food_background_light">#FAFAFA</color>
-    <color name="food_background_card">#FFFFFF</color>
-    <color name="food_surface_modal">#FFFFFF</color>
-    
-    <!-- Text Colors -->
-    <color name="food_text_primary">#212121</color>
-    <color name="food_text_secondary">#757575</color>
-    <color name="food_text_hint">#BDBDBD</color>
-    <color name="food_text_inverse">#FFFFFF</color>
-    <color name="food_text_error">#D32F2F</color>
-    
-    <!-- Status Colors -->
-    <color name="food_status_success">#4CAF50</color>
-    <color name="food_status_warning">#FF9800</color>
-    <color name="food_status_error">#F44336</color>
-    <color name="food_status_info">#2196F3</color>
 
-    <!-- UI Elements -->
-    <color name="food_divider">#EEEEEE</color>
-    <color name="food_ripple">#20FF6B35</color>
-    <color name="food_overlay_dark">#80000000</color>
+    <!-- ============================================================ -->
+    <!-- Comedor Polo — Sistema de diseño M3 (rework 2026)            -->
+    <!-- ============================================================ -->
 
-    <!-- Legacy Mappings (backward compatibility) -->
-    <color name="comedor_brown_primary">@color/food_primary_orange</color>
-    <color name="comedor_brown_dark">@color/food_primary_orange_dark</color>
-    <color name="comedor_brown_light">@color/food_primary_orange_light</color>
-    <color name="comedor_brown_accent">@color/food_accent_yellow</color>
-    
-    <color name="comedor_beige_primary">@color/food_background_light</color>
+    <!-- Primary (verde institucional) -->
+    <color name="md_primary">#2F6F5E</color>
+    <color name="md_on_primary">#FFFFFF</color>
+    <color name="md_primary_container">#CFE8DD</color>
+    <color name="md_on_primary_container">#0B2E23</color>
+
+    <!-- Secondary (acento dorado) -->
+    <color name="md_secondary">#D89A2E</color>
+    <color name="md_on_secondary">#FFFFFF</color>
+    <color name="md_secondary_container">#FBEDC9</color>
+    <color name="md_on_secondary_container">#8A5A00</color>
+
+    <!-- Surfaces (cálidas) -->
+    <color name="md_surface">#FFFFFF</color>
+    <color name="md_surface_screen">#FFFBF7</color>
+    <color name="md_surface_container_low">#FFF4EA</color>
+    <color name="md_surface_container">#FBEADA</color>
+    <color name="md_surface_container_high">#F5E2CC</color>
+    <color name="md_on_surface">#2B1D12</color>
+    <color name="md_on_surface_variant">#6F6153</color>
+    <color name="md_outline">#C8B8A4</color>
+    <color name="md_outline_variant">#E7DACB</color>
+    <color name="md_divider">#F0E6D8</color>
+
+    <!-- Semantic states -->
+    <color name="md_error">#BA1A1A</color>
+    <color name="md_on_error">#FFFFFF</color>
+    <color name="md_error_container">#FFDAD5</color>
+    <color name="md_success">#2E7D32</color>
+    <color name="md_warning">#8A5A00</color>
+
+    <!-- Text auxiliares -->
+    <color name="md_text_hint">#B4A492</color>
+    <color name="md_text_muted">#8A7C6D</color>
+
+    <!-- Status chips -->
+    <color name="chip_open_bg">#DDF2DE</color>
+    <color name="chip_open_text">#1E4620</color>
+    <color name="chip_open_dot">#2E7D32</color>
+    <color name="chip_closed_bg">#F5E2CC</color>
+    <color name="chip_closed_text">#6F6153</color>
+    <color name="chip_closed_dot">#8A7C6D</color>
+    <color name="chip_chosen_bg">#CFE8DD</color>
+    <color name="chip_chosen_text">#0B2E23</color>
+    <color name="chip_chosen_dot">#2F6F5E</color>
+    <color name="chip_pending_bg">#FFE9BC</color>
+    <color name="chip_pending_text">#8A5A00</color>
+    <color name="chip_pending_dot">#8A5A00</color>
+    <color name="chip_nomenu_bg">#EFE9E2</color>
+    <color name="chip_nomenu_text">#6F6357</color>
+    <color name="chip_nomenu_dot">#B4A492</color>
+    <color name="chip_error_bg">#FFDAD5</color>
+    <color name="chip_error_text">#BA1A1A</color>
+    <color name="chip_error_dot">#BA1A1A</color>
+
+    <!-- Misc UI -->
+    <color name="md_ripple">#202F6F5E</color>
+    <color name="md_overlay_dark">#80000000</color>
+    <color name="md_toast_bg">#2B1D12</color>
+    <color name="card_chosen_border">#BFE0D2</color>
+    <color name="badge_hoy_bg">#FBEDC9</color>
+    <color name="badge_hoy_text">#8A5A00</color>
+
+    <!-- ============================================================ -->
+    <!-- Alias legacy — re-apuntados a la paleta nueva.               -->
+    <!-- Se eliminan en la fase de limpieza final.                    -->
+    <!-- ============================================================ -->
+    <color name="food_primary_orange">@color/md_primary</color>
+    <color name="food_primary_orange_dark">@color/md_on_primary_container</color>
+    <color name="food_primary_orange_light">@color/md_primary_container</color>
+    <color name="food_secondary_green">@color/md_success</color>
+    <color name="food_secondary_green_dark">#1E4620</color>
+    <color name="food_secondary_green_light">@color/chip_open_bg</color>
+    <color name="food_accent_yellow">@color/md_secondary</color>
+    <color name="food_accent_red">@color/md_error</color>
+    <color name="food_background_light">@color/md_surface_screen</color>
+    <color name="food_background_card">@color/md_surface</color>
+    <color name="food_surface_modal">@color/md_surface</color>
+    <color name="food_text_primary">@color/md_on_surface</color>
+    <color name="food_text_secondary">@color/md_on_surface_variant</color>
+    <color name="food_text_hint">@color/md_text_hint</color>
+    <color name="food_text_inverse">@color/white</color>
+    <color name="food_text_error">@color/md_error</color>
+    <color name="food_status_success">@color/md_success</color>
+    <color name="food_status_warning">@color/md_warning</color>
+    <color name="food_status_error">@color/md_error</color>
+    <color name="food_status_info">@color/md_primary</color>
+    <color name="food_divider">@color/md_divider</color>
+    <color name="food_ripple">@color/md_ripple</color>
+    <color name="food_overlay_dark">@color/md_overlay_dark</color>
+
+    <color name="comedor_brown_primary">@color/md_primary</color>
+    <color name="comedor_brown_dark">@color/md_on_primary_container</color>
+    <color name="comedor_brown_light">@color/md_primary_container</color>
+    <color name="comedor_brown_accent">@color/md_secondary</color>
+    <color name="comedor_beige_primary">@color/md_surface_screen</color>
     <color name="comedor_beige_light">@color/white</color>
-    <color name="comedor_beige_dark">@color/food_divider</color>
-    
-    <color name="comedor_text_primary">@color/food_text_primary</color>
-    <color name="comedor_text_secondary">@color/food_text_secondary</color>
-    <color name="comedor_text_hint">@color/food_text_hint</color>
-    <color name="comedor_text_white">@color/food_text_inverse</color>
-
-    <!-- Legacy / Missing Colors fixed for Build -->
-    <color name="formosa_blue_accent">@color/food_status_info</color>
-    <color name="formosa_blue_light">@color/food_status_info</color> <!-- Mapped to info/blueish or orange if primary-->
-    <color name="food_orange">@color/food_primary_orange</color>
-    <color name="primary_green">@color/food_secondary_green</color>
-    <color name="primary_blue_light">@color/food_primary_orange_light</color>
-    <color name="comedor_accent_warm">@color/food_accent_yellow</color>
-    <color name="comedor_accent_gold">@color/food_accent_yellow</color>
-    <color name="success_green_dark">@color/food_secondary_green_dark</color>
-    <color name="success_green">@color/food_secondary_green</color>
-    <color name="comedor_white_card">@color/food_background_card</color>
-    <color name="card_solid_white">@color/food_background_card</color>
-    <color name="divider_light">@color/food_divider</color>
-    
-    <!-- More Legacy Mappings from Build Failure 2 -->
-    <color name="food_orange_light">@color/food_primary_orange_light</color>
-    <color name="status_open">@color/food_status_success</color>
-    <color name="text_secondary">@color/food_text_secondary</color>
-    <color name="text_primary">@color/food_text_primary</color>
-    <color name="background_card">@color/food_background_card</color>
-
-    <color name="comedor_success">@color/food_status_success</color>
-    <color name="comedor_error">@color/food_status_error</color>
+    <color name="comedor_beige_dark">@color/md_divider</color>
+    <color name="comedor_text_primary">@color/md_on_surface</color>
+    <color name="comedor_text_secondary">@color/md_on_surface_variant</color>
+    <color name="comedor_text_hint">@color/md_text_hint</color>
+    <color name="comedor_text_white">@color/white</color>
+    <color name="formosa_blue_accent">@color/md_primary</color>
+    <color name="formosa_blue_light">@color/md_primary_container</color>
+    <color name="food_orange">@color/md_primary</color>
+    <color name="primary_green">@color/md_success</color>
+    <color name="primary_blue_light">@color/md_primary_container</color>
+    <color name="comedor_accent_warm">@color/md_secondary</color>
+    <color name="comedor_accent_gold">@color/md_secondary</color>
+    <color name="success_green_dark">#1E4620</color>
+    <color name="success_green">@color/md_success</color>
+    <color name="comedor_white_card">@color/md_surface</color>
+    <color name="card_solid_white">@color/md_surface</color>
+    <color name="divider_light">@color/md_divider</color>
+    <color name="food_orange_light">@color/md_primary_container</color>
+    <color name="status_open">@color/md_success</color>
+    <color name="text_secondary">@color/md_on_surface_variant</color>
+    <color name="text_primary">@color/md_on_surface</color>
+    <color name="background_card">@color/md_surface</color>
+    <color name="comedor_success">@color/md_success</color>
+    <color name="comedor_error">@color/md_error</color>
     <color name="ic_launcher_background">#FFFFFF</color>
 </resources>

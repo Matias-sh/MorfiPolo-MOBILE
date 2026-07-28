@@ -112,7 +112,6 @@ class WeeklyMenuAdapter(
             // Configurar horario fijo: 08:00 - 11:00
             binding.timeRangeTextView.text = binding.root.context.getString(
                 R.string.selection_time,
-                "08:00",
                 "11:00"
             )
             binding.timeRangeTextView.visibility = View.VISIBLE

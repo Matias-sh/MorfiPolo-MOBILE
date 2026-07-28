@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paleta oscura preparada (spec del rework). NO activa: el theme
+         sigue siendo Light. Cuando se habilite dark mode, estos tokens
+         reemplazan automáticamente a los de values/. -->
+
+    <color name="md_primary">#8FD9C4</color>
+    <color name="md_on_primary">#0B2E23</color>
+    <color name="md_primary_container">#15473A</color>
+    <color name="md_on_primary_container">#CFE8DD</color>
+
+    <color name="md_secondary">#E8B95C</color>
+    <color name="md_on_secondary">#3D2800</color>
+    <color name="md_secondary_container">#5C4300</color>
+    <color name="md_on_secondary_container">#FBEDC9</color>
+
+    <color name="md_surface">#26190E</color>
+    <color name="md_surface_screen">#1E140B</color>
+    <color name="md_surface_container_low">#241811</color>
+    <color name="md_surface_container">#2E2015</color>
+    <color name="md_surface_container_high">#3A2A1C</color>
+    <color name="md_on_surface">#F3E4D4</color>
+    <color name="md_on_surface_variant">#D2C0AC</color>
+    <color name="md_outline">#8A7C6D</color>
+    <color name="md_outline_variant">#4A3B2C</color>
+    <color name="md_divider">#3A2C1E</color>
+
+    <color name="md_error">#FFB4AB</color>
+    <color name="md_on_error">#690005</color>
+    <color name="md_error_container">#93000A</color>
+    <color name="md_success">#8BD98F</color>
+    <color name="md_warning">#E8C36A</color>
+
+    <color name="md_text_hint">#8A7C6D</color>
+    <color name="md_text_muted">#B4A492</color>
+
+    <color name="chip_open_bg">#1E4620</color>
+    <color name="chip_open_text">#DDF2DE</color>
+    <color name="chip_open_dot">#8BD98F</color>
+    <color name="chip_closed_bg">#3A2A1C</color>
+    <color name="chip_closed_text">#D2C0AC</color>
+    <color name="chip_closed_dot">#8A7C6D</color>
+    <color name="chip_chosen_bg">#15473A</color>
+    <color name="chip_chosen_text">#CFE8DD</color>
+    <color name="chip_chosen_dot">#8FD9C4</color>
+    <color name="chip_pending_bg">#5C4300</color>
+    <color name="chip_pending_text">#FFE9BC</color>
+    <color name="chip_pending_dot">#E8C36A</color>
+    <color name="chip_nomenu_bg">#2E2015</color>
+    <color name="chip_nomenu_text">#B4A492</color>
+    <color name="chip_nomenu_dot">#8A7C6D</color>
+    <color name="chip_error_bg">#93000A</color>
+    <color name="chip_error_text">#FFDAD5</color>
+    <color name="chip_error_dot">#FFB4AB</color>
+
+    <color name="md_ripple">#208FD9C4</color>
+    <color name="md_toast_bg">#F3E4D4</color>
+    <color name="card_chosen_border">#15473A</color>
+    <color name="badge_hoy_bg">#5C4300</color>
+    <color name="badge_hoy_text">#FBEDC9</color>
+</resources>
