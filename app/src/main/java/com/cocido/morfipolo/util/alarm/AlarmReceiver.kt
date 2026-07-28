@@ -35,7 +35,7 @@ class AlarmReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "AlarmReceiver"
         const val ACTION_CUSTOM_NOTIFICATION = "com.cocido.morfipolo.CUSTOM_NOTIFICATION"
-        private const val WAKE_LOCK_TIMEOUT = 30000L // 30 segundos
+        private const val WAKE_LOCK_TIMEOUT = 60000L // 60 segundos
     }
     
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -71,99 +71,122 @@ class AlarmReceiver : BroadcastReceiver() {
         )
         
         scope.launch {
+            var app: MorfipoloApplication? = null
             try {
                 wakeLock.acquire(WAKE_LOCK_TIMEOUT)
                 Log.d(TAG, "📍 Procesando notificación: $notificationId para día $dayOfWeek")
-                
-                val app = context.applicationContext as? MorfipoloApplication
+
+                app = context.applicationContext as? MorfipoloApplication
                 if (app == null) {
                     Log.w(TAG, "No se pudo obtener MorfipoloApplication")
                     return@launch
                 }
-                
-                // Verificar que la notificación existe y está habilitada
-                val notification = app.notificationConfigRepository.getNotificationById(notificationId)
-                if (notification == null || !notification.isEnabled) {
-                    Log.d(TAG, "⚠️ Notificación $notificationId no encontrada o deshabilitada")
-                    return@launch
-                }
-                
-                // Verificar que sea el día correcto
-                val calendar = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault())
-                val currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-                val expectedCalendarDay = when (dayOfWeek) {
-                    1 -> Calendar.MONDAY
-                    2 -> Calendar.TUESDAY
-                    3 -> Calendar.WEDNESDAY
-                    4 -> Calendar.THURSDAY
-                    5 -> Calendar.FRIDAY
-                    6 -> Calendar.SATURDAY
-                    7 -> Calendar.SUNDAY
-                    else -> return@launch
-                }
-                
-                if (currentDayOfWeek != expectedCalendarDay) {
-                    Log.d(TAG, "⚠️ Día de la semana no coincide (esperado: $dayOfWeek, actual: $currentDayOfWeek)")
-                    return@launch
-                }
-                
-                // 1. Verificar si hay menú publicado
-                val menu = getTodayMenu(context)
-                if (menu == null) {
-                    Log.d(TAG, "❌ No hay menú publicado para hoy, NO se envía notificación")
-                    return@launch
-                }
-                
-                Log.d(TAG, "✅ Menú encontrado: ${menu.description}")
-                
-                // 2. Verificar si el usuario ya votó (solo si está logueado)
-                val userId = app.sessionManager.getCurrentUserId()
-                if (userId != null) {
-                    try {
-                        Log.d(TAG, "🔍 Verificando si el usuario ya votó...")
-                        val userVote = app.voteRepository.getUserVoteForMenu(menu.id, userId, maxPagesToSearch = 10)
-                        if (userVote != null) {
-                            Log.d(TAG, "✅ Usuario ya votó (opción: ${userVote.option.name}), NO se envía notificación")
-                            return@launch
-                        }
-                        Log.d(TAG, "ℹ️ Usuario NO ha votado aún")
-                    } catch (e: Exception) {
-                        Log.w(TAG, "⚠️ Error al verificar voto: ${e.message}")
-                        // Continuar con la notificación (mejor notificar de más que de menos)
-                    }
-                } else {
-                    Log.d(TAG, "ℹ️ Usuario no logueado, enviando notificación para que abra la app")
-                }
-                
-                // 3. Verificar si ya se envió esta notificación hoy
-                val alarmPrefs = AlarmPreferences(context)
-                if (alarmPrefs.wasCustomNotificationSent(notificationId)) {
-                    Log.d(TAG, "⏭️ Ya se envió la notificación $notificationId hoy")
-                    return@launch
-                }
-                
-                // 4. Enviar notificación
-                val menuContent = formatMenuOptions(menu)
-                val notificationSent = sendNotification(context, menuContent)
-                
-                if (notificationSent) {
-                    alarmPrefs.setCustomNotificationSent(notificationId)
-                    Log.d(TAG, "✅ Notificación $notificationId enviada exitosamente")
-                } else {
-                    Log.w(TAG, "⚠️ No se pudo enviar la notificación $notificationId")
-                }
-                
-                // 5. Reprogramar para la próxima vez
-                AlarmScheduler.scheduleCustomNotifications(context, app.notificationConfigRepository)
-                
+
+                processNotification(context, app, notificationId, dayOfWeek)
+
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Error al procesar notificación: ${e.message}", e)
             } finally {
+                // Las alarmas son one-shot: si no se reprograma acá, el slot de
+                // este día muere hasta el próximo cold start de la app. Debe
+                // ejecutarse SIEMPRE, sin importar por qué rama salió el proceso.
+                try {
+                    app?.let {
+                        AlarmScheduler.scheduleCustomNotifications(context, it.notificationConfigRepository)
+                        Log.d(TAG, "🔁 Alarmas reprogramadas")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Error al reprogramar alarmas: ${e.message}", e)
+                }
                 if (wakeLock.isHeld) {
                     wakeLock.release()
                 }
                 pendingResult.finish()
             }
+        }
+    }
+
+    /**
+     * Evalúa las condiciones y envía la notificación si corresponde.
+     * Los early-return son seguros: la reprogramación ocurre en el finally del caller.
+     */
+    private suspend fun processNotification(
+        context: Context,
+        app: MorfipoloApplication,
+        notificationId: String,
+        dayOfWeek: Int
+    ) {
+        // Verificar que la notificación existe y está habilitada
+        val notification = app.notificationConfigRepository.getNotificationById(notificationId)
+        if (notification == null || !notification.isEnabled) {
+            Log.d(TAG, "⚠️ Notificación $notificationId no encontrada o deshabilitada")
+            return
+        }
+
+        // Verificar que sea el día correcto
+        val calendar = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault())
+        val currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+        val expectedCalendarDay = when (dayOfWeek) {
+            1 -> Calendar.MONDAY
+            2 -> Calendar.TUESDAY
+            3 -> Calendar.WEDNESDAY
+            4 -> Calendar.THURSDAY
+            5 -> Calendar.FRIDAY
+            6 -> Calendar.SATURDAY
+            7 -> Calendar.SUNDAY
+            else -> return
+        }
+
+        if (currentDayOfWeek != expectedCalendarDay) {
+            Log.d(TAG, "⚠️ Día de la semana no coincide (esperado: $dayOfWeek, actual: $currentDayOfWeek)")
+            return
+        }
+
+        // 1. Verificar si hay menú publicado
+        val menu = getTodayMenu(context)
+        if (menu == null) {
+            Log.d(TAG, "❌ No hay menú publicado para hoy, NO se envía notificación")
+            return
+        }
+
+        Log.d(TAG, "✅ Menú encontrado: ${menu.description}")
+
+        // 2. Verificar si el usuario ya votó (solo si está logueado)
+        val userId = app.sessionManager.getCurrentUserId()
+        if (userId != null) {
+            try {
+                Log.d(TAG, "🔍 Verificando si el usuario ya votó...")
+                val userVote = app.voteRepository.getUserVoteForMenu(menu.id, userId, maxPagesToSearch = 3)
+                if (userVote != null) {
+                    Log.d(TAG, "✅ Usuario ya votó (opción: ${userVote.option.name}), NO se envía notificación")
+                    return
+                }
+                Log.d(TAG, "ℹ️ Usuario NO ha votado aún")
+            } catch (e: Exception) {
+                Log.w(TAG, "⚠️ Error al verificar voto: ${e.message}")
+                // Continuar con la notificación (mejor notificar de más que de menos)
+            }
+        } else {
+            Log.d(TAG, "ℹ️ Usuario no logueado, enviando notificación para que abra la app")
+        }
+
+        // 3. Verificar si ya se envió esta notificación hoy
+        val alarmPrefs = AlarmPreferences(context)
+        if (alarmPrefs.wasCustomNotificationSent(notificationId)) {
+            Log.d(TAG, "⏭️ Ya se envió la notificación $notificationId hoy")
+            return
+        }
+
+        // 4. Enviar notificación (variante urgente si el recordatorio es de 10:00 en adelante)
+        val menuContent = formatMenuOptions(menu)
+        val isUrgent = notification.hour >= 10
+        val notificationSent = sendNotification(context, menuContent, isUrgent)
+
+        if (notificationSent) {
+            alarmPrefs.setCustomNotificationSent(notificationId)
+            Log.d(TAG, "✅ Notificación $notificationId enviada exitosamente (urgente=$isUrgent)")
+        } else {
+            Log.w(TAG, "⚠️ No se pudo enviar la notificación $notificationId")
         }
     }
     
@@ -213,9 +236,10 @@ class AlarmReceiver : BroadcastReceiver() {
     }
     
     /**
-     * Envía la notificación.
+     * Envía la notificación. Si [isUrgent] (recordatorios de 10:00 en adelante)
+     * usa la variante de seguimiento con copy urgente.
      */
-    private fun sendNotification(context: Context, menuDescription: String?): Boolean {
+    private fun sendNotification(context: Context, menuDescription: String?, isUrgent: Boolean = false): Boolean {
         return try {
             // Verificar permisos en Android 13+
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
@@ -224,16 +248,20 @@ class AlarmReceiver : BroadcastReceiver() {
                         context,
                         android.Manifest.permission.POST_NOTIFICATIONS
                     )
-                
+
                 if (!hasPermission) {
                     Log.e(TAG, "❌ No hay permiso de notificaciones")
                     return false
                 }
             }
-            
+
             val notificationHelper = NotificationHelper(context)
-            val sent = notificationHelper.showDailyReminderNotification(menuDescription)
-            
+            val sent = if (isUrgent) {
+                notificationHelper.showFollowUpReminderNotification(menuDescription)
+            } else {
+                notificationHelper.showDailyReminderNotification(menuDescription)
+            }
+
             if (sent) {
                 Log.d(TAG, "✅ Notificación enviada exitosamente")
             }

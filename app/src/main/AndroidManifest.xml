@@ -6,9 +6,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     
-    <!-- Permisos para alarmas exactas (notificaciones a las 9am) -->
+    <!-- Alarmas exactas para recordatorios: SCHEDULE_EXACT_ALARM (el usuario la
+         concede desde Ajustes en Android 12+). USE_EXACT_ALARM se quitó porque
+         Play lo restringe a apps de alarma/reloj y podía causar rechazo. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 

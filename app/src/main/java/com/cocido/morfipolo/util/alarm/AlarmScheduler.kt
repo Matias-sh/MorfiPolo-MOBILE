@@ -205,12 +205,24 @@ object AlarmScheduler {
     }
     
     /**
-     * Genera un request code único para una notificación y día específico.
+     * Genera un request code determinístico para una notificación y día específico.
+     * Usa el hashCode completo de "id#día" en lugar de truncar a un bucket de 1000:
+     * el esquema anterior hacía que dos notificaciones distintas del mismo día
+     * pudieran colisionar y pisarse el PendingIntent en silencio.
      */
     private fun generateRequestCode(notificationId: String, dayOfWeek: Int): Int {
-        val baseCode = kotlin.math.abs(notificationId.hashCode() % 1000)
-        val dayOffset = (dayOfWeek - 1) * 1000
-        return 10000 + baseCode + dayOffset
+        return "$notificationId#$dayOfWeek".hashCode()
+    }
+
+    /**
+     * Indica si el sistema nos permite programar alarmas exactas (Android 12+).
+     * En versiones anteriores siempre es true. Pensado para que la UI de
+     * Recordatorios muestre el estado real y ofrezca ir a Ajustes.
+     */
+    fun canScheduleExact(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        return alarmManager.canScheduleExactAlarms()
     }
     
     /**

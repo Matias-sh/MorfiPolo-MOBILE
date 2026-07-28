@@ -99,10 +99,11 @@ class MorfipoloApplication : Application() {
         // para evitar notificaciones duplicadas o fuera de la configuración del usuario.
         workManager.cancelUniqueWork("daily_reminder_work")
 
-        // Mantener método legacy como no-op por compatibilidad.
-        notificationConfigRepository.createDefaultNotificationsIfNeeded()
+        // Primero limpiar la config legacy, después sembrar los defaults nuevos
+        // (9:00 y 10:00 Lun-Vie) solo si el usuario no tiene nada configurado.
         notificationConfigRepository.clearLegacyDefaultNotificationsIfNeeded()
-        
+        notificationConfigRepository.createDefaultNotificationsIfNeeded()
+
         // Programar las notificaciones personalizadas del usuario
         // Usa AlarmManager con setExactAndAllowWhileIdle() para garantizar ejecución
         // incluso cuando la app está completamente cerrada

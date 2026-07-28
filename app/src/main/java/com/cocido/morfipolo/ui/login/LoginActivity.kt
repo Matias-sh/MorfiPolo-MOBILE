@@ -1,14 +1,11 @@
 package com.cocido.morfipolo.ui.login
 
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -30,17 +27,6 @@ class LoginActivity : AppCompatActivity() {
         LoginViewModelFactory((application as MorfipoloApplication).userRepository)
     }
     
-    // Launcher para solicitar permiso de notificaciones
-    private val requestNotificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            android.util.Log.d("LoginActivity", "✅ Permiso de notificaciones concedido")
-        } else {
-            android.util.Log.w("LoginActivity", "⚠️ Permiso de notificaciones denegado")
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -62,8 +48,8 @@ class LoginActivity : AppCompatActivity() {
         windowInsetsController?.isAppearanceLightStatusBars = true
         window.statusBarColor = android.graphics.Color.TRANSPARENT
 
-        // Solicitar permiso de notificaciones si es necesario (Android 13+)
-        requestNotificationPermissionIfNeeded()
+        // El permiso de notificaciones se solicita una sola vez desde MainActivity
+        // (pedirlo también acá causaba doble prompt según el flujo de navegación).
 
         setupObservers()
         setupListeners()
@@ -293,28 +279,6 @@ class LoginActivity : AppCompatActivity() {
         }
     }
     
-    private fun requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            when {
-                ContextCompat.checkSelfPermission(
-                    this,
-                    android.Manifest.permission.POST_NOTIFICATIONS
-                ) == android.content.pm.PackageManager.PERMISSION_GRANTED -> {
-                    android.util.Log.d("LoginActivity", "✅ Permiso de notificaciones ya concedido")
-                }
-                shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS) -> {
-                    // El usuario denegó el permiso anteriormente, explicar por qué lo necesitamos
-                    android.util.Log.d("LoginActivity", "Solicitando permiso de notificaciones (ya denegado antes)")
-                    requestNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                }
-                else -> {
-                    // Primera vez que se solicita
-                    android.util.Log.d("LoginActivity", "Solicitando permiso de notificaciones por primera vez")
-                    requestNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                }
-            }
-        }
-    }
 }
 
 class LoginViewModelFactory(private val userRepository: com.cocido.morfipolo.data.repository.UserRepository) :

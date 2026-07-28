@@ -18,6 +18,7 @@ class NotificationConfigRepository(context: Context) {
         private const val KEY_NOTIFICATIONS = "custom_notifications"
         private const val KEY_DEFAULTS_CREATED = "default_notifications_created"
         private const val KEY_LEGACY_DEFAULTS_CLEANED = "legacy_default_notifications_cleaned"
+        private const val KEY_DEFAULTS_SEEDED_V2 = "default_notifications_seeded_v2"
     }
     
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -116,26 +117,45 @@ class NotificationConfigRepository(context: Context) {
     }
     
     /**
-     * Obtiene todas las notificaciones habilitadas para un día específico.
-     */
-    fun getEnabledNotificationsForDay(dayOfWeek: Int): List<CustomNotification> {
-        return getEnabledNotifications().filter { it.isScheduledForDay(dayOfWeek) }
-    }
-    
-    /**
-     * Crea las notificaciones predefinidas SOLO la primera vez que se abre la app.
-     * Las notificaciones predefinidas son:
-     * - 9:00 AM (Lunes a Viernes) - Recordatorio principal
-     * - 9:30 AM (Lunes a Viernes) - Recordatorio de reintento
-     * - 10:00 AM (Lunes a Viernes) - Recordatorio urgente
-     * 
-     * El usuario puede modificarlas, eliminarlas o agregar más después.
-     * Si el usuario elimina todas las notificaciones, NO se vuelven a crear.
+     * Siembra los recordatorios por defecto (9:00 y 10:00, lunes a viernes)
+     * para que la app funcione "out of the box".
+     *
+     * Solo se ejecuta una vez (flag v2) y solo si el usuario no tiene ninguna
+     * notificación configurada: respeta a quien ya creó las suyas, y si el
+     * usuario borra los defaults después, NO se vuelven a crear.
      */
     fun createDefaultNotificationsIfNeeded() {
-        // Legacy no-op: ya no se crean notificaciones predefinidas automáticamente.
-        prefs.edit().putBoolean(KEY_DEFAULTS_CREATED, true).apply()
-        android.util.Log.d("NotificationConfigRepository", "ℹ️ Se omite creación automática de notificaciones predefinidas")
+        if (prefs.getBoolean(KEY_DEFAULTS_SEEDED_V2, false)) return
+
+        if (getAllNotifications().isEmpty()) {
+            val weekdays = setOf(
+                CustomNotification.MONDAY,
+                CustomNotification.TUESDAY,
+                CustomNotification.WEDNESDAY,
+                CustomNotification.THURSDAY,
+                CustomNotification.FRIDAY
+            )
+            val defaults = listOf(
+                CustomNotification(
+                    id = "default_v2_9_00",
+                    hour = 9,
+                    minute = 0,
+                    isEnabled = true,
+                    daysOfWeek = weekdays
+                ),
+                CustomNotification(
+                    id = "default_v2_10_00",
+                    hour = 10,
+                    minute = 0,
+                    isEnabled = true,
+                    daysOfWeek = weekdays
+                )
+            )
+            saveNotifications(defaults)
+            android.util.Log.d("NotificationConfigRepository", "🌱 Sembrados recordatorios por defecto (9:00 y 10:00, Lun-Vie)")
+        }
+
+        prefs.edit().putBoolean(KEY_DEFAULTS_SEEDED_V2, true).apply()
     }
 
     /**
