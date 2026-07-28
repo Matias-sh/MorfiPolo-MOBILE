@@ -113,8 +113,6 @@ class LoginActivity : AppCompatActivity() {
                         setLoading(false)
                         // Actualizar widget después del login exitoso
                         updateWidget()
-                        // Programar recordatorio diario después del login
-                        com.cocido.morfipolo.util.work.DailyReminderWorker.scheduleDailyReminder(this@LoginActivity)
                         navigateToMain()
                     }
                     is LoginUiState.Error -> {

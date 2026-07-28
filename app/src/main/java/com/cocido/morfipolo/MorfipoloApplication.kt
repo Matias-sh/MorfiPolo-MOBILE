@@ -5,9 +5,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.room.Room
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.cocido.morfipolo.data.local.database.AppDatabase
@@ -19,7 +17,6 @@ import com.cocido.morfipolo.data.repository.NotificationConfigRepository
 import com.cocido.morfipolo.data.repository.UserRepository
 import com.cocido.morfipolo.data.repository.VoteRepository
 import com.cocido.morfipolo.util.alarm.AlarmScheduler
-import com.cocido.morfipolo.util.work.DailyReminderWorker
 import com.cocido.morfipolo.util.work.SessionRefreshWorker
 import java.util.concurrent.TimeUnit
 
@@ -98,13 +95,18 @@ class MorfipoloApplication : Application() {
             sessionRefreshWork
         )
 
-        // PRINCIPAL: Programar alarma exacta para notificación a las 9am
+        // Cancelar flujo legacy basado en WorkManager (recordatorio fijo 9:00)
+        // para evitar notificaciones duplicadas o fuera de la configuración del usuario.
+        workManager.cancelUniqueWork("daily_reminder_work")
+
+        // Mantener método legacy como no-op por compatibilidad.
+        notificationConfigRepository.createDefaultNotificationsIfNeeded()
+        notificationConfigRepository.clearLegacyDefaultNotificationsIfNeeded()
+        
+        // Programar las notificaciones personalizadas del usuario
         // Usa AlarmManager con setExactAndAllowWhileIdle() para garantizar ejecución
         // incluso cuando la app está completamente cerrada
-        AlarmScheduler.scheduleDailyAlarm(this)
-        
-        // BACKUP: También usar WorkManager como respaldo (menos confiable pero adicional)
-        DailyReminderWorker.scheduleDailyReminder(this)
+        AlarmScheduler.scheduleCustomNotifications(this, notificationConfigRepository)
     }
 }
 

@@ -56,16 +56,13 @@
             android:permission="android.permission.BIND_REMOTEVIEWS"
             android:exported="false" />
 
-        <!-- Receiver para las alarmas diarias de notificaciones (9am, 9:30am, 10am) -->
+        <!-- Receiver para las notificaciones personalizadas del usuario -->
         <receiver
             android:name=".util.alarm.AlarmReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.cocido.morfipolo.DAILY_REMINDER_ALARM" />
-                <action android:name="com.cocido.morfipolo.REMINDER_9AM" />
-                <action android:name="com.cocido.morfipolo.REMINDER_930AM" />
-                <action android:name="com.cocido.morfipolo.REMINDER_10AM" />
+                <action android:name="com.cocido.morfipolo.CUSTOM_NOTIFICATION" />
             </intent-filter>
         </receiver>
 

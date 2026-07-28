@@ -16,12 +16,12 @@
 
         <ImageView
             android:id="@+id/logoImageView"
-            android:layout_width="200dp"
+            android:layout_width="wrap_content"
             android:layout_height="200dp"
             android:layout_marginTop="32dp"
             android:adjustViewBounds="true"
             android:contentDescription="@string/app_name"
-            android:src="@drawable/comedor_azul"
+            android:src="@drawable/ic_login_logo"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />

@@ -13,9 +13,6 @@ class AlarmPreferences(context: Context) {
     
     companion object {
         private const val PREFS_NAME = "alarm_notification_prefs"
-        private const val KEY_NOTIFIED_9AM = "notified_9am_"
-        private const val KEY_NOTIFIED_930AM = "notified_930am_"
-        private const val KEY_NOTIFIED_10AM = "notified_10am_"
         private const val KEY_CUSTOM_NOTIFICATION = "custom_notification_"
         private const val KEY_LAST_CLEANUP_DATE = "last_cleanup_date"
     }
@@ -28,93 +25,6 @@ class AlarmPreferences(context: Context) {
      */
     private fun getTodayString(): String {
         return dateFormat.format(Date())
-    }
-    
-    /**
-     * Verifica si se envió la notificación de las 9am hoy.
-     */
-    fun wasNotified9am(): Boolean {
-        val today = getTodayString()
-        return prefs.getBoolean("$KEY_NOTIFIED_9AM$today", false)
-    }
-    
-    /**
-     * Marca que se envió la notificación de las 9am hoy.
-     */
-    fun setNotified9am() {
-        val today = getTodayString()
-        prefs.edit().putBoolean("$KEY_NOTIFIED_9AM$today", true).apply()
-        android.util.Log.d("AlarmPreferences", "✅ Marcado: notificación 9am enviada para $today")
-        cleanupOldEntries()
-    }
-    
-    /**
-     * Verifica si se envió la notificación de las 9:30am hoy.
-     */
-    fun wasNotified930am(): Boolean {
-        val today = getTodayString()
-        return prefs.getBoolean("$KEY_NOTIFIED_930AM$today", false)
-    }
-    
-    /**
-     * Marca que se envió la notificación de las 9:30am hoy.
-     */
-    fun setNotified930am() {
-        val today = getTodayString()
-        prefs.edit().putBoolean("$KEY_NOTIFIED_930AM$today", true).apply()
-        android.util.Log.d("AlarmPreferences", "✅ Marcado: notificación 9:30am enviada para $today")
-        cleanupOldEntries()
-    }
-    
-    /**
-     * Verifica si se envió la notificación de las 10am hoy.
-     */
-    fun wasNotified10am(): Boolean {
-        val today = getTodayString()
-        return prefs.getBoolean("$KEY_NOTIFIED_10AM$today", false)
-    }
-    
-    /**
-     * Marca que se envió la notificación de las 10am hoy.
-     */
-    fun setNotified10am() {
-        val today = getTodayString()
-        prefs.edit().putBoolean("$KEY_NOTIFIED_10AM$today", true).apply()
-        android.util.Log.d("AlarmPreferences", "✅ Marcado: notificación 10am enviada para $today")
-        cleanupOldEntries()
-    }
-    
-    /**
-     * Verifica si ya se envió alguna notificación de recordatorio hoy (9am o 9:30am).
-     * Útil para la lógica de 9:30am que solo debe enviar si no se envió antes.
-     */
-    fun wasAnyReminderNotifiedToday(): Boolean {
-        return wasNotified9am() || wasNotified930am()
-    }
-    
-    /**
-     * Resetea todas las notificaciones del día actual (útil para testing).
-     */
-    fun resetTodayNotifications() {
-        val today = getTodayString()
-        prefs.edit()
-            .remove("$KEY_NOTIFIED_9AM$today")
-            .remove("$KEY_NOTIFIED_930AM$today")
-            .remove("$KEY_NOTIFIED_10AM$today")
-            .apply()
-        android.util.Log.d("AlarmPreferences", "🔄 Reset de notificaciones para $today")
-    }
-    
-    /**
-     * Resetea solo la notificación de 10am del día actual.
-     * Útil cuando el flag está marcado pero la notificación no se envió realmente.
-     */
-    fun reset10amNotification() {
-        val today = getTodayString()
-        prefs.edit()
-            .remove("$KEY_NOTIFIED_10AM$today")
-            .apply()
-        android.util.Log.d("AlarmPreferences", "🔄 Reset de notificación 10am para $today")
     }
     
     /**
@@ -135,8 +45,26 @@ class AlarmPreferences(context: Context) {
         val today = getTodayString()
         val key = "$KEY_CUSTOM_NOTIFICATION${notificationId}_$today"
         prefs.edit().putBoolean(key, true).apply()
-        android.util.Log.d("AlarmPreferences", "✅ Marcado: notificación personalizada $notificationId enviada para $today")
+        android.util.Log.d("AlarmPreferences", "✅ Marcado: notificación $notificationId enviada para $today")
         cleanupOldEntries()
+    }
+    
+    /**
+     * Resetea todas las notificaciones del día actual (útil para testing).
+     */
+    fun resetTodayNotifications() {
+        val today = getTodayString()
+        val editor = prefs.edit()
+        
+        // Buscar y eliminar todas las claves de hoy
+        prefs.all.keys.filter { 
+            it.startsWith(KEY_CUSTOM_NOTIFICATION) && it.endsWith("_$today") 
+        }.forEach { key ->
+            editor.remove(key)
+        }
+        
+        editor.apply()
+        android.util.Log.d("AlarmPreferences", "🔄 Reset de notificaciones para $today")
     }
     
     /**
@@ -160,11 +88,7 @@ class AlarmPreferences(context: Context) {
             
             // Revisar todas las claves
             prefs.all.keys.forEach { key ->
-                if (key.startsWith(KEY_NOTIFIED_9AM) || 
-                    key.startsWith(KEY_NOTIFIED_930AM) || 
-                    key.startsWith(KEY_NOTIFIED_10AM) ||
-                    key.startsWith(KEY_CUSTOM_NOTIFICATION)) {
-                    
+                if (key.startsWith(KEY_CUSTOM_NOTIFICATION)) {
                     // Extraer la fecha de la clave
                     val dateStr = key.substringAfterLast("_")
                     try {
@@ -192,11 +116,3 @@ class AlarmPreferences(context: Context) {
         }
     }
 }
-
-
-
-
-
-
-
-

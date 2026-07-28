@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="220dp"
+    android:height="220dp"
+    android:viewportWidth="212"
+    android:viewportHeight="236">
+
+    <path
+        android:pathData="M106,16 L196,67 L196,169 L106,220 L16,169 L16,67 Z"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/food_primary_orange"
+        android:strokeWidth="11"
+        android:strokeLineJoin="round" />
+
+    <path
+        android:pathData="M84,60 L84,99"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/food_primary_orange"
+        android:strokeWidth="10"
+        android:strokeLineCap="round" />
+
+    <path
+        android:pathData="M106,55 L106,99"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/food_primary_orange"
+        android:strokeWidth="10"
+        android:strokeLineCap="round" />
+
+    <path
+        android:pathData="M128,60 L128,99"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/food_primary_orange"
+        android:strokeWidth="10"
+        android:strokeLineCap="round" />
+
+    <path
+        android:pathData="M84,99 Q82,119 106,125 Q130,119 128,99"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/food_primary_orange"
+        android:strokeWidth="10"
+        android:strokeLineCap="round" />
+
+    <path
+        android:pathData="M106,125 L106,196"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/food_primary_orange"
+        android:strokeWidth="11"
+        android:strokeLineCap="round" />
+</vector>

@@ -221,12 +221,14 @@ class NotificationSettingsFragment : Fragment() {
                 @Suppress("DEPRECATION")
                 timePicker.currentMinute = 0
             }
-            // Por defecto, solo días laborales
+            // Por defecto, solo días laborales (resetear todos primero para evitar estados inconsistentes)
             chips[CustomNotification.MONDAY]?.isChecked = true
             chips[CustomNotification.TUESDAY]?.isChecked = true
             chips[CustomNotification.WEDNESDAY]?.isChecked = true
             chips[CustomNotification.THURSDAY]?.isChecked = true
             chips[CustomNotification.FRIDAY]?.isChecked = true
+            chips[CustomNotification.SATURDAY]?.isChecked = false
+            chips[CustomNotification.SUNDAY]?.isChecked = false
         }
 
         val dialog = AlertDialog.Builder(requireContext())

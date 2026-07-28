@@ -506,3 +506,178 @@
 
 # CRÍTICO: No eliminar clases que puedan estar siendo usadas por reflection
 -keep class com.cocido.morfipolo.domain.model.** { *; }
+
+# =====================================================
+# NOTIFICACIONES PERSONALIZADAS - Gson serialización
+# =====================================================
+
+# CRÍTICO: Preservar CustomNotification para Gson serialización
+-keep class com.cocido.morfipolo.domain.model.CustomNotification { *; }
+-keepclassmembers class com.cocido.morfipolo.domain.model.CustomNotification {
+    <init>(...);
+    <fields>;
+    <methods>;
+    public java.lang.String getId();
+    public int getHour();
+    public int getMinute();
+    public boolean isEnabled();
+    public java.util.Set getDaysOfWeek();
+    public java.lang.String getFormattedTime();
+    public java.lang.String getFormattedTime24();
+    public java.lang.String getFormattedDays();
+    public boolean isScheduledForDay(int);
+}
+
+# Preservar Companion object de CustomNotification
+-keep class com.cocido.morfipolo.domain.model.CustomNotification$Companion { *; }
+-keepclassmembers class com.cocido.morfipolo.domain.model.CustomNotification$Companion {
+    public java.lang.String generateId(int, int);
+    public java.lang.String getDayName(int);
+    public java.lang.String getDayNameFull(int);
+}
+
+# CRÍTICO: Preservar NotificationConfigRepository
+-keep class com.cocido.morfipolo.data.repository.NotificationConfigRepository { *; }
+-keepclassmembers class com.cocido.morfipolo.data.repository.NotificationConfigRepository {
+    <init>(...);
+    <fields>;
+    <methods>;
+    public java.util.List getAllNotifications();
+    public void saveNotifications(java.util.List);
+    public com.cocido.morfipolo.domain.model.CustomNotification getNotificationById(java.lang.String);
+    public void saveNotification(com.cocido.morfipolo.domain.model.CustomNotification);
+    public void deleteNotification(java.lang.String);
+    public java.util.List getEnabledNotifications();
+    public java.util.List getEnabledNotificationsForDay(int);
+}
+
+# CRÍTICO: Preservar Gson y TypeToken para deserialización
+-keep class com.google.gson.** { *; }
+-keep class com.google.gson.reflect.TypeToken { *; }
+-keep class * extends com.google.gson.reflect.TypeToken
+-keepattributes Signature
+
+# Preservar TypeToken anónimos usados en NotificationConfigRepository
+-keep class com.cocido.morfipolo.data.repository.NotificationConfigRepository$* { *; }
+
+# CRÍTICO: Preservar UI de notificaciones
+-keep class com.cocido.morfipolo.ui.notifications.** { *; }
+-keepclassmembers class com.cocido.morfipolo.ui.notifications.** {
+    <init>(...);
+    <fields>;
+    <methods>;
+}
+
+# =====================================================
+# SISTEMA DE ALARMAS Y NOTIFICACIONES - CRÍTICO
+# =====================================================
+
+# CRÍTICO: Preservar TODO el paquete de alarmas
+-keep class com.cocido.morfipolo.util.alarm.** { *; }
+-keepclassmembers class com.cocido.morfipolo.util.alarm.** {
+    <init>(...);
+    <fields>;
+    <methods>;
+    *;
+}
+
+# CRÍTICO: Preservar AlarmScheduler completamente
+-keep class com.cocido.morfipolo.util.alarm.AlarmScheduler { *; }
+-keepclassmembers class com.cocido.morfipolo.util.alarm.AlarmScheduler {
+    public static void scheduleCustomNotifications(android.content.Context, com.cocido.morfipolo.data.repository.NotificationConfigRepository);
+    public static void cancelAllCustomAlarms(android.content.Context);
+    public static java.lang.String getDayName(int);
+    private static long calculateNextAlarmTimeForDay(int, int, int);
+    private static int generateRequestCode(java.lang.String, int);
+    private static android.app.PendingIntent createCustomAlarmPendingIntent(android.content.Context, int, java.lang.String, int);
+    private static java.util.Set getScheduledRequestCodes(android.content.Context);
+    private static void saveScheduledRequestCodes(android.content.Context, java.util.Set);
+}
+
+# CRÍTICO: Preservar AlarmReceiver (BroadcastReceiver)
+-keep class com.cocido.morfipolo.util.alarm.AlarmReceiver { *; }
+-keepclassmembers class com.cocido.morfipolo.util.alarm.AlarmReceiver {
+    <init>();
+    public void onReceive(android.content.Context, android.content.Intent);
+    private void handleCustomNotification(android.content.Context, java.lang.String, int);
+    private *** getTodayMenu(android.content.Context);
+    private java.lang.String formatMenuOptions(com.cocido.morfipolo.domain.model.Menu);
+    private boolean sendNotification(android.content.Context, java.lang.String);
+}
+-keep class com.cocido.morfipolo.util.alarm.AlarmReceiver$Companion { *; }
+
+# CRÍTICO: Preservar BootReceiver (BroadcastReceiver)
+-keep class com.cocido.morfipolo.util.alarm.BootReceiver { *; }
+-keepclassmembers class com.cocido.morfipolo.util.alarm.BootReceiver {
+    <init>();
+    public void onReceive(android.content.Context, android.content.Intent);
+}
+
+# CRÍTICO: Preservar AlarmPreferences
+-keep class com.cocido.morfipolo.util.alarm.AlarmPreferences { *; }
+-keepclassmembers class com.cocido.morfipolo.util.alarm.AlarmPreferences {
+    <init>(android.content.Context);
+    public boolean wasCustomNotificationSent(java.lang.String);
+    public void setCustomNotificationSent(java.lang.String);
+    public void resetTodayNotifications();
+    private java.lang.String getTodayString();
+    private void cleanupOldEntries();
+}
+
+# CRÍTICO: Preservar NotificationHelper
+-keep class com.cocido.morfipolo.util.notifications.** { *; }
+-keepclassmembers class com.cocido.morfipolo.util.notifications.NotificationHelper {
+    <init>(android.content.Context);
+    public void showMenuLoadedNotification(java.lang.String, java.lang.String);
+    public boolean showDailyReminderNotification(java.lang.String);
+    public boolean showFollowUpReminderNotification(java.lang.String);
+    private void createNotificationChannel();
+    private void updateWidget(android.content.Context);
+}
+
+# CRÍTICO: Preservar BroadcastReceivers (Android los instancia por reflection)
+-keep public class * extends android.content.BroadcastReceiver {
+    <init>();
+    public void onReceive(android.content.Context, android.content.Intent);
+}
+
+# CRÍTICO: Preservar constantes ACTION en BroadcastReceivers
+-keepclassmembers class com.cocido.morfipolo.util.alarm.AlarmReceiver {
+    public static final java.lang.String ACTION_CUSTOM_NOTIFICATION;
+}
+
+# CRÍTICO: Preservar AlarmManager y PendingIntent
+-keep class android.app.AlarmManager { *; }
+-keepclassmembers class android.app.AlarmManager {
+    public void setExact(int, long, android.app.PendingIntent);
+    public void setExactAndAllowWhileIdle(int, long, android.app.PendingIntent);
+    public void cancel(android.app.PendingIntent);
+    public boolean canScheduleExactAlarms();
+}
+
+# CRÍTICO: Preservar PowerManager y WakeLock
+-keep class android.os.PowerManager { *; }
+-keep class android.os.PowerManager$WakeLock { *; }
+-keepclassmembers class android.os.PowerManager {
+    public android.os.PowerManager$WakeLock newWakeLock(int, java.lang.String);
+}
+-keepclassmembers class android.os.PowerManager$WakeLock {
+    public void acquire(long);
+    public void release();
+    public boolean isHeld();
+}
+
+# CRÍTICO: Preservar NotificationManager y NotificationChannel
+-keep class android.app.NotificationManager { *; }
+-keep class android.app.NotificationChannel { *; }
+
+# Preservar Application getter de notificationConfigRepository
+-keepclassmembers class com.cocido.morfipolo.MorfipoloApplication {
+    public com.cocido.morfipolo.data.repository.NotificationConfigRepository getNotificationConfigRepository();
+    public final com.cocido.morfipolo.data.repository.NotificationConfigRepository notificationConfigRepository;
+}
+
+# CRÍTICO: Preservar createDefaultNotificationsIfNeeded
+-keepclassmembers class com.cocido.morfipolo.data.repository.NotificationConfigRepository {
+    public void createDefaultNotificationsIfNeeded();
+}

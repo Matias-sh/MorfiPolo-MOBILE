@@ -24,10 +24,12 @@ data class CustomNotification(
         const val SUNDAY = 7
         
         /**
-         * Genera un ID único basado en la hora y minuto.
+         * Genera un ID único basado en la hora, minuto y timestamp.
+         * El timestamp asegura que dos notificaciones para la misma hora tengan IDs diferentes.
          */
         fun generateId(hour: Int, minute: Int): String {
-            return "notification_${hour}_${minute}"
+            val timestamp = System.currentTimeMillis()
+            return "notification_${hour}_${minute}_$timestamp"
         }
         
         /**

@@ -80,4 +80,5 @@
 
     <color name="comedor_success">@color/food_status_success</color>
     <color name="comedor_error">@color/food_status_error</color>
+    <color name="ic_launcher_background">#FFFFFF</color>
 </resources>
