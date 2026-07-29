@@ -2,24 +2,14 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/dailyMenuFragment"
-        android:icon="@android:drawable/ic_menu_today"
-        android:title="@string/menu_daily" />
+        android:icon="@drawable/ic_nav_today"
+        android:title="Hoy" />
     <item
         android:id="@+id/weeklyMenuFragment"
-        android:icon="@android:drawable/ic_menu_my_calendar"
-        android:title="@string/menu_weekly" />
+        android:icon="@drawable/ic_nav_weekly"
+        android:title="Semanal" />
     <item
         android:id="@+id/profileFragment"
-        android:icon="@android:drawable/ic_menu_manage"
+        android:icon="@drawable/ic_nav_profile"
         android:title="@string/profile" />
 </menu>
-
-
-
-
-
-
-
-
-
-

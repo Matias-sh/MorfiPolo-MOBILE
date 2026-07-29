@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Empty state reutilizable (sin menú / cerrado sin elección / error) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/space_2xl"
+    android:paddingVertical="40dp">
+
+    <FrameLayout
+        android:id="@+id/emptyIconCircle"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:background="@drawable/empty_state_circle">
+
+        <TextView
+            android:id="@+id/emptyIconText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:textColor="@color/md_text_muted"
+            android:textSize="26sp"
+            tools:text="–" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/emptyTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_md"
+        android:gravity="center"
+        android:textColor="@color/md_on_surface"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        tools:text="No elegiste un menú hoy" />
+
+    <TextView
+        android:id="@+id/emptySubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_sm"
+        android:gravity="center"
+        android:lineSpacingMultiplier="1.4"
+        android:maxWidth="260dp"
+        android:textColor="@color/md_text_muted"
+        android:textSize="13sp"
+        tools:text="La selección cerró a las 11:00. Mañana hay una nueva oportunidad." />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/emptyRetryButton"
+        style="@style/Widget.Morfipolo.Button.Outlined"
+        android:layout_width="wrap_content"
+        android:layout_height="44dp"
+        android:layout_marginTop="@dimen/space_md"
+        android:text="@string/error_retry"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+</LinearLayout>

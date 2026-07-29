@@ -46,7 +46,21 @@ class ProfileFragment : Fragment() {
 
         setupObservers()
         setupListeners()
+        setupVersionText()
         viewModel.loadUser()
+    }
+
+    private fun setupVersionText() {
+        val versionName = try {
+            requireContext().packageManager.getPackageInfo(requireContext().packageName, 0).versionName
+        } catch (e: Exception) {
+            null
+        }
+        binding.versionTextView.text = if (versionName != null) {
+            "${getString(R.string.app_name)} · v$versionName"
+        } else {
+            getString(R.string.app_name)
+        }
     }
 
     private fun setupObservers() {
@@ -59,7 +73,11 @@ class ProfileFragment : Fragment() {
                     is ProfileUiState.Success -> {
                         val fullName = "${state.user.name} ${state.user.lastName}"
                         binding.nameTextView.text = fullName
-                        binding.avatarTextView.text = state.user.name.firstOrNull()?.toString() ?: "U"
+                        binding.dniTextView.text = getString(R.string.dni) + " " + state.user.dni
+                        val initials = listOf(state.user.name, state.user.lastName)
+                            .mapNotNull { it.trim().firstOrNull()?.uppercaseChar() }
+                            .joinToString("")
+                        binding.avatarTextView.text = initials.ifEmpty { "U" }
                     }
                     is ProfileUiState.Error -> {
                         // No mostrar errores técnicos al usuario

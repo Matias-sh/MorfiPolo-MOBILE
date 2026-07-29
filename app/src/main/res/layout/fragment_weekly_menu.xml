@@ -4,27 +4,19 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/food_background_light"
+    android:background="@color/md_surface_screen"
     tools:context=".ui.menu.weekly.WeeklyMenuFragment">
-
-    <!-- Header Shadow/BG -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="240dp"
-        android:background="@drawable/background_rect_curved_bottom"
-        android:backgroundTint="@color/food_primary_orange"
-        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/titleTextView"
-        style="@style/TextAppearance.Morfipolo.Headline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="60dp"
+        android:layout_marginStart="@dimen/space_xl"
+        android:layout_marginTop="24dp"
         android:text="@string/menu_weekly"
-        android:textColor="@color/white"
-        android:textSize="24sp"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:textColor="@color/md_on_surface"
+        android:textSize="22sp"
+        android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -32,12 +24,11 @@
         android:id="@+id/instructionTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/select_date_instruction"
-        android:textColor="@color/white"
-        android:alpha="0.8"
-        android:textSize="14sp"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginStart="@dimen/space_xl"
+        android:layout_marginTop="2dp"
+        android:text="@string/menu_weekly_subtitle"
+        android:textColor="@color/md_text_muted"
+        android:textSize="13sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/titleTextView" />
 
@@ -45,7 +36,7 @@
         android:id="@+id/swipeRefreshLayout"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/instructionTextView">
 
@@ -54,9 +45,9 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingHorizontal="16dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="80dp"
+            android:paddingHorizontal="@dimen/space_lg"
+            android:paddingTop="@dimen/space_xs"
+            android:paddingBottom="100dp"
             tools:listitem="@layout/item_weekly_menu" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
@@ -65,38 +56,68 @@
         android:id="@+id/emptyStateLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
         android:gravity="center"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/space_2xl"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/instructionTextView">
+        app:layout_constraintTop_toBottomOf="@id/instructionTextView"
+        app:layout_constraintVertical_bias="0.35">
 
-        <ImageView
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:src="@android:drawable/ic_menu_view"
-            app:tint="@color/food_text_hint" />
-            
+        <FrameLayout
+            android:id="@+id/emptyIconCircle"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:background="@drawable/empty_state_circle">
+
+            <TextView
+                android:id="@+id/emptyIconText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="···"
+                android:textColor="@color/md_text_muted"
+                android:textSize="26sp" />
+        </FrameLayout>
+
         <TextView
+            android:id="@+id/emptyTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_md"
             android:text="@string/empty_state_title"
-            style="@style/TextAppearance.Morfipolo.Headline"
-            android:layout_marginTop="16dp" />
-            
+            android:textColor="@color/md_on_surface"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
         <TextView
+            android:id="@+id/emptySubtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/empty_state_message"
+            android:layout_marginTop="@dimen/space_sm"
             android:gravity="center"
-            android:layout_marginTop="8dp" />
+            android:lineSpacingMultiplier="1.4"
+            android:maxWidth="260dp"
+            android:text="@string/empty_state_message"
+            android:textColor="@color/md_text_muted"
+            android:textSize="13sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/emptyRetryButton"
+            style="@style/Widget.Morfipolo.Button.Outlined"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:layout_marginTop="@dimen/space_md"
+            android:text="@string/error_retry"
+            android:textSize="13sp"
+            android:visibility="gone" />
     </LinearLayout>
-    
+
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:indeterminateTint="@color/food_primary_orange"
+        android:indeterminateTint="@color/md_primary"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -108,34 +129,35 @@
         android:id="@+id/infoBanner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
+        android:layout_margin="@dimen/space_lg"
         android:visibility="gone"
-        app:cardBackgroundColor="@color/food_accent_yellow"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="8dp"
+        app:cardBackgroundColor="@color/md_secondary_container"
+        app:cardCornerRadius="@dimen/radius_medium"
+        app:cardElevation="4dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:padding="16dp">
+            android:orientation="horizontal"
+            android:padding="@dimen/space_lg">
 
             <ImageView
                 android:id="@+id/infoBannerIcon"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_dialog_info"
-                app:tint="@color/food_text_primary" />
+                app:tint="@color/md_on_secondary_container" />
 
             <TextView
                 android:id="@+id/infoBannerText"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_md"
                 android:layout_weight="1"
-                android:layout_marginStart="12dp"
-                android:textColor="@color/food_text_primary"
+                android:textColor="@color/md_on_secondary_container"
+                android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

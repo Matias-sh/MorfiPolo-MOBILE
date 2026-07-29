@@ -19,7 +19,6 @@ import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.R
 import com.cocido.morfipolo.databinding.FragmentDailyMenuBinding
 import com.cocido.morfipolo.util.NetworkUtils
-import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -50,8 +49,13 @@ class DailyMenuFragment : Fragment() {
         )
     }
 
-    private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    // Formato largo del spec: "Lunes 28 de julio"
+    private val dateFormat = SimpleDateFormat("EEEE d 'de' MMMM", Locale("es", "AR"))
     private val dateFormatApi = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+    private fun formatDisplayDate(date: Date): String {
+        return dateFormat.format(date).replaceFirstChar { it.uppercase() }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -65,14 +69,12 @@ class DailyMenuFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Configurar insets para el header naranja - extender detrás de la barra de estado
-        // Aplicar padding solo al contenido (dateTextView) para que no quede debajo de la barra de estado
-        ViewCompat.setOnApplyWindowInsetsListener(binding.dateTextView) { v, insets ->
+        // Insets: correr el header debajo de la barra de estado
+        ViewCompat.setOnApplyWindowInsetsListener(binding.headerCaption) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            // Ajustar marginTop para incluir el espacio de la barra de estado
             val layoutParams = v.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
             layoutParams?.let {
-                val originalMarginTop = 24 // dp del XML (reducido de 60dp)
+                val originalMarginTop = 24 // space_2xl del XML
                 val marginTopInPx = (originalMarginTop * resources.displayMetrics.density).toInt()
                 it.topMargin = marginTopInPx + systemBars.top
                 v.layoutParams = it
@@ -204,42 +206,7 @@ class DailyMenuFragment : Fragment() {
     
     private fun checkNetworkStatus() {
         val isOnline = NetworkUtils.isNetworkAvailable(requireContext())
-        // binding.offlineIndicator.visibility = if (!isOnline) View.VISIBLE else View.GONE
-    }
-    
-    private var currentSnackbar: Snackbar? = null
-    
-    private fun showErrorWithRetry(message: String, retryAction: () -> Unit) {
-        // Ocultar snackbar anterior si existe
-        currentSnackbar?.dismiss()
-        
-        // Usar duración de 4 segundos
-        val snackbar = Snackbar.make(binding.root, message, 4000)
-        snackbar.setAction(getString(R.string.error_retry)) {
-            retryAction()
-        }
-        snackbar.setActionTextColor(resources.getColor(R.color.comedor_brown_primary, null))
-        snackbar.addCallback(object : Snackbar.Callback() {
-            override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
-                currentSnackbar = null
-            }
-        })
-        currentSnackbar = snackbar
-        snackbar.show()
-    }
-    
-    private fun showTemporaryMessage(message: String) {
-        // Ocultar snackbar anterior si existe
-        currentSnackbar?.dismiss()
-        
-        val snackbar = Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG)
-        snackbar.addCallback(object : Snackbar.Callback() {
-            override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
-                currentSnackbar = null
-            }
-        })
-        currentSnackbar = snackbar
-        snackbar.show()
+        binding.offlineIndicator.visibility = if (!isOnline) View.VISIBLE else View.GONE
     }
 
     private fun setupObservers() {
@@ -264,14 +231,15 @@ class DailyMenuFragment : Fragment() {
                                 currentBinding.progressBar.visibility = View.VISIBLE
                             }
                             currentBinding.optionsContainer.visibility = View.GONE
+                            currentBinding.optionsTitle.visibility = View.GONE
+                            currentBinding.optionsHint.visibility = View.GONE
                             // Mostrar información genérica mientras carga
                             val today = Date()
-                            currentBinding.dateTextView.text = dateFormat.format(today)
+                            currentBinding.dateTextView.text = formatDisplayDate(today)
                             currentBinding.dateTextView.visibility = View.VISIBLE
-                            currentBinding.timeRangeTextView.text = "Horario para elegir: 08:00 - 11:00"
+                            currentBinding.timeRangeTextView.text = getString(R.string.selection_time, "11:00")
                             currentBinding.timeRangeTextView.visibility = View.VISIBLE
                             currentBinding.statusContainer.visibility = View.GONE
-                            // El card siempre está visible, no se oculta
                             checkNetworkStatus()
                         }
                         is DailyMenuUiState.Success -> {
@@ -308,17 +276,10 @@ class DailyMenuFragment : Fragment() {
                                     // Error de horario - mostrar banner informativo sin reintentar
                                     showInfoBanner(state.message)
                                 }
-                                !NetworkUtils.isNetworkAvailable(requireContext()) -> {
-                                    // Error de conexión - mostrar con reintentar
-                                    showErrorWithRetry(getString(R.string.error_no_connection)) {
-                                        viewModel.loadMenuForDate(viewModel.getCurrentDate())
-                                    }
-                                }
                                 else -> {
-                                    // Otros errores - mostrar con reintentar
-                                    showErrorWithRetry(state.message) {
-                                        viewModel.loadMenuForDate(viewModel.getCurrentDate())
-                                    }
+                                    // Error real de carga (conexión o servidor) - estado inline con Reintentar,
+                                    // como en el spec, en vez de un snackbar que se pierde.
+                                    showLoadErrorState()
                                 }
                             }
                         }
@@ -349,48 +310,41 @@ class DailyMenuFragment : Fragment() {
         binding.dateTextView.visibility = View.VISIBLE
         binding.timeRangeTextView.visibility = View.VISIBLE
         binding.statusContainer.visibility = View.VISIBLE
-        
+
         // Fecha - convertir de String a Date
         val menuDate = try {
             SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(menu.date) ?: Date()
         } catch (e: Exception) {
             Date()
         }
-        binding.dateTextView.text = dateFormat.format(menuDate)
+        binding.dateTextView.text = formatDisplayDate(menuDate)
 
-        // Horario fijo: 08:00 - 11:00
-        binding.timeRangeTextView.text = getString(
-            R.string.selection_time,
-            "11:00"
-        )
-
-        // Estado - usar el valor calculado en el ViewModel
+        // Chip de estado: Abierto (verde suave) / Cerrado (neutral, nunca rojo)
         val isActuallyOpen = state.isActuallyOpen
-        val statusText = when {
-            isActuallyOpen -> getString(R.string.open)
-            menu.status == "closed" -> getString(R.string.closed)
-            else -> getString(R.string.closed) // Si pasó el horario o no es hoy, mostrar cerrado
-        }
-        binding.statusTextView.text = statusText
-        binding.statusTextView.setBackgroundResource(
-            if (isActuallyOpen) {
-                R.drawable.badge_success_modern
-            } else {
-                R.drawable.badge_error_modern
-            }
-        )
-
-        // Ya elegiste
-        binding.alreadySelectedTextView.visibility = if (state.userVote != null) {
-            View.VISIBLE
+        if (isActuallyOpen) {
+            binding.statusTextView.text = getString(R.string.open)
+            binding.statusTextView.setBackgroundResource(R.drawable.chip_open)
+            binding.statusTextView.setTextColor(
+                androidx.core.content.ContextCompat.getColor(requireContext(), R.color.chip_open_text)
+            )
         } else {
-            View.GONE
+            binding.statusTextView.text = getString(R.string.closed)
+            binding.statusTextView.setBackgroundResource(R.drawable.chip_closed)
+            binding.statusTextView.setTextColor(
+                androidx.core.content.ContextCompat.getColor(requireContext(), R.color.chip_closed_text)
+            )
         }
 
-        // El card siempre muestra "Menú de hoy" (estático en el XML)
-        // No se modifica el texto del card
-        
-        // Mostrar todas las opciones del menú (reutilizar isActuallyOpen ya calculado arriba)
+        // Subtítulo contextual según estado y elección
+        binding.timeRangeTextView.text = when {
+            isActuallyOpen && state.userVote != null -> getString(R.string.selection_change_until)
+            isActuallyOpen -> getString(R.string.selection_time, "11:00")
+            else -> getString(R.string.selection_closed_at)
+        }
+
+        // El chip "Ya elegiste" del header queda oculto: la card de confirmación lo comunica
+        binding.alreadySelectedTextView.visibility = View.GONE
+
         displayMenuOptions(menu, state.userVote, state.isWithinTime, isActuallyOpen)
     }
     
@@ -435,101 +389,83 @@ class DailyMenuFragment : Fragment() {
         }
     }
 
-    private fun showNoMenuMessage() {
-        // Mostrar información genérica pero real cuando no hay menú
-        // Fecha de HOY (no estática incorrecta)
-        val today = Date()
-        binding.dateTextView.text = dateFormat.format(today)
-        binding.dateTextView.visibility = View.VISIBLE
-        
-        // Horario estándar
-        binding.timeRangeTextView.text = "Horario para elegir: 08:00 - 11:00"
-        binding.timeRangeTextView.visibility = View.VISIBLE
-        
-        // Ocultar estado "Abierto/Cerrado" ya que no hay menú de referencia
+    private fun showLoadErrorState() {
+        binding.dateTextView.visibility = View.GONE
+        binding.timeRangeTextView.visibility = View.GONE
         binding.statusContainer.visibility = View.GONE
-        
-        // Limpiar opciones anteriores
+        binding.optionsTitle.visibility = View.GONE
+        binding.optionsHint.visibility = View.GONE
+
         binding.optionsContainer.removeAllViews()
-        
-        // Crear un card elegante para el mensaje
-        val noMenuCard = com.google.android.material.card.MaterialCardView(requireContext()).apply {
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                setMargins(0, 16, 0, 16)
-            }
-            cardElevation = 4f
-            radius = 16f
-            setCardBackgroundColor(resources.getColor(R.color.food_background_card, null))
-            strokeWidth = 0
-        }
-        
-        // Contenedor interno con padding
-        val cardContent = android.widget.LinearLayout(requireContext()).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            gravity = android.view.Gravity.CENTER
-            setPadding(32, 48, 32, 48)
-        }
-        
-        // Función helper para convertir dp a px
-        fun dpToPx(dp: Int): Int {
-            return (dp * resources.displayMetrics.density).toInt()
-        }
-        
-        // Icono
-        val iconView = android.widget.ImageView(requireContext()).apply {
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                dpToPx(80),
-                dpToPx(80)
-            ).apply {
-                bottomMargin = dpToPx(16)
-            }
-            setImageResource(android.R.drawable.ic_dialog_info)
-            imageTintList = android.content.res.ColorStateList.valueOf(
-                androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_text_secondary)
-            )
-            alpha = 0.6f
-        }
-        
-        // Texto principal
-        val titleText = android.widget.TextView(requireContext()).apply {
-            text = "No hay menú disponible"
-            textSize = 18f
-            setTextColor(resources.getColor(R.color.food_text_primary, null))
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            gravity = android.view.Gravity.CENTER
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                bottomMargin = dpToPx(8)
-            }
-        }
-        
-        // Texto secundario
-        val subtitleText = android.widget.TextView(requireContext()).apply {
-            text = "No hay menú para el día de hoy"
-            textSize = 14f
-            setTextColor(resources.getColor(R.color.food_text_secondary, null))
-            gravity = android.view.Gravity.CENTER
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
-        
-        // Agregar elementos al card
-        cardContent.addView(iconView)
-        cardContent.addView(titleText)
-        cardContent.addView(subtitleText)
-        noMenuCard.addView(cardContent)
-        
         binding.optionsContainer.visibility = View.VISIBLE
-        binding.optionsContainer.addView(noMenuCard)
-        
-        // El card siempre está visible, no se oculta
+        addEmptyState(
+            icon = "!",
+            title = getString(R.string.menu_load_error_title),
+            subtitle = getString(R.string.menu_load_error_hint),
+            isError = true,
+            onRetry = { viewModel.loadMenuForDate(viewModel.getCurrentDate()) }
+        )
+    }
+
+    private fun showNoMenuMessage() {
+        val today = Date()
+        binding.dateTextView.text = formatDisplayDate(today)
+        binding.dateTextView.visibility = View.VISIBLE
+        binding.timeRangeTextView.visibility = View.GONE
+        binding.statusContainer.visibility = View.GONE
+        binding.optionsTitle.visibility = View.GONE
+        binding.optionsHint.visibility = View.GONE
+
+        binding.optionsContainer.removeAllViews()
+        binding.optionsContainer.visibility = View.VISIBLE
+        addEmptyState(
+            icon = "···",
+            title = getString(R.string.no_menu_available),
+            subtitle = getString(R.string.no_menu_available_hint)
+        )
+    }
+
+    /**
+     * Infla el empty state reutilizable dentro de optionsContainer.
+     * [onRetry] agrega el botón Reintentar (para el estado de error).
+     */
+    private fun addEmptyState(
+        icon: String,
+        title: String,
+        subtitle: String,
+        isError: Boolean = false,
+        onRetry: (() -> Unit)? = null
+    ) {
+        val emptyView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.item_empty_state, binding.optionsContainer, false)
+        val iconCircle = emptyView.findViewById<android.widget.FrameLayout>(R.id.emptyIconCircle)
+        val iconText = emptyView.findViewById<android.widget.TextView>(R.id.emptyIconText)
+        iconText.text = icon
+        emptyView.findViewById<android.widget.TextView>(R.id.emptyTitle).text = title
+        emptyView.findViewById<android.widget.TextView>(R.id.emptySubtitle).text = subtitle
+        if (isError) {
+            iconCircle.background.setTint(
+                androidx.core.content.ContextCompat.getColor(requireContext(), R.color.chip_error_bg)
+            )
+            iconText.setTextColor(
+                androidx.core.content.ContextCompat.getColor(requireContext(), R.color.md_error)
+            )
+        }
+        val retryButton = emptyView.findViewById<com.google.android.material.button.MaterialButton>(R.id.emptyRetryButton)
+        if (onRetry != null) {
+            retryButton.visibility = View.VISIBLE
+            retryButton.setOnClickListener { onRetry() }
+        }
+        binding.optionsContainer.addView(emptyView)
+    }
+
+    private fun confirmRemoveVote() {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.confirm_remove_vote_title)
+            .setMessage(R.string.confirm_remove_vote_message)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.confirm) { _, _ -> viewModel.deleteVote() }
+            .show()
     }
     
     private fun displayMenuOptions(
@@ -538,146 +474,111 @@ class DailyMenuFragment : Fragment() {
         isWithinTime: Boolean,
         isMenuOpen: Boolean
     ) {
-        // Limpiar opciones anteriores
         binding.optionsContainer.removeAllViews()
-        
-        // El card siempre está visible, no necesita lógica de visibilidad
-        
+        binding.optionsContainer.visibility = View.VISIBLE
+
         val options = menu.getOptionsOrEmpty()
-        
+        val canVote = isWithinTime && isMenuOpen
+        val hasVoted = userVote != null
+
+        // Título/hint de "Elegí tu menú" solo cuando hay lista para elegir
+        val showChooseHeader = canVote && !hasVoted && options.isNotEmpty()
+        binding.optionsTitle.visibility = if (showChooseHeader) View.VISIBLE else View.GONE
+        binding.optionsHint.visibility = if (showChooseHeader) View.VISIBLE else View.GONE
+
         if (options.isEmpty()) {
-            // Si no hay opciones pero hay descripción, mostrar la descripción como información
             if (menu.description.isNotBlank()) {
-                val descriptionCard = com.google.android.material.card.MaterialCardView(requireContext()).apply {
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        setMargins(0, 0, 0, 12)
-                    }
-                    cardElevation = 2f
-                    radius = 12f
-                    setCardBackgroundColor(resources.getColor(R.color.food_background_card, null))
-                    strokeWidth = 1
-                    strokeColor = resources.getColor(R.color.food_divider, null)
-                }
-                
-                val cardContent = android.widget.LinearLayout(requireContext()).apply {
-                    orientation = android.widget.LinearLayout.VERTICAL
-                    setPadding(16, 16, 16, 16)
-                }
-                
-                val descriptionText = android.widget.TextView(requireContext()).apply {
-                    text = menu.description
-                    textSize = 15f
-                    setTextColor(resources.getColor(R.color.food_text_primary, null))
-                    gravity = android.view.Gravity.START
-                }
-                
-                cardContent.addView(descriptionText)
-                descriptionCard.addView(cardContent)
-                binding.optionsContainer.addView(descriptionCard)
+                // Menú sin opciones estructuradas: mostrar la descripción en una card simple
+                val descriptionView = LayoutInflater.from(requireContext())
+                    .inflate(R.layout.item_menu_option, binding.optionsContainer, false)
+                descriptionView.findViewById<android.widget.TextView>(R.id.optionNameTextView).text = menu.description
+                descriptionView.findViewById<android.view.View>(R.id.selectedIndicator).visibility = View.GONE
+                descriptionView.isClickable = false
+                binding.optionsContainer.addView(descriptionView)
             } else {
-                // Si no hay opciones ni descripción, mostrar mensaje
-                val noOptionsTextView = android.widget.TextView(requireContext()).apply {
-                    text = getString(R.string.no_menu_available)
-                    textSize = 14f
-                    setTextColor(resources.getColor(R.color.text_secondary, null))
-                    gravity = android.view.Gravity.CENTER
-                    setPadding(0, 16, 0, 16)
-                }
-                binding.optionsContainer.addView(noOptionsTextView)
+                addEmptyState(
+                    icon = "···",
+                    title = getString(R.string.no_menu_available),
+                    subtitle = getString(R.string.no_menu_available_hint)
+                )
             }
             return
         }
-        
-        // Crear una vista para cada opción
-        options.forEachIndexed { index, option ->
-            val optionView = LayoutInflater.from(requireContext())
-                .inflate(R.layout.item_menu_option, binding.optionsContainer, false)
-            
-            val optionNameTextView = optionView.findViewById<android.widget.TextView>(R.id.optionNameTextView)
-            val optionButton = optionView.findViewById<com.google.android.material.button.MaterialButton>(R.id.optionButton)
-            val selectedIndicator = optionView.findViewById<android.widget.ImageView>(R.id.selectedIndicator)
-            val statusMessageTextView = optionView.findViewById<android.widget.TextView>(R.id.statusMessageTextView)
-            
-            // Nombre de la opción
-            optionNameTextView.text = if (menu.getOptionsOrEmpty().size > 1) {
-                "Opción ${index + 1}: ${option.name}"
+
+        if (hasVoted) {
+            // Card de confirmación "Tu elección de hoy" / "Tu menú de hoy"
+            val confirmedView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.item_selection_confirmed, binding.optionsContainer, false)
+            val card = confirmedView as com.google.android.material.card.MaterialCardView
+            val label = confirmedView.findViewById<android.widget.TextView>(R.id.selectionLabel)
+            val name = confirmedView.findViewById<android.widget.TextView>(R.id.selectionName)
+            val hint = confirmedView.findViewById<android.widget.TextView>(R.id.selectionHint)
+            val checkBadge = confirmedView.findViewById<android.widget.FrameLayout>(R.id.checkBadge)
+            val removeAction = confirmedView.findViewById<android.widget.TextView>(R.id.removeSelectionAction)
+
+            name.text = userVote!!.option.name
+
+            if (canVote) {
+                label.setText(R.string.your_choice_today)
+                hint.setText(R.string.selection_change_until)
+                removeAction.visibility = View.VISIBLE
+                removeAction.setOnClickListener { confirmRemoveVote() }
             } else {
-                option.name
+                // Variante cerrada: neutral beige, check apagado, sin acciones
+                label.setText(R.string.your_menu_today)
+                hint.setText(R.string.selection_closed_at)
+                card.setCardBackgroundColor(
+                    androidx.core.content.ContextCompat.getColor(requireContext(), R.color.md_surface_container_high)
+                )
+                checkBadge.background.setTint(
+                    androidx.core.content.ContextCompat.getColor(requireContext(), R.color.md_text_muted)
+                )
+                removeAction.visibility = View.GONE
             }
-            
-            val canVote = isWithinTime && isMenuOpen
-            val isSelected = userVote?.option?.id == option.id
-            val hasVotedAny = userVote != null
-            
-            if (!canVote) {
-                // Estado CERRADO / FUERA DE HORARIO
-                optionButton.visibility = View.GONE
-                statusMessageTextView.visibility = View.VISIBLE
-                
-                if (isSelected) {
-                    // El usuario votó ESTA opción
-                    statusMessageTextView.text = "Usted ya seleccionó esta opción"
-                    statusMessageTextView.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_secondary_green))
-                    statusMessageTextView.setTypeface(null, android.graphics.Typeface.BOLD)
-                } else if (!hasVotedAny) {
-                    // El usuario NO votó nada hoy
-                    statusMessageTextView.text = "Usted no seleccionó una opción el día de hoy"
-                    statusMessageTextView.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_status_error))
-                    statusMessageTextView.setTypeface(null, android.graphics.Typeface.NORMAL)
-                } else {
-                    // votó OTRA opción
-                     statusMessageTextView.text = "No seleccionada"
-                     statusMessageTextView.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_text_secondary))
-                     statusMessageTextView.setTypeface(null, android.graphics.Typeface.NORMAL)
+            binding.optionsContainer.addView(confirmedView)
+
+            if (canVote && options.size > 1) {
+                // Sección "Otras opciones" para cambiar la elección
+                val otherTitle = android.widget.TextView(requireContext()).apply {
+                    text = getString(R.string.other_options)
+                    textSize = 13f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(
+                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.md_on_surface_variant)
+                    )
+                    setPadding(0, 0, 0, (8 * resources.displayMetrics.density).toInt())
                 }
-                
-                // Keep indicator visible if selected even if closed, to confirm selection
-                selectedIndicator.visibility = if (isSelected) View.VISIBLE else View.GONE
-                
-            } else {
-                // Estado ABIERTO / PENDIENTE
-                statusMessageTextView.visibility = View.GONE
-                optionButton.visibility = View.VISIBLE
-                
-                if (isSelected) {
-                    // Opción seleccionada -> Botón rojo "Quitar"
-                    optionButton.text = getString(R.string.remove_selection)
-                    optionButton.setIconResource(android.R.drawable.ic_menu_delete)
-                    optionButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_status_error)
-                    )
-                    optionButton.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.black))
-                    optionButton.iconTint = android.content.res.ColorStateList.valueOf(
-                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.black)
-                    )
-                    selectedIndicator.visibility = View.VISIBLE
-                    
-                    optionButton.setOnClickListener {
-                        if (canVote) viewModel.deleteVote()
-                    }
-                } else {
-                    // Opción no seleccionada -> Botón verde "Elegir"
-                    optionButton.text = getString(R.string.choose_option)
-                    optionButton.setIconResource(android.R.drawable.ic_menu_add)
-                    optionButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.food_secondary_green)
-                    )
-                    optionButton.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white))
-                    optionButton.iconTint = android.content.res.ColorStateList.valueOf(
-                        androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white)
-                    )
-                    selectedIndicator.visibility = View.GONE
-                    
-                    optionButton.setOnClickListener {
-                        if (canVote) viewModel.selectOption(option.id)
-                    }
+                binding.optionsContainer.addView(otherTitle)
+
+                options.filter { it.id != userVote.option.id }.forEach { option ->
+                    val optionView = LayoutInflater.from(requireContext())
+                        .inflate(R.layout.item_menu_option, binding.optionsContainer, false)
+                    optionView.findViewById<android.widget.TextView>(R.id.optionNameTextView).text = option.name
+                    optionView.findViewById<android.view.View>(R.id.selectedIndicator).visibility = View.GONE
+                    optionView.findViewById<android.widget.TextView>(R.id.optionActionTextView).visibility = View.VISIBLE
+                    optionView.setOnClickListener { viewModel.selectOption(option.id) }
+                    binding.optionsContainer.addView(optionView)
                 }
             }
-            
-            binding.optionsContainer.addView(optionView)
+            return
+        }
+
+        if (canVote) {
+            // Abierto y sin elegir: lista de opciones con radio, toda la card clickeable
+            options.forEach { option ->
+                val optionView = LayoutInflater.from(requireContext())
+                    .inflate(R.layout.item_menu_option, binding.optionsContainer, false)
+                optionView.findViewById<android.widget.TextView>(R.id.optionNameTextView).text = option.name
+                optionView.setOnClickListener { viewModel.selectOption(option.id) }
+                binding.optionsContainer.addView(optionView)
+            }
+        } else {
+            // Cerrado sin elección: empty state del spec
+            addEmptyState(
+                icon = "–",
+                title = getString(R.string.no_choice_today),
+                subtitle = getString(R.string.no_choice_today_hint)
+            )
         }
     }
 
@@ -693,9 +594,6 @@ class DailyMenuFragment : Fragment() {
         // Cancelar trabajo de ocultación del banner
         infoBannerHideJob?.cancel()
         infoBannerHideJob = null
-        // Ocultar snackbar si existe
-        currentSnackbar?.dismiss()
-        currentSnackbar = null
         _binding = null
     }
 }

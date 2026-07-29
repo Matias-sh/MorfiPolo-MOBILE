@@ -1,75 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Card de opción de menú: toda la card es clickeable, radio a la derecha (spec rework) -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    style="@style/Widget.Morfipolo.Card"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
-    app:cardElevation="2dp"
-    app:strokeWidth="1dp"
-    app:strokeColor="@color/food_divider">
+    android:layout_marginBottom="@dimen/space_md"
+    android:clickable="true"
+    android:focusable="true"
+    android:minHeight="64dp"
+    app:cardBackgroundColor="@color/md_surface"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="0dp"
+    app:rippleColor="@color/md_ripple"
+    app:strokeColor="@color/md_outline_variant"
+    app:strokeWidth="1.5dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp">
-
-        <ImageView
-            android:id="@+id/selectedIndicator"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_check_bold"
-            android:visibility="gone"
-            app:tint="@color/food_secondary_green"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            android:contentDescription="Seleccionado" />
+        android:padding="18dp">
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="@dimen/space_md"
             android:orientation="vertical"
-            android:gravity="center_vertical"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="12dp"
-            app:layout_constraintStart_toEndOf="@id/selectedIndicator"
-            app:layout_constraintEnd_toStartOf="@id/optionButton"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent">
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/selectedIndicator"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
             <TextView
                 android:id="@+id/optionNameTextView"
-                style="@style/TextAppearance.Morfipolo.Subhead"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Opción 1: Hamburguesas con arroz"
-                android:textSize="15sp" />
+                android:lineSpacingMultiplier="1.2"
+                android:textColor="@color/md_on_surface"
+                android:textSize="15sp"
+                tools:text="Milanesa napolitana con puré de papas" />
 
             <TextView
                 android:id="@+id/statusMessageTextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Usted no selecciono una opcion el dia de hoy"
+                android:layout_marginTop="@dimen/space_xs"
+                android:textColor="@color/md_on_surface_variant"
                 android:textSize="12sp"
-                android:textColor="@color/food_text_secondary"
-                android:visibility="gone"
-                android:layout_marginTop="4dp" />
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/optionActionTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_xs"
+                android:text="@string/choose_action"
+                android:textColor="@color/md_primary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
         </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/optionButton"
-            style="@style/Widget.Material3.Button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/choose_option"
-            android:textSize="12sp"
-            android:textColor="@color/white"
-            app:icon="@android:drawable/ic_menu_add"
-            app:iconTint="@color/white"
+        <ImageView
+            android:id="@+id/selectedIndicator"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:contentDescription="@string/chosen"
+            android:src="@drawable/radio_circle_unchecked"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

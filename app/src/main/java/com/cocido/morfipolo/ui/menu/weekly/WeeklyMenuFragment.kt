@@ -18,9 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.R
 import com.cocido.morfipolo.databinding.FragmentWeeklyMenuBinding
-import com.cocido.morfipolo.domain.model.Menu
 import com.cocido.morfipolo.util.NetworkUtils
-import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
 class WeeklyMenuFragment : Fragment() {
@@ -28,15 +26,14 @@ class WeeklyMenuFragment : Fragment() {
     private var _binding: FragmentWeeklyMenuBinding? = null
     private val binding get() = _binding!!
 
-    private var infoBannerHideJob: kotlinx.coroutines.Job? = null
-    
+    private var hasLoadedOnce = false
+
     // BroadcastReceiver para escuchar actualizaciones del menú
     private val menuUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.cocido.morfipolo.MENU_UPDATED") {
                 android.util.Log.d("WeeklyMenuFragment", "📱 Recibido broadcast de actualización de menú")
-                // Recargar menús semanales
-                viewModel.loadWeeklyMenus()
+                viewModel.loadWeeklyMenus(forceReload = true)
             }
         }
     }
@@ -65,14 +62,12 @@ class WeeklyMenuFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Configurar insets para el header naranja - extender detrás de la barra de estado
-        // Aplicar padding solo al contenido (titleTextView) para que no quede debajo de la barra de estado
+        // Insets: correr el header debajo de la barra de estado
         ViewCompat.setOnApplyWindowInsetsListener(binding.titleTextView) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            // Ajustar marginTop para incluir el espacio de la barra de estado
             val layoutParams = v.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
             layoutParams?.let {
-                val originalMarginTop = 60 // dp del XML
+                val originalMarginTop = 24
                 val marginTopInPx = (originalMarginTop * resources.displayMetrics.density).toInt()
                 it.topMargin = marginTopInPx + systemBars.top
                 v.layoutParams = it
@@ -80,151 +75,21 @@ class WeeklyMenuFragment : Fragment() {
             insets
         }
 
-        // Configurar insets para el RecyclerView - aplicar padding inferior para evitar solapamiento con la barra de navegación
         ViewCompat.setOnApplyWindowInsetsListener(binding.menusRecyclerView) { v, insets ->
             val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
-            // Calcular altura de la BottomNavigationView de la app (aproximadamente 80dp + insets)
             val bottomNavHeightDp = 80f
             val bottomNavHeightPx = (bottomNavHeightDp * resources.displayMetrics.density).toInt()
-            // Padding total = insets del sistema + altura de la barra de navegación de la app + margen extra
             val totalBottomPadding = navigationBars.bottom + bottomNavHeightPx + (16 * resources.displayMetrics.density).toInt()
             v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, totalBottomPadding)
             insets
         }
 
+        // Elegir/cambiar elección siempre navega a "Hoy": es la única pantalla que
+        // vota, evitando el picker duplicado que tenía acá el diseño anterior.
         adapter = WeeklyMenuAdapter(
-            onMenuClick = { item ->
-                // Navegar al menú del día con la fecha seleccionada
-                android.util.Log.d("WeeklyMenuFragment", "Navegando al menú del día: ${item.menu.date}")
-                val bundle = Bundle().apply {
-                    putString("menuDate", item.menu.date)
-                }
+            onChangeSelection = { item ->
+                val bundle = Bundle().apply { putString("menuDate", item.menu.date) }
                 findNavController().navigate(R.id.action_weeklyMenuFragment_to_dailyMenuFragment, bundle)
-            },
-            onRemoveVote = { voteId, errorMessage ->
-                // Eliminar voto y recargar menús
-                lifecycleScope.launch {
-                    try {
-                        val app = requireActivity().application as MorfipoloApplication
-                        android.util.Log.d("WeeklyMenuFragment", "🗑️ Iniciando eliminación de voto: $voteId")
-                        val result = app.voteRepository.deleteVote(voteId)
-                        if (result.isSuccess) {
-                            android.util.Log.d("WeeklyMenuFragment", "✅ Voto eliminado exitosamente")
-                            // Pequeño delay para dar tiempo al servidor de procesar
-                            kotlinx.coroutines.delay(300)
-                            // Recargar menús para sincronizar estado
-                            viewModel.loadWeeklyMenus()
-                        } else {
-                            android.util.Log.e("WeeklyMenuFragment", "Error al eliminar voto")
-                            val exception = result.exceptionOrNull()
-                            val message = exception?.message ?: ""
-                            
-                            // Verificar si es un error de sesión expirada
-                            if (exception is com.cocido.morfipolo.data.remote.SessionExpiredException ||
-                                message.contains("sesión", ignoreCase = true) || 
-                                message.contains("session", ignoreCase = true)) {
-                                navigateToLogin()
-                                return@launch
-                            }
-                            
-                            // Mostrar mensaje descriptivo
-                            // Si hay un errorMessage del adapter (menú cerrado), usarlo
-                            // Si no, usar el mensaje del servidor o uno genérico descriptivo
-                            val infoMessage = when {
-                                errorMessage != null -> errorMessage
-                                message.contains("cerrado", ignoreCase = true) || 
-                                message.contains("horario", ignoreCase = true) || 
-                                message.contains("time", ignoreCase = true) -> {
-                                    "No se puede eliminar el voto. Solo puedes modificar tu elección de 08:00 a 11:00."
-                                }
-                                message.isNotEmpty() -> message
-                                else -> "No se puede eliminar el voto. Solo puedes modificar tu elección de 08:00 a 11:00."
-                            }
-                            showInfoBanner(infoMessage)
-                        }
-                    } catch (e: com.cocido.morfipolo.data.remote.SessionExpiredException) {
-                        android.util.Log.w("WeeklyMenuFragment", "Sesión expirada al eliminar voto")
-                        navigateToLogin()
-                    } catch (e: Exception) {
-                        android.util.Log.e("WeeklyMenuFragment", "Error al eliminar voto", e)
-                        val message = e.message ?: ""
-                        if (message.contains("sesión", ignoreCase = true) || 
-                            message.contains("session", ignoreCase = true)) {
-                            navigateToLogin()
-                        } else {
-                            // Mostrar mensaje descriptivo sobre el horario
-                            showInfoBanner("No se puede eliminar el voto. Solo puedes modificar tu elección de 08:00 a 11:00.")
-                        }
-                    }
-                }
-            },
-            onSelectOption = { menuId, optionId, errorMessage ->
-                // Seleccionar opción y recargar menús
-                lifecycleScope.launch {
-                    try {
-                        val app = requireActivity().application as MorfipoloApplication
-                        val userId = app.sessionManager.getCurrentUserId()
-                        if (userId != null) {
-                            android.util.Log.d("WeeklyMenuFragment", "🗳️ Iniciando selección de opción: $optionId para menú: $menuId")
-                            val result = app.voteRepository.createVoteOrReplace(optionId, menuId, userId)
-                            if (result.isSuccess) {
-                                android.util.Log.d("WeeklyMenuFragment", "✅ Opción seleccionada exitosamente")
-                                // Pequeño delay para dar tiempo al servidor de procesar
-                                kotlinx.coroutines.delay(300)
-                                // Recargar menús para sincronizar estado
-                                viewModel.loadWeeklyMenus()
-                            } else {
-                                android.util.Log.e("WeeklyMenuFragment", "Error al seleccionar opción")
-                                val exception = result.exceptionOrNull()
-                                val message = exception?.message ?: ""
-                                
-                                // Verificar si es un error de sesión expirada
-                                if (exception is com.cocido.morfipolo.data.remote.SessionExpiredException ||
-                                    message.contains("sesión", ignoreCase = true) || 
-                                    message.contains("session", ignoreCase = true)) {
-                                    navigateToLogin()
-                                    return@launch
-                                }
-                                
-                                // Mostrar mensaje descriptivo
-                                val infoMessage = when {
-                                    errorMessage != null -> errorMessage
-                                    message.contains("already voted", ignoreCase = true) || 
-                                    message.contains("ya tienes un voto", ignoreCase = true) -> {
-                                        // Si el servidor dice que ya hay un voto pero el cliente no lo detecta,
-                                        // recargar para sincronizar estado
-                                        android.util.Log.w("WeeklyMenuFragment", "⚠️ Servidor reporta voto existente, recargando estado...")
-                                        kotlinx.coroutines.delay(500)
-                                        viewModel.loadWeeklyMenus()
-                                        "Ya tienes un voto registrado. Recargando estado..."
-                                    }
-                                    message.contains("cerrado", ignoreCase = true) || 
-                                    message.contains("horario", ignoreCase = true) || 
-                                    message.contains("time", ignoreCase = true) -> {
-                                        "No se puede seleccionar. Solo puedes votar de 08:00 a 11:00."
-                                    }
-                                    message.isNotEmpty() -> message
-                                    else -> "No se puede seleccionar. Solo puedes votar de 08:00 a 11:00."
-                                }
-                                if (!infoMessage.contains("Recargando estado")) {
-                                    showInfoBanner(infoMessage)
-                                }
-                            }
-                        }
-                    } catch (e: com.cocido.morfipolo.data.remote.SessionExpiredException) {
-                        android.util.Log.w("WeeklyMenuFragment", "Sesión expirada al seleccionar opción")
-                        navigateToLogin()
-                    } catch (e: Exception) {
-                        android.util.Log.e("WeeklyMenuFragment", "Error al seleccionar opción", e)
-                        val message = e.message ?: ""
-                        if (message.contains("sesión", ignoreCase = true) || 
-                            message.contains("session", ignoreCase = true)) {
-                            navigateToLogin()
-                        } else {
-                            showInfoBanner("No se puede seleccionar. Solo puedes votar de 08:00 a 11:00.")
-                        }
-                    }
-                }
             }
         )
         binding.menusRecyclerView.layoutManager = LinearLayoutManager(requireContext())
@@ -233,9 +98,7 @@ class WeeklyMenuFragment : Fragment() {
         setupPullToRefresh()
         setupObservers()
         checkNetworkStatus()
-        
-        // Registrar BroadcastReceiver para escuchar actualizaciones del menú
-        // RECEIVER_NOT_EXPORTED porque solo escuchamos broadcasts internos de nuestra app
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             requireContext().registerReceiver(
                 menuUpdateReceiver,
@@ -248,65 +111,35 @@ class WeeklyMenuFragment : Fragment() {
                 IntentFilter("com.cocido.morfipolo.MENU_UPDATED")
             )
         }
-        
+
         viewModel.loadWeeklyMenus()
+        hasLoadedOnce = true
     }
-    
-    private fun setupPullToRefresh() {
-        binding.swipeRefreshLayout.setColorSchemeResources(
-            R.color.comedor_brown_primary,
-            R.color.comedor_accent_warm,
-            R.color.comedor_success
-        )
-        binding.swipeRefreshLayout.setOnRefreshListener {
-            // Forzar recarga completa
+
+    override fun onResume() {
+        super.onResume()
+        // El usuario puede haber votado en "Hoy" y vuelto acá por atrás: el
+        // caché de 5 min de este ViewModel podría mostrar el estado viejo.
+        if (hasLoadedOnce) {
             viewModel.loadWeeklyMenus(forceReload = true)
         }
     }
-    
-    private fun checkNetworkStatus() {
-        val isOnline = NetworkUtils.isNetworkAvailable(requireContext())
-        // binding.offlineIndicator.visibility = if (!isOnline) View.VISIBLE else View.GONE
-    }
-    
-    private var currentSnackbar: Snackbar? = null
-    
-    private fun showErrorWithRetry(message: String, retryAction: () -> Unit) {
-        // Ocultar snackbar anterior si existe
-        currentSnackbar?.dismiss()
-        
-        // Usar duración de 4 segundos
-        val snackbar = Snackbar.make(binding.root, message, 4000)
-        snackbar.setAction(getString(R.string.error_retry)) {
-            retryAction()
+
+    private fun setupPullToRefresh() {
+        binding.swipeRefreshLayout.setColorSchemeResources(R.color.md_primary)
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            viewModel.loadWeeklyMenus(forceReload = true)
         }
-        snackbar.setActionTextColor(resources.getColor(R.color.comedor_brown_primary, null))
-        snackbar.addCallback(object : Snackbar.Callback() {
-            override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
-                currentSnackbar = null
-            }
-        })
-        currentSnackbar = snackbar
-        snackbar.show()
     }
-    
-    private fun showTemporaryMessage(message: String) {
-        // Ocultar snackbar anterior si existe
-        currentSnackbar?.dismiss()
-        
-        val snackbar = Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG)
-        snackbar.addCallback(object : Snackbar.Callback() {
-            override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
-                currentSnackbar = null
-            }
-        })
-        currentSnackbar = snackbar
-        snackbar.show()
+
+    private fun checkNetworkStatus() {
+        // Sin banner dedicado en esta pantalla: los errores de red van al
+        // estado de error inline (showLoadErrorState).
+        NetworkUtils.isNetworkAvailable(requireContext())
     }
 
     private fun setupObservers() {
         lifecycleScope.launch {
-            // Observar cuando la sesión expira
             viewModel.sessionExpired.collect { expired ->
                 if (expired) {
                     android.util.Log.w("WeeklyMenuFragment", "Sesión expirada, redirigiendo al login")
@@ -314,74 +147,47 @@ class WeeklyMenuFragment : Fragment() {
                 }
             }
         }
-        
+
         lifecycleScope.launch {
             viewModel.uiState.collect { state ->
-                binding.swipeRefreshLayout.isRefreshing = false
-                
-                when (state) {
-                    is WeeklyMenuUiState.Loading -> {
-                        if (!binding.swipeRefreshLayout.isRefreshing) {
-                            binding.progressBar.visibility = View.VISIBLE
+                _binding?.let { currentBinding ->
+                    currentBinding.swipeRefreshLayout.isRefreshing = false
+
+                    when (state) {
+                        is WeeklyMenuUiState.Loading -> {
+                            if (!currentBinding.swipeRefreshLayout.isRefreshing) {
+                                currentBinding.progressBar.visibility = View.VISIBLE
+                            }
+                            currentBinding.menusRecyclerView.visibility = View.GONE
+                            currentBinding.emptyStateLayout.visibility = View.GONE
                         }
-                        binding.menusRecyclerView.visibility = View.GONE
-                        binding.emptyStateLayout.visibility = View.GONE
-                        android.util.Log.d("WeeklyMenuFragment", "Cargando menús...")
-                        checkNetworkStatus()
-                    }
-                    is WeeklyMenuUiState.Success -> {
-                        binding.progressBar.visibility = View.GONE
-                        // binding.offlineIndicator.visibility = View.GONE
-                        
-                        if (state.menus.isEmpty()) {
-                            binding.menusRecyclerView.visibility = View.GONE
-                            binding.emptyStateLayout.visibility = View.VISIBLE
-                        } else {
-                            binding.menusRecyclerView.visibility = View.VISIBLE
-                            binding.emptyStateLayout.visibility = View.GONE
-                            
-                            android.util.Log.d("WeeklyMenuFragment", "Menús cargados exitosamente: ${state.menus.size}")
-                            adapter.submitList(state.menus) {
-                                android.util.Log.d("WeeklyMenuFragment", "Adapter actualizado con ${state.menus.size} menús")
+                        is WeeklyMenuUiState.Success -> {
+                            currentBinding.progressBar.visibility = View.GONE
+
+                            if (state.menus.isEmpty()) {
+                                currentBinding.menusRecyclerView.visibility = View.GONE
+                                showEmptyState(
+                                    icon = "···",
+                                    title = getString(R.string.empty_state_title),
+                                    subtitle = getString(R.string.empty_state_message)
+                                )
+                            } else {
+                                currentBinding.menusRecyclerView.visibility = View.VISIBLE
+                                currentBinding.emptyStateLayout.visibility = View.GONE
+                                adapter.submitList(state.menus)
                             }
                         }
-                    }
-                    is WeeklyMenuUiState.Error -> {
-                        binding.progressBar.visibility = View.GONE
-                        binding.menusRecyclerView.visibility = View.GONE
-                        binding.emptyStateLayout.visibility = View.GONE
-                        checkNetworkStatus()
-                        
-                        android.util.Log.e("WeeklyMenuFragment", "Error al cargar menús: ${state.message}")
-                        
-                        // Detectar tipo de error
-                        when {
-                            state.message.contains("sesión", ignoreCase = true) || 
-                            state.message.contains("session", ignoreCase = true) -> {
-                                // Error de sesión expirada, redirigir al login
-                                navigateToLogin()
-                                return@collect
-                            }
-                            state.message.contains("08:00", ignoreCase = true) ||
-                            state.message.contains("11:00", ignoreCase = true) ||
-                            state.message.contains("horario", ignoreCase = true) ||
-                            state.message.contains("cerrado", ignoreCase = true) ||
-                            state.message.contains("eliminar el voto", ignoreCase = true) ||
-                            state.message.contains("votar", ignoreCase = true) -> {
-                                // Error de horario - mostrar banner informativo sin reintentar
-                                showInfoBanner(state.message)
-                            }
-                            !NetworkUtils.isNetworkAvailable(requireContext()) -> {
-                                // Error de conexión - mostrar con reintentar
-                                showErrorWithRetry(getString(R.string.error_no_connection)) {
-                                    viewModel.loadWeeklyMenus()
+                        is WeeklyMenuUiState.Error -> {
+                            currentBinding.progressBar.visibility = View.GONE
+                            currentBinding.menusRecyclerView.visibility = View.GONE
+
+                            when {
+                                state.message.contains("sesión", ignoreCase = true) ||
+                                state.message.contains("session", ignoreCase = true) -> {
+                                    navigateToLogin()
+                                    return@collect
                                 }
-                            }
-                            else -> {
-                                // Otros errores - mostrar con reintentar
-                                showErrorWithRetry(state.message) {
-                                    viewModel.loadWeeklyMenus()
-                                }
+                                else -> showLoadErrorState()
                             }
                         }
                     }
@@ -389,7 +195,29 @@ class WeeklyMenuFragment : Fragment() {
             }
         }
     }
-    
+
+    private fun showEmptyState(icon: String, title: String, subtitle: String, onRetry: (() -> Unit)? = null) {
+        binding.emptyStateLayout.visibility = View.VISIBLE
+        binding.emptyIconText.text = icon
+        binding.emptyTitle.text = title
+        binding.emptySubtitle.text = subtitle
+        if (onRetry != null) {
+            binding.emptyRetryButton.visibility = View.VISIBLE
+            binding.emptyRetryButton.setOnClickListener { onRetry() }
+        } else {
+            binding.emptyRetryButton.visibility = View.GONE
+        }
+    }
+
+    private fun showLoadErrorState() {
+        showEmptyState(
+            icon = "!",
+            title = getString(R.string.menu_load_error_title),
+            subtitle = getString(R.string.menu_load_error_hint),
+            onRetry = { viewModel.loadWeeklyMenus(forceReload = true) }
+        )
+    }
+
     private fun navigateToLogin() {
         val intent = android.content.Intent(requireContext(), com.cocido.morfipolo.ui.login.LoginActivity::class.java)
         intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -397,61 +225,13 @@ class WeeklyMenuFragment : Fragment() {
         requireActivity().finish()
     }
 
-    private fun showInfoBanner(message: String) {
-        // Cancelar trabajo anterior si existe
-        infoBannerHideJob?.cancel()
-        
-        binding.infoBannerText.text = message
-        binding.infoBannerIcon.setImageResource(android.R.drawable.ic_dialog_info)
-        binding.infoBanner.setCardBackgroundColor(resources.getColor(R.color.comedor_accent_warm, null))
-        
-        // Mostrar con animación suave
-        if (binding.infoBanner.visibility != View.VISIBLE) {
-            binding.infoBanner.alpha = 0f
-            binding.infoBanner.visibility = View.VISIBLE
-            binding.infoBanner.animate()
-                .alpha(1f)
-                .setDuration(300)
-                .start()
-        }
-        
-        // Ocultar automáticamente después de 5 segundos
-        infoBannerHideJob = lifecycleScope.launch {
-            kotlinx.coroutines.delay(5000) // 5 segundos
-            hideInfoBanner()
-        }
-    }
-    
-    private fun hideInfoBanner() {
-        // Cancelar trabajo de ocultación si existe
-        infoBannerHideJob?.cancel()
-        infoBannerHideJob = null
-        
-        if (binding.infoBanner.visibility == View.VISIBLE) {
-            binding.infoBanner.animate()
-                .alpha(0f)
-                .setDuration(300)
-                .withEndAction {
-                    binding.infoBanner.visibility = View.GONE
-                }
-                .start()
-        }
-    }
-
     override fun onDestroyView() {
         super.onDestroyView()
-        // Desregistrar BroadcastReceiver
         try {
             requireContext().unregisterReceiver(menuUpdateReceiver)
         } catch (e: Exception) {
             // El receiver puede no estar registrado, ignorar
         }
-        // Cancelar trabajo de ocultación del banner
-        infoBannerHideJob?.cancel()
-        infoBannerHideJob = null
-        // Ocultar snackbar si existe
-        currentSnackbar?.dismiss()
-        currentSnackbar = null
         _binding = null
     }
 }
@@ -470,9 +250,3 @@ class WeeklyMenuViewModelFactory(
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
-
-
-
-
-
-
