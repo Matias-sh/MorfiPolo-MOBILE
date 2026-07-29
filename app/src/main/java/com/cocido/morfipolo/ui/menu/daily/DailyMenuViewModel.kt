@@ -186,14 +186,26 @@ class DailyMenuViewModel(
                             return@launch
                         }
                         
-                        // Mostrar mensaje de error si es por horario
-                        if (errorMessage?.contains("cerrado", ignoreCase = true) == true ||
+                        // Mostrar el error siempre (antes se perdía en silencio si el
+                        // mensaje no calzaba con "cerrado/horario/time/08:00": el usuario
+                        // tocaba una opción y no pasaba nada visible).
+                        val currentState = _uiState.value
+                        if (currentState is DailyMenuUiState.Success) {
+                            _uiState.value = currentState.copy(infoMessage = errorMessage)
+                        }
+
+                        // createVoteOrReplace puede fallar DESPUÉS de haber borrado el voto
+                        // viejo (p.ej. si el create de reintento falla). Resincronizar con el
+                        // servidor para que la UI no siga mostrando la selección anterior
+                        // como si siguiera vigente.
+                        val isHorarioError = errorMessage?.contains("cerrado", ignoreCase = true) == true ||
                             errorMessage?.contains("horario", ignoreCase = true) == true ||
                             errorMessage?.contains("time", ignoreCase = true) == true ||
-                            errorMessage?.contains("08:00", ignoreCase = true) == true) {
-                            val currentState = _uiState.value
-                            if (currentState is DailyMenuUiState.Success) {
-                                _uiState.value = currentState.copy(infoMessage = errorMessage)
+                            errorMessage?.contains("08:00", ignoreCase = true) == true
+                        if (!isHorarioError) {
+                            val menuId = (currentState as? DailyMenuUiState.Success)?.menu?.id
+                            if (menuId != null) {
+                                refreshUserVoteOnly(menuId, userId)
                             }
                         }
                     }
@@ -275,15 +287,11 @@ class DailyMenuViewModel(
                                 return@launch
                             }
                             
-                            // Mostrar mensaje de error si es por horario
-                            if (errorMessage?.contains("cerrado", ignoreCase = true) == true ||
-                                errorMessage?.contains("horario", ignoreCase = true) == true ||
-                                errorMessage?.contains("time", ignoreCase = true) == true ||
-                                errorMessage?.contains("08:00", ignoreCase = true) == true) {
-                                val currentState = _uiState.value
-                                if (currentState is DailyMenuUiState.Success) {
-                                    _uiState.value = currentState.copy(infoMessage = errorMessage)
-                                }
+                            // Mostrar el error siempre, no solo cuando el texto matchea
+                            // "cerrado/horario/time/08:00" (antes se perdía en silencio).
+                            val currentState = _uiState.value
+                            if (currentState is DailyMenuUiState.Success) {
+                                _uiState.value = currentState.copy(infoMessage = errorMessage)
                             }
                         }
                     } else {
@@ -352,54 +360,9 @@ class DailyMenuViewModel(
         }
     }
     
-    private fun isWithinSelectionTime(menu: Menu): Boolean {
-        if (menu.status != "open") return false
+    private fun isWithinSelectionTime(menu: Menu) = com.cocido.morfipolo.util.MenuTimeUtils.isWithinSelectionTime(menu)
 
-        try {
-            // Horario fijo: 08:00 - 11:00
-            val now = Calendar.getInstance()
-            val currentHour = now.get(Calendar.HOUR_OF_DAY)
-            val currentMinute = now.get(Calendar.MINUTE)
-
-            val startHour = 8
-            val startMin = 0
-            val endHour = 11
-            val endMin = 0
-
-            val currentTimeInMinutes = currentHour * 60 + currentMinute
-            val startTimeInMinutes = startHour * 60 + startMin
-            val endTimeInMinutes = endHour * 60 + endMin
-
-            return currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes
-        } catch (e: Exception) {
-            return false
-        }
-    }
-    
-    private fun isMenuToday(menu: Menu): Boolean {
-        return try {
-            val today = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-            val menuDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(menu.date)
-            
-            menuDate?.let {
-                val menuCalendar = Calendar.getInstance().apply {
-                    time = it
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-                menuCalendar.timeInMillis == today.timeInMillis
-            } ?: false
-        } catch (e: Exception) {
-            false
-        }
-    }
+    private fun isMenuToday(menu: Menu) = com.cocido.morfipolo.util.MenuTimeUtils.isMenuToday(menu)
 }
 
 sealed class DailyMenuUiState {

@@ -64,7 +64,7 @@ class ProfileFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.uiState.collect { state ->
                 when (state) {
                     is ProfileUiState.Loading -> {
@@ -87,7 +87,7 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.passwordChangeState.collect { state ->
                 when (state) {
                     is PasswordChangeState.Idle -> {}

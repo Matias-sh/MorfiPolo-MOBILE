@@ -5,6 +5,9 @@ import com.cocido.morfipolo.data.local.database.entity.MenuEntity
 import com.cocido.morfipolo.data.remote.SessionExpiredException
 import com.cocido.morfipolo.data.remote.api.MorfiPoloApiService
 import com.cocido.morfipolo.domain.model.Menu
+import com.cocido.morfipolo.domain.model.MenuOption
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import retrofit2.HttpException
@@ -17,7 +20,8 @@ class MenuRepository(
     private val apiService: MorfiPoloApiService
 ) {
     private val menuDao = database.menuDao()
-    
+    private val gson = Gson()
+
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val isoDateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).apply {
         timeZone = TimeZone.getTimeZone("UTC")
@@ -197,14 +201,24 @@ class MenuRepository(
             descripcion = menu.description,
             horarioInicio = menu.start_time,
             horarioFin = menu.end_time,
-            estado = menu.status
+            estado = menu.status,
+            opcionesJson = menu.options?.let { gson.toJson(it) }
         )
     }
 
     private fun entityToMenu(entity: MenuEntity): Menu {
         // Convertir timestamp a date string
         val dateString = dateFormat.format(Date(entity.fecha))
-        
+
+        val options = entity.opcionesJson?.let {
+            try {
+                val type = object : TypeToken<List<MenuOption>>() {}.type
+                gson.fromJson<List<MenuOption>>(it, type)
+            } catch (e: Exception) {
+                null
+            }
+        }
+
         return Menu(
             id = entity.id,
             date = dateString,
@@ -214,7 +228,7 @@ class MenuRepository(
             status = entity.estado,
             created_at = "",
             updated_at = "",
-            options = emptyList() // Las opciones no se guardan en la entidad por ahora
+            options = options // Antes siempre emptyList(): el fallback offline mostraba "sin opciones"
         )
     }
 }

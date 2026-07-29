@@ -1,6 +1,7 @@
 package com.cocido.morfipolo.data.repository
 
 import com.cocido.morfipolo.data.remote.SessionExpiredException
+import com.cocido.morfipolo.data.remote.TemporaryServerException
 import com.cocido.morfipolo.data.remote.api.MorfiPoloApiService
 import com.cocido.morfipolo.domain.model.CreateVoteRequest
 import com.cocido.morfipolo.domain.model.Vote
@@ -60,6 +61,9 @@ class VoteRepository(
             Result.failure(Exception(errorMessage))
         } catch (e: IOException) {
             Result.failure(Exception("No se pudo conectar al servidor. Verifica tu conexión a internet."))
+        } catch (e: TemporaryServerException) {
+            // Antes caía en el catch genérico de abajo y perdía su mensaje específico.
+            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(Exception("No se pudo registrar tu elección. Intenta de nuevo."))
         }
@@ -99,6 +103,8 @@ class VoteRepository(
             Result.failure(Exception(errorMessage))
         } catch (e: IOException) {
             Result.failure(Exception("No se pudo conectar al servidor. Verifica tu conexión a internet."))
+        } catch (e: TemporaryServerException) {
+            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(Exception("No se pudo quitar tu elección. Intenta de nuevo."))
         }
@@ -200,11 +206,13 @@ class VoteRepository(
             Result.failure(Exception(errorMessage))
         } catch (e: java.io.IOException) {
             Result.failure(Exception("No se pudo conectar al servidor. Verifica tu conexión a internet."))
+        } catch (e: TemporaryServerException) {
+            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(Exception("No se pudo cargar la información. Intenta de nuevo."))
         }
     }
-    
+
     /**
      * Obtiene múltiples páginas de votos y filtra por userId localmente.
      * 
@@ -335,16 +343,49 @@ class VoteRepository(
         }
     }
     
+    /**
+     * Crea un voto, reemplazando el existente si lo hay.
+     *
+     * Antes esto SIEMPRE buscaba y borraba el voto previo antes de crear el
+     * nuevo, ignorando además el resultado del borrado: si el delete fallaba,
+     * igual se intentaba crear (y fallaba con un "ya votaste" confuso), y si
+     * el create fallaba después de un delete exitoso, el usuario quedaba sin
+     * ningún voto sin que la UI se enterara.
+     *
+     * Ahora se intenta crear directo primero. Sin voto previo (el caso más
+     * común: elegir por primera vez) esto es una sola llamada y no hay
+     * ventana de "sin voto" en absoluto. Solo si el servidor responde
+     * "ya tenés un voto" se busca y borra el existente, verificando el
+     * resultado del borrado antes de reintentar el create.
+     */
     suspend fun createVoteOrReplace(optionId: String, menuId: String, userId: String): Result<Vote> {
+        val firstAttempt = createVote(optionId, menuId)
+        if (firstAttempt.isSuccess) return firstAttempt
+
+        val message = firstAttempt.exceptionOrNull()?.message.orEmpty()
+        val isAlreadyVotedConflict = message.contains("Ya tienes un voto", ignoreCase = true) ||
+            message.contains("already voted", ignoreCase = true)
+        if (!isAlreadyVotedConflict) return firstAttempt
+
         return try {
-            // OPTIMIZACIÓN: Para el menú del día (reciente), buscar solo en 3 páginas
-            // Esto es mucho más rápido que buscar en todas las páginas
             val existingVote = getUserVoteForMenu(menuId, userId, maxPagesToSearch = 3)
-            existingVote?.let {
-                deleteVote(it.id)
+            if (existingVote == null) {
+                return Result.failure(
+                    Exception("Ya tenés una elección registrada, pero no la encontramos para cambiarla. Volvé a intentar en unos segundos.")
+                )
             }
-            
-            // Crear nuevo voto
+            if (existingVote.option.id == optionId) {
+                // Ya es la opción elegida: no hay nada que reemplazar.
+                return Result.success(existingVote)
+            }
+
+            val deleteResult = deleteVote(existingVote.id)
+            if (deleteResult.isFailure) {
+                return Result.failure(
+                    deleteResult.exceptionOrNull() ?: Exception("No se pudo actualizar tu elección. Intenta de nuevo.")
+                )
+            }
+
             createVote(optionId, menuId)
         } catch (e: Exception) {
             Result.failure(e)

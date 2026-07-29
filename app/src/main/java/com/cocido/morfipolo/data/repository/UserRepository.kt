@@ -37,12 +37,10 @@ class UserRepository(
                         loginResponse.refreshToken
                     )
                     
-                    // Guardar sesión con password temporal para refresh token
                     sessionManager.saveSession(
                         user.id,
                         user.dni,
-                        "${user.name} ${user.lastName}",
-                        password
+                        "${user.name} ${user.lastName}"
                     )
                     
                     // Guardar en base de datos local
@@ -119,13 +117,6 @@ class UserRepository(
             val response = apiService.changePassword(request)
             
             if (response.isSuccessful) {
-                // Actualizar la contraseña guardada en SessionManager para el refresh token
-                sessionManager.saveSession(
-                    userId = userId,
-                    dni = sessionManager.getCurrentUserDni() ?: "",
-                    name = sessionManager.getCurrentUserName() ?: "",
-                    password = newPassword
-                )
                 Result.success(true)
             } else {
                 val errorMessage = when (response.code()) {

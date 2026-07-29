@@ -186,5 +186,15 @@ object DatabaseMigrations {
             }
         }
     }
+
+    /**
+     * Migración 2 a 3: agrega opcionesJson a menus para que el caché offline
+     * conserve las opciones de voto (antes se perdían al leer desde caché).
+     */
+    val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE menus ADD COLUMN opcionesJson TEXT")
+        }
+    }
 }
 

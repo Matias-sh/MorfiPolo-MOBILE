@@ -1008,28 +1008,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
      * Verifica si la hora actual está dentro del tiempo de selección del menú.
      * Horario fijo: 08:00 - 11:00
      */
-    private fun isWithinSelectionTime(menu: com.cocido.morfipolo.domain.model.Menu): Boolean {
-        if (menu.status != "open") return false
-        
-        return try {
-            // Horario fijo: 08:00 - 11:00
-            val now = Calendar.getInstance()
-            val currentHour = now.get(Calendar.HOUR_OF_DAY)
-            val currentMinute = now.get(Calendar.MINUTE)
-
-            val startHour = 8
-            val startMin = 0
-            val endHour = 11
-            val endMin = 0
-
-            val currentTimeInMinutes = currentHour * 60 + currentMinute
-            val startTimeInMinutes = startHour * 60 + startMin
-            val endTimeInMinutes = endHour * 60 + endMin
-
-            currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes
-        } catch (e: Exception) {
-            false
-        }
-    }
+    private fun isWithinSelectionTime(menu: com.cocido.morfipolo.domain.model.Menu): Boolean =
+        com.cocido.morfipolo.util.MenuTimeUtils.isWithinSelectionTime(menu)
 }
 

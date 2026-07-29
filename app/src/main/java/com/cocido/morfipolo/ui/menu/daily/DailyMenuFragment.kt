@@ -210,7 +210,10 @@ class DailyMenuFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        lifecycleScope.launch {
+        // viewLifecycleOwner (no el Fragment) evita colectores duplicados si
+        // onCreateView/onViewCreated se vuelven a ejecutar sobre la misma
+        // instancia de Fragment (back stack) sin pasar por onDestroy real.
+        viewLifecycleOwner.lifecycleScope.launch {
             // Observar cuando la sesión expira
             viewModel.sessionExpired.collect { expired ->
                 if (expired) {
@@ -219,8 +222,8 @@ class DailyMenuFragment : Fragment() {
                 }
             }
         }
-        
-        lifecycleScope.launch {
+
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.uiState.collect { state ->
                 _binding?.let { currentBinding ->
                     currentBinding.swipeRefreshLayout.isRefreshing = false
