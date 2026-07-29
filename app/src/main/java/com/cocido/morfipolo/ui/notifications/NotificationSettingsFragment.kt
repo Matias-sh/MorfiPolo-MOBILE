@@ -1,11 +1,18 @@
 package com.cocido.morfipolo.ui.notifications
 
+import android.Manifest
 import android.app.AlertDialog
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TimePicker
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
@@ -16,6 +23,7 @@ import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.R
 import com.cocido.morfipolo.databinding.FragmentNotificationSettingsBinding
 import com.cocido.morfipolo.domain.model.CustomNotification
+import com.cocido.morfipolo.util.alarm.AlarmScheduler
 import com.google.android.material.chip.Chip
 import kotlinx.coroutines.launch
 
@@ -86,8 +94,85 @@ class NotificationSettingsFragment : Fragment() {
         setupObservers()
         setupListeners()
         setupBackButton()
+        setupPermissionsCard()
     }
-    
+
+    override fun onResume() {
+        super.onResume()
+        // El usuario puede volver de Ajustes después de conceder un permiso.
+        refreshPermissionsCard()
+    }
+
+    /**
+     * Antes esta pantalla no mostraba el estado real de los permisos del
+     * sistema: se podía tener todo "activado" acá adentro mientras Android
+     * bloqueaba las notificaciones o las alarmas exactas en silencio.
+     */
+    private fun setupPermissionsCard() {
+        binding.notificationPermissionChip.setOnClickListener {
+            openAppNotificationSettings()
+        }
+        binding.exactAlarmAction.setOnClickListener {
+            openExactAlarmSettings()
+        }
+        refreshPermissionsCard()
+    }
+
+    private fun refreshPermissionsCard() {
+        val context = context ?: return
+
+        val notificationsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+        if (notificationsGranted) {
+            binding.notificationPermissionChip.text = getString(R.string.permission_allowed)
+            binding.notificationPermissionChip.setBackgroundResource(R.drawable.chip_open)
+            binding.notificationPermissionChip.setTextColor(
+                ContextCompat.getColor(context, R.color.chip_open_text)
+            )
+        } else {
+            binding.notificationPermissionChip.text = getString(R.string.permission_blocked)
+            binding.notificationPermissionChip.setBackgroundResource(R.drawable.chip_error)
+            binding.notificationPermissionChip.setTextColor(
+                ContextCompat.getColor(context, R.color.chip_error_text)
+            )
+        }
+
+        // Alarmas exactas: solo relevante en Android 12+; en versiones previas
+        // no existe el permiso y las alarmas son exactas por defecto.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val exactAlarmsGranted = AlarmScheduler.canScheduleExact(context)
+            binding.exactAlarmRow.visibility = if (exactAlarmsGranted) View.GONE else View.VISIBLE
+            binding.exactAlarmDivider.visibility = binding.exactAlarmRow.visibility
+        } else {
+            binding.exactAlarmRow.visibility = View.GONE
+            binding.exactAlarmDivider.visibility = View.GONE
+        }
+    }
+
+    private fun openAppNotificationSettings() {
+        val context = context ?: return
+        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        } else {
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(Uri.fromParts("package", context.packageName, null))
+        }
+        startActivity(intent)
+    }
+
+    private fun openExactAlarmSettings() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val context = context ?: return
+        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+            .setData(Uri.fromParts("package", context.packageName, null))
+        startActivity(intent)
+    }
+
     private fun setupBackButton() {
         binding.backButton.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
@@ -108,7 +193,7 @@ class NotificationSettingsFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.uiState.collect { state ->
                 when (state) {
                     is NotificationSettingsUiState.Loading -> {

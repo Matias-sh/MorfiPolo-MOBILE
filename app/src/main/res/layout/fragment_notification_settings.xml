@@ -4,53 +4,147 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/food_background_light"
+    android:background="@color/md_surface_screen"
     tools:context=".ui.notifications.NotificationSettingsFragment">
-
-    <View
-        android:id="@+id/headerBackground"
-        android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:background="@drawable/background_rect_curved_bottom"
-        android:backgroundTint="@color/food_primary_orange"
-        app:layout_constraintTop_toTopOf="parent" />
 
     <ImageButton
         android:id="@+id/backButton"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="16dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Volver"
         android:src="@drawable/ic_arrow_back"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="@color/md_on_surface_variant" />
 
     <TextView
         android:id="@+id/titleTextView"
-        style="@style/TextAppearance.Morfipolo.Headline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:text="@string/notification_settings"
+        android:textColor="@color/md_on_surface"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="@id/backButton"
+        app:layout_constraintStart_toEndOf="@id/backButton"
+        app:layout_constraintTop_toTopOf="@id/backButton" />
+
+    <!-- Permisos del sistema: el toggle en-app puede estar "activado" mientras
+         el SO bloquea todo silenciosamente. Antes esto no se mostraba en ningún
+         lado. -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/permissionsCard"
+        style="@style/Widget.Morfipolo.Card"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:gravity="center"
-        android:text="Notificaciones"
-        android:textColor="@color/white"
-        android:textSize="28sp"
+        android:layout_marginHorizontal="@dimen/space_xl"
+        android:layout_marginTop="@dimen/space_lg"
+        app:cardCornerRadius="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/backButton">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/space_lg">
+
+            <TextView
+                style="@style/TextAppearance.Morfipolo.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_sm"
+                android:text="@string/reminders_permissions_section" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:minHeight="@dimen/touch_target_min">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/reminders_system_notifications"
+                    android:textColor="@color/md_on_surface"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/notificationPermissionChip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/chip_open"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="5dp"
+                    android:textColor="@color/chip_open_text"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true"
+                    tools:text="Permitidas" />
+            </LinearLayout>
+
+            <View
+                android:id="@+id/exactAlarmDivider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="@dimen/space_sm"
+                android:background="@color/md_divider"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/exactAlarmRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:minHeight="@dimen/touch_target_min"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/exact_alarms_label"
+                    android:textColor="@color/md_on_surface"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/exactAlarmAction"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/chip_pending"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="5dp"
+                    android:text="@string/exact_alarms_grant"
+                    android:textColor="@color/chip_pending_text"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/notificationsRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="16dp"
+        android:paddingHorizontal="@dimen/space_xl"
+        android:paddingTop="@dimen/space_lg"
         android:paddingBottom="100dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/headerBackground"
+        app:layout_constraintTop_toBottomOf="@id/permissionsCard"
         tools:listitem="@layout/item_notification" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -59,7 +153,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="24dp"
         android:contentDescription="@string/add_notification"
-        app:backgroundTint="@color/food_primary_orange"
+        app:backgroundTint="@color/md_primary"
         app:srcCompat="@android:drawable/ic_input_add"
         app:tint="@color/white"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -69,7 +163,7 @@
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:indeterminateTint="@color/food_primary_orange"
+        android:indeterminateTint="@color/md_primary"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -80,41 +174,51 @@
         android:id="@+id/emptyStateLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
         android:gravity="center_horizontal"
-        android:paddingHorizontal="32dp"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/space_2xl"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/headerBackground">
+        app:layout_constraintTop_toBottomOf="@id/permissionsCard"
+        app:layout_constraintVertical_bias="0.3">
 
-        <ImageView
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:layout_gravity="center_horizontal"
-            android:src="@drawable/ic_notifications_empty"
-            android:contentDescription="Estado vacío" />
-            
+        <FrameLayout
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:background="@drawable/empty_state_circle">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="🔔"
+                android:textSize="24sp" />
+        </FrameLayout>
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:text="No hay notificaciones configuradas"
-            style="@style/TextAppearance.Morfipolo.Headline"
+            android:layout_marginTop="@dimen/space_md"
             android:gravity="center"
+            android:text="No hay recordatorios configurados"
             android:textAlignment="center"
-            android:layout_marginTop="24dp" />
-            
+            android:textColor="@color/md_on_surface"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:text="Toca el botón + para agregar una notificación"
+            android:layout_marginTop="@dimen/space_sm"
             android:gravity="center"
+            android:text="Tocá el botón + para agregar uno"
             android:textAlignment="center"
-            android:layout_marginTop="12dp"
-            android:textColor="@color/food_text_secondary" />
+            android:textColor="@color/md_text_muted"
+            android:textSize="13sp" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

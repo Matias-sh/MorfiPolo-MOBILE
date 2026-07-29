@@ -4,36 +4,36 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
+    android:layout_marginBottom="@dimen/space_md"
     style="@style/Widget.Morfipolo.Card"
-    app:cardElevation="2dp">
+    app:cardCornerRadius="16dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp">
+        android:padding="@dimen/space_lg">
 
         <TextView
             android:id="@+id/timeTextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="9:00 AM"
-            android:textSize="24sp"
+            android:textColor="@color/md_on_surface"
+            android:textSize="22sp"
             android:textStyle="bold"
-            android:textColor="@color/food_text_primary"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="9:00 AM" />
 
         <TextView
             android:id="@+id/daysTextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Lun, Mar, Mié, Jue, Vie"
-            android:textSize="14sp"
-            android:textColor="@color/food_text_secondary"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/md_text_muted"
+            android:textSize="13sp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/timeTextView" />
+            app:layout_constraintTop_toBottomOf="@id/timeTextView"
+            tools:text="Lun, Mar, Mié, Jue, Vie" />
 
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/enabledSwitch"
@@ -41,9 +41,9 @@
             android:layout_height="wrap_content"
             app:thumbTint="@color/switch_thumb_selector"
             app:trackTint="@color/switch_track_selector"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

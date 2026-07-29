@@ -502,10 +502,13 @@ class MenuWidgetProvider : AppWidgetProvider() {
             views.setViewVisibility(R.id.widgetStatusTextView, View.VISIBLE)
             views.setTextViewText(R.id.widgetStatusTextView, statusText)
             try {
+                // Antes hardcodeaba hex propios ("Verde/Rojo Comedor") independientes
+                // de colors.xml; ahora usa los mismos tokens que el resto de la app
+                // (y "Cerrado" ya no es rojo, es neutral).
                 val statusColor = if (isActuallyOpen) {
-                    0xFF6B8E23.toInt() // Verde Comedor
+                    androidx.core.content.ContextCompat.getColor(context, R.color.chip_open_dot)
                 } else {
-                    0xFFC85A5A.toInt() // Rojo Comedor
+                    androidx.core.content.ContextCompat.getColor(context, R.color.chip_closed_dot)
                 }
                 views.setInt(R.id.widgetStatusTextView, "setBackgroundColor", statusColor)
                 android.util.Log.d(TAG, "showMenuState: Estado del menú configurado: $statusText")
