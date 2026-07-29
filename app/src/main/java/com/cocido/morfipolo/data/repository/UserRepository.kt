@@ -86,7 +86,6 @@ class UserRepository(
                     lastName = nameParts.getOrNull(1) ?: "",
                     email = userEntity.email ?: "",
                     dni = userEntity.dni,
-                    dependence = "",
                     birthDate = "",
                     isActive = true,
                     roles = emptyList(),

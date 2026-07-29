@@ -447,7 +447,10 @@ class DailyMenuFragment : Fragment() {
         emptyView.findViewById<android.widget.TextView>(R.id.emptyTitle).text = title
         emptyView.findViewById<android.widget.TextView>(R.id.emptySubtitle).text = subtitle
         if (isError) {
-            iconCircle.background.setTint(
+            // mutate() antes de setTint(): empty_state_circle es un drawable compartido
+            // por varias pantallas (Hoy, Semanal, Recordatorios); sin mutate() el tinte
+            // se filtra a las demás.
+            iconCircle.background.mutate().setTint(
                 androidx.core.content.ContextCompat.getColor(requireContext(), R.color.chip_error_bg)
             )
             iconText.setTextColor(
@@ -533,7 +536,8 @@ class DailyMenuFragment : Fragment() {
                 card.setCardBackgroundColor(
                     androidx.core.content.ContextCompat.getColor(requireContext(), R.color.md_surface_container_high)
                 )
-                checkBadge.background.setTint(
+                // mutate(): circle_check_badge es compartido con la variante abierta.
+                checkBadge.background.mutate().setTint(
                     androidx.core.content.ContextCompat.getColor(requireContext(), R.color.md_text_muted)
                 )
                 removeAction.visibility = View.GONE

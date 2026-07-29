@@ -100,7 +100,18 @@ class WeeklyMenuAdapter(
             binding.statusTextView.setBackgroundResource(chipBg)
             binding.statusTextView.setTextColor(androidx.core.content.ContextCompat.getColor(context, chipText))
             binding.statusTextView.text = context.getString(chipLabel)
-            binding.dayBadge.background.setTint(androidx.core.content.ContextCompat.getColor(context, chipText))
+            // .mutate() es obligatorio: el drawable de fondo (chip_*) tiene ConstantState
+            // compartido entre TODAS las filas del RecyclerView que lo referencian. Sin
+            // mutate(), setTint() pinta el drawable compartido y el color se filtra a
+            // otras filas recicladas (badges se veían negros/sin texto legible).
+            binding.dayBadge.background.mutate().setTint(androidx.core.content.ContextCompat.getColor(context, chipText))
+            // El número/día del badge estaba hardcodeado a chip_chosen_text en el XML:
+            // con fondo dinámico oscuro (p.ej. el propio chip_chosen_text en "Elegido"),
+            // el texto quedaba del mismo color que el fondo e invisible. Blanco fijo
+            // contrasta con los 5 chipText, todos oscuros/saturados.
+            val badgeTextColor = androidx.core.content.ContextCompat.getColor(context, R.color.white)
+            binding.dayNumTextView.setTextColor(badgeTextColor)
+            binding.dayShortTextView.setTextColor(badgeTextColor)
 
             binding.detailTextView.text = detail
 
