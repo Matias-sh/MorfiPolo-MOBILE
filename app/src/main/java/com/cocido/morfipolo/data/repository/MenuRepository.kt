@@ -106,14 +106,14 @@ class MenuRepository(
     suspend fun getWeeklyMenus(): List<Menu> {
         return try {
             val response = apiService.getMenus()
-            
+
             if (response.isSuccessful) {
                 val menusResponse = response.body()
                 val menus = menusResponse?.data ?: emptyList()
-                
+
                 // Filtrar menús "draft" (borradores) - solo mostrar menús publicados
                 val publishedMenus = menus.filter { it.status != "draft" }
-                
+
                 // Ordenar menús por fecha (más recientes primero)
                 val sortedMenus = publishedMenus.sortedByDescending { menu ->
                     try {
@@ -122,14 +122,27 @@ class MenuRepository(
                         0L
                     }
                 }
-                
-                // OPTIMIZACIÓN: Limitar a los últimos 10 menús para mejorar rendimiento
-                val limitedMenus = sortedMenus.take(10)
-                
-                // Guardar en base de datos local (solo los últimos 10)
+
+                // La pantalla dice "Menú semanal — Lunes a viernes", pero antes esto
+                // tomaba los últimos 10 menús publicados sin filtrar por fecha: si había
+                // días sin menú (feriados, etc.) terminaba mostrando semanas distintas
+                // mezcladas. El endpoint no soporta filtro de fecha en el servidor (probado
+                // con date_from/date_to: los ignora), así que se filtra acá con los datos
+                // ya traídos por /menus (page=1, limit=20 por defecto — de sobra para
+                // cubrir la semana actual).
+                val currentWeekMenus = sortedMenus.filter { isInCurrentWeek(it.date) }
+                val limitedMenus = if (currentWeekMenus.isNotEmpty()) {
+                    currentWeekMenus
+                } else {
+                    // Fallback defensivo: si por lo que sea la semana actual no aparece
+                    // en la página traída, no dejar la pantalla vacía.
+                    sortedMenus.take(10)
+                }
+
+                // Guardar en base de datos local
                 val menuEntities = limitedMenus.map { menuToEntity(it) }
                 menuDao.insertMenus(menuEntities)
-                
+
                 limitedMenus
             } else {
                 // Si es 401, lanzar excepción de sesión expirada
@@ -159,12 +172,42 @@ class MenuRepository(
         // Obtener todos los menús de la BD local (ya están ordenados por fecha DESC en el query)
         val menuEntities = menuDao.getAllMenusSync()
         val menus = menuEntities.map { entityToMenu(it) }
-        
+
         // Filtrar menús "draft" - no mostrar borradores
         val publishedMenus = menus.filter { it.status != "draft" }
-        
-        // OPTIMIZACIÓN: Limitar a los últimos 10 menús también desde local
-        return publishedMenus.take(10)
+
+        val currentWeekMenus = publishedMenus.filter { isInCurrentWeek(it.date) }
+        return currentWeekMenus.ifEmpty { publishedMenus.take(10) }
+    }
+
+    /**
+     * true si [dateString] (yyyy-MM-dd) cae entre el lunes y el viernes de la
+     * semana calendario actual (hora del dispositivo), ambos inclusive.
+     */
+    private fun isInCurrentWeek(dateString: String): Boolean {
+        val date = try {
+            dateFormat.parse(dateString) ?: return false
+        } catch (e: Exception) {
+            return false
+        }
+
+        val monday = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            val daysToMonday = (get(Calendar.DAY_OF_WEEK) - Calendar.MONDAY + 7) % 7
+            add(Calendar.DAY_OF_MONTH, -daysToMonday)
+        }
+        val friday = (monday.clone() as Calendar).apply {
+            add(Calendar.DAY_OF_MONTH, 4)
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+            set(Calendar.MILLISECOND, 999)
+        }
+
+        return date.time in monday.timeInMillis..friday.timeInMillis
     }
 
     fun getWeeklyMenusFlow(): Flow<List<Menu>> {
