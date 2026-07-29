@@ -369,8 +369,6 @@ class MenuWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widgetDateTextView, "Menú del Día - Cargando...")
             views.setTextViewText(R.id.widgetMenuDescriptionTextView, "")
             views.setViewVisibility(R.id.widgetStatusTextView, View.GONE)
-            views.setViewVisibility(R.id.widgetOption1Container, View.GONE)
-            views.setViewVisibility(R.id.widgetOption2Container, View.GONE)
             views.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
             appWidgetManager.updateAppWidget(appWidgetId, views)
             android.util.Log.d(TAG, "showLoadingState: ✅ Estado de carga mostrado")
@@ -393,8 +391,6 @@ class MenuWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widgetDateTextView, "Inicia sesión para ver el menú")
             views.setTextViewText(R.id.widgetMenuDescriptionTextView, "")
             views.setViewVisibility(R.id.widgetStatusTextView, View.GONE)
-            views.setViewVisibility(R.id.widgetOption1Container, View.GONE)
-            views.setViewVisibility(R.id.widgetOption2Container, View.GONE)
             views.setViewVisibility(R.id.widgetNoMenuTextView, View.GONE)
             appWidgetManager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
@@ -578,133 +574,6 @@ class MenuWidgetProvider : AppWidgetProvider() {
             android.util.Log.d(TAG, "showMenuState: ✅ Widget actualizado con menú")
         } catch (e: Exception) {
             android.util.Log.e(TAG, "showMenuState: ❌ ERROR", e)
-            if (BuildConfig.DEBUG) e.printStackTrace()
-        }
-    }
-
-    /**
-     * Configura una opción del menú en el widget.
-     */
-    private fun configureOption(
-        context: Context,
-        views: RemoteViews,
-        optionContainerId: Int,
-        optionNameId: Int,
-        optionButtonId: Int,
-        optionSelectedIndicatorId: Int,
-        option: com.cocido.morfipolo.domain.model.MenuOption?,
-        optionIndex: Int,
-        menuId: String,
-        userVote: com.cocido.morfipolo.domain.model.Vote?,
-        canVote: Boolean,
-        totalOptions: Int
-    ) {
-        if (option == null) {
-            views.setViewVisibility(optionContainerId, View.GONE)
-            return
-        }
-
-        views.setViewVisibility(optionContainerId, View.VISIBLE)
-        
-        // Configurar nombre de la opción
-        val optionName = if (totalOptions > 1) {
-            "Opción ${optionIndex + 1}: ${option.name}"
-        } else {
-            option.name
-        }
-        views.setTextViewText(optionNameId, optionName)
-        
-        // Verificar si está seleccionada
-        val isSelected = userVote?.option?.id == option.id
-        
-        // Mostrar indicador de selección (solo si existe en el layout)
-        // Nota: widget_menu_simple no tiene estos indicadores, así que los ignoramos silenciosamente
-        try {
-            // Intentar usar el indicador solo si el ID es válido (no 0)
-            if (optionSelectedIndicatorId != 0) {
-                views.setViewVisibility(
-                    optionSelectedIndicatorId,
-                    if (isSelected) View.VISIBLE else View.GONE
-                )
-            }
-        } catch (e: Exception) {
-            // El indicador no existe en el layout simplificado, ignorar silenciosamente
-            android.util.Log.d(TAG, "configureOption: Indicador de selección no disponible (esto es normal en widget_menu_simple)")
-        }
-        
-        // Configurar botón (TextView) - usar drawables para compatibilidad con RemoteViews
-        try {
-            if (isSelected && userVote != null) {
-                // Botón para quitar selección
-                views.setTextViewText(optionButtonId, "Quitar selección")
-                try {
-                    // Usar drawable rojo para el botón
-                    views.setInt(optionButtonId, "setBackgroundResource", R.drawable.button_red)
-                } catch (e: Exception) {
-                    android.util.Log.d(TAG, "configureOption: Error al configurar drawable de botón rojo, usando color sólido")
-                    try {
-                        views.setInt(optionButtonId, "setBackgroundColor", 0xFFC85A5A.toInt()) // Rojo Comedor
-                    } catch (e2: Exception) {
-                        android.util.Log.e(TAG, "configureOption: Error al configurar color de botón rojo", e2)
-                    }
-                }
-                try {
-                    val pendingIntent = createPendingIntent(
-                        context,
-                        ACTION_DELETE_VOTE,
-                        userVote.id,
-                        optionIndex
-                    )
-                    views.setOnClickPendingIntent(optionButtonId, pendingIntent)
-                    android.util.Log.d(TAG, "configureOption: PendingIntent configurado para quitar selección")
-                } catch (e: Exception) {
-                    android.util.Log.e(TAG, "configureOption: Error al configurar PendingIntent para quitar selección", e)
-                }
-            } else {
-                // Botón para seleccionar
-                views.setTextViewText(optionButtonId, if (canVote) "Elegir esta opción" else "No disponible")
-                try {
-                    if (canVote) {
-                        // Usar drawable del botón primario
-                        views.setInt(optionButtonId, "setBackgroundResource", R.drawable.button_primary_solid)
-                    } else {
-                        // Usar color gris cuando no se puede votar
-                        views.setInt(optionButtonId, "setBackgroundColor", 0xFFA1887F.toInt()) // Gris Comedor
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.d(TAG, "configureOption: Error al configurar drawable de botón, usando color sólido")
-                    try {
-                        val buttonColor = if (canVote) 0xFF8B6F47.toInt() else 0xFFA1887F.toInt() // Marrón Comedor o Gris
-                        views.setInt(optionButtonId, "setBackgroundColor", buttonColor)
-                    } catch (e2: Exception) {
-                        android.util.Log.e(TAG, "configureOption: Error al configurar color de botón", e2)
-                    }
-                }
-                if (canVote) {
-                    try {
-                        val pendingIntent = createPendingIntent(
-                            context,
-                            ACTION_SELECT_OPTION,
-                            menuId,
-                            optionIndex,
-                            option.id
-                        )
-                        views.setOnClickPendingIntent(optionButtonId, pendingIntent)
-                        android.util.Log.d(TAG, "configureOption: PendingIntent configurado para seleccionar")
-                    } catch (e: Exception) {
-                        android.util.Log.e(TAG, "configureOption: Error al configurar PendingIntent para seleccionar", e)
-                    }
-                } else {
-                    // Si no se puede votar, eliminar cualquier PendingIntent previo
-                    try {
-                        views.setOnClickPendingIntent(optionButtonId, null)
-                    } catch (e: Exception) {
-                        android.util.Log.e(TAG, "configureOption: Error al eliminar PendingIntent", e)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            android.util.Log.e(TAG, "configureOption: ERROR general al configurar botón", e)
             if (BuildConfig.DEBUG) e.printStackTrace()
         }
     }
