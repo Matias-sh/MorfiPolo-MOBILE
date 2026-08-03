@@ -12,6 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.*
 
@@ -36,18 +37,21 @@ class AlarmReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "AlarmReceiver"
         const val ACTION_CUSTOM_NOTIFICATION = "com.cocido.morfipolo.CUSTOM_NOTIFICATION"
-        private const val WAKE_LOCK_TIMEOUT = 35000L // 35 segundos
-        // El peor caso real son hasta ~5 llamadas de red secuenciales (menú del día +
-        // hasta 3 páginas de votos), cada una con timeout de 30s en RetrofitClient. Sin
-        // este límite, una conexión lenta podía dejar la corrutina corriendo más allá de
-        // los 60s que duraba antes el wakelock: el sistema lo liberaba solo (PowerManager
-        // lo hace igual al vencer el timeout aunque no llamemos a release()) y el proceso
-        // podía quedar congelado a mitad de la petición, sin enviar la notificación ni
-        // llegar nunca al finally que reprograma mañana. Preferible cortar rápido acá:
-        // si la red está lenta, mejor saltear el aviso de hoy que arriesgar el receiver
-        // entero, y en un celular real con administrador de batería agresivo, sostener
-        // el wakelock por minutos es justo lo que lo pone en la mira para que lo maten.
-        private const val PROCESSING_TIMEOUT = 25000L // 25 segundos
+        // RetrofitClient usa 30s de timeout por llamada. Los presupuestos de abajo son
+        // por-paso (no un único límite global) para no cortar una llamada que iba a
+        // terminar bien solo porque tardó un poco: 20s le da a la búsqueda del menú
+        // margen real bajo mala señal sin llegar a los 30s completos de OkHttp; el
+        // chequeo de voto usa menos (15s) porque si se cuelga, el propio catch de más
+        // abajo ya elige seguir y notificar igual ("mejor notificar de más que de
+        // menos") — cortarlo rápido ahí no cambia la decisión, solo evita esperar de más.
+        private const val MENU_FETCH_TIMEOUT = 20000L // 20 segundos
+        private const val VOTE_CHECK_TIMEOUT = 15000L // 15 segundos
+        // Red de seguridad final: normalmente nunca debería activarse (20s + 15s ya
+        // acotan lo que puede tardar la parte de red), pero cubre cualquier otro paso
+        // inesperado que se cuelgue. Sostener el wakelock por minutos en un celular real
+        // es justo lo que lo pone en la mira de un administrador de batería agresivo.
+        private const val PROCESSING_TIMEOUT = 50000L // 50 segundos
+        private const val WAKE_LOCK_TIMEOUT = 55000L // 55 segundos (margen sobre el de arriba)
     }
     
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -98,7 +102,7 @@ class AlarmReceiver : BroadcastReceiver() {
                     processNotification(context, app, notificationId, dayOfWeek)
                 }
                 if (completed == null) {
-                    Log.w(TAG, "⏱️ Se agotó el tiempo procesando la notificación $notificationId, se saltea (mañana se reintenta)")
+                    Log.w(TAG, "⏱️ Se agotó el tiempo total procesando la notificación $notificationId, se saltea (mañana se reintenta)")
                 }
 
             } catch (e: Exception) {
@@ -173,7 +177,9 @@ class AlarmReceiver : BroadcastReceiver() {
         if (userId != null) {
             try {
                 Log.d(TAG, "🔍 Verificando si el usuario ya votó...")
-                val userVote = app.voteRepository.getUserVoteForMenu(menu.id, userId, maxPagesToSearch = 3)
+                val userVote = withTimeout(VOTE_CHECK_TIMEOUT) {
+                    app.voteRepository.getUserVoteForMenu(menu.id, userId, maxPagesToSearch = 3)
+                }
                 if (userVote != null) {
                     Log.d(TAG, "✅ Usuario ya votó (opción: ${userVote.option.name}), NO se envía notificación")
                     return
@@ -224,8 +230,10 @@ class AlarmReceiver : BroadcastReceiver() {
             val todayString = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 .format(todayDate)
             
-            val menu = app.menuRepository.getMenuByDate(todayDate)
-            
+            val menu = withTimeoutOrNull(MENU_FETCH_TIMEOUT) {
+                app.menuRepository.getMenuByDate(todayDate)
+            }
+
             // Solo devolver menú si corresponde al día actual y está publicado/abierto.
             if (menu != null && menu.date == todayString && menu.status == "open") {
                 menu
