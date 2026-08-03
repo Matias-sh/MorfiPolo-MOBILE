@@ -32,8 +32,8 @@ android {
         applicationId = "com.cocido.morfipolo"
         minSdk = 28
         targetSdk = 36
-        versionCode = 11
-        versionName = "3.1.0"
+        versionCode = 12
+        versionName = "3.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

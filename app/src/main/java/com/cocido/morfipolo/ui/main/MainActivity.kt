@@ -1,9 +1,12 @@
 package com.cocido.morfipolo.ui.main
 
+import android.app.AlertDialog
 import android.appwidget.AppWidgetManager
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -18,6 +21,7 @@ import com.cocido.morfipolo.MorfipoloApplication
 import com.cocido.morfipolo.R
 import com.cocido.morfipolo.databinding.ActivityMainBinding
 import com.cocido.morfipolo.ui.login.LoginActivity
+import com.cocido.morfipolo.util.alarm.AlarmScheduler
 import com.cocido.morfipolo.util.widget.MenuWidgetProvider
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.launch
@@ -25,7 +29,10 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    
+
+    // Evita mostrar el diálogo de alarmas exactas más de una vez por apertura de la app.
+    private var exactAlarmPromptShownThisSession = false
+
     // Launcher para solicitar permiso de notificaciones
     private val requestNotificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -35,6 +42,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             android.util.Log.w("MainActivity", "⚠️ Permiso de notificaciones denegado")
         }
+        maybeShowExactAlarmPrompt()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,6 +77,11 @@ class MainActivity : AppCompatActivity() {
 
         // Solicitar permiso de notificaciones si es necesario (Android 13+)
         requestNotificationPermissionIfNeeded()
+        // En Android 12-12L (API 31-32) no hay permiso POST_NOTIFICATIONS, así que el
+        // flujo de arriba no dispara el chequeo de alarmas exactas: cubrirlo acá también.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            maybeShowExactAlarmPrompt()
+        }
 
         // Verificar y refrescar autenticación automáticamente
         // El SessionRefreshWorker debería mantener la sesión activa automáticamente
@@ -111,10 +124,45 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         // Actualizar widget cuando la app vuelve al foreground
         updateWidget()
-        
+
         // CRÍTICO: Emitir broadcast para que los fragments refresquen sus datos
         // Esto soluciona el bug de sincronización cuando el usuario vota desde la web
         notifyMenuUpdated()
+
+        // Si el usuario acaba de volver de Ajustes tras conceder el permiso, reprogramar
+        // ya mismo con setExactAndAllowWhileIdle (antes quedaban con la alarma inexacta
+        // programada al iniciar la app hasta el próximo reinicio de proceso).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && AlarmScheduler.canScheduleExact(this)) {
+            val app = application as MorfipoloApplication
+            AlarmScheduler.scheduleCustomNotifications(this, app.notificationConfigRepository)
+        }
+    }
+
+    /**
+     * Sin esto, el permiso de alarmas exactas (API 31+) solo se pedía si el usuario
+     * entraba manualmente a Perfil > Recordatorios y notaba el chip "Activar" — la
+     * mayoría nunca lo hacía, así que sus recordatorios quedaban programados con
+     * setAndAllowWhileIdle() (inexacta, el sistema puede demorarla o agruparla) en vez
+     * de setExactAndAllowWhileIdle(), lo que explica que "no llegue si la app está
+     * cerrada". Se pregunta una vez por apertura de la app hasta que se conceda.
+     */
+    private fun maybeShowExactAlarmPrompt() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        if (exactAlarmPromptShownThisSession) return
+        if (AlarmScheduler.canScheduleExact(this)) return
+        exactAlarmPromptShownThisSession = true
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.exact_alarm_prompt_title))
+            .setMessage(getString(R.string.exact_alarm_prompt_message))
+            .setPositiveButton(getString(R.string.exact_alarm_prompt_positive)) { _, _ ->
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                    .setData(Uri.fromParts("package", packageName, null))
+                startActivity(intent)
+            }
+            .setNegativeButton(getString(R.string.exact_alarm_prompt_negative), null)
+            .setCancelable(true)
+            .show()
     }
     
     /**
@@ -179,6 +227,7 @@ class MainActivity : AppCompatActivity() {
                     android.Manifest.permission.POST_NOTIFICATIONS
                 ) == android.content.pm.PackageManager.PERMISSION_GRANTED -> {
                     android.util.Log.d("MainActivity", "✅ Permiso de notificaciones ya concedido")
+                    maybeShowExactAlarmPrompt()
                 }
                 shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS) -> {
                     // El usuario denegó el permiso anteriormente, explicar por qué lo necesitamos
