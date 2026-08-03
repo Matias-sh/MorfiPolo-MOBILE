@@ -30,8 +30,17 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
-    // Evita mostrar el diálogo de alarmas exactas más de una vez por apertura de la app.
+    // Evita mostrar cada diálogo de permisos más de una vez por apertura de la app.
     private var exactAlarmPromptShownThisSession = false
+    private var batteryOptimizationPromptShownThisSession = false
+
+    // true mientras el usuario está en la pantalla de Ajustes que abrimos nosotros
+    // (alarma exacta o batería). Solo en ese caso onResume() debe intentar avanzar
+    // a la siguiente pregunta de la cadena; si no, un onResume "normal" (por ejemplo
+    // el que sigue inmediatamente al onCreate) podría disparar un segundo AlertDialog
+    // mientras el diálogo de permiso de notificaciones del sistema todavía se está
+    // mostrando, superponiendo dos prompts a la vez.
+    private var awaitingSettingsReturn = false
 
     // Launcher para solicitar permiso de notificaciones
     private val requestNotificationPermissionLauncher = registerForActivityResult(
@@ -42,7 +51,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             android.util.Log.w("MainActivity", "⚠️ Permiso de notificaciones denegado")
         }
-        maybeShowExactAlarmPrompt()
+        maybeShowNextPermissionPrompt()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,9 +87,9 @@ class MainActivity : AppCompatActivity() {
         // Solicitar permiso de notificaciones si es necesario (Android 13+)
         requestNotificationPermissionIfNeeded()
         // En Android 12-12L (API 31-32) no hay permiso POST_NOTIFICATIONS, así que el
-        // flujo de arriba no dispara el chequeo de alarmas exactas: cubrirlo acá también.
+        // flujo de arriba no dispara la cadena de alarmas exactas/batería: cubrirlo acá también.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            maybeShowExactAlarmPrompt()
+            maybeShowNextPermissionPrompt()
         }
 
         // Verificar y refrescar autenticación automáticamente
@@ -136,6 +145,28 @@ class MainActivity : AppCompatActivity() {
             val app = application as MorfipoloApplication
             AlarmScheduler.scheduleCustomNotifications(this, app.notificationConfigRepository)
         }
+
+        // Solo avanzar la cadena de permisos acá si este resume es porque el usuario
+        // volvió de una pantalla de Ajustes que abrimos nosotros. Sin este chequeo,
+        // el onResume que sigue inmediatamente al onCreate podría mostrar el diálogo
+        // de batería superpuesto con el permiso de notificaciones del sistema, que
+        // se pide de forma asincrónica.
+        if (awaitingSettingsReturn) {
+            awaitingSettingsReturn = false
+            maybeShowNextPermissionPrompt()
+        }
+    }
+
+    /**
+     * Cadena de permisos que afectan si los recordatorios llegan con la app cerrada,
+     * en orden de impacto: primero alarmas exactas, después optimización de batería.
+     * Se muestran de a uno (nunca los dos diálogos superpuestos) y como mucho una vez
+     * cada uno por apertura de la app; onResume() vuelve a llamar a esto para avanzar
+     * al siguiente cuando el usuario vuelve de Ajustes.
+     */
+    private fun maybeShowNextPermissionPrompt() {
+        if (maybeShowExactAlarmPrompt()) return
+        maybeShowBatteryOptimizationPrompt()
     }
 
     /**
@@ -145,26 +176,73 @@ class MainActivity : AppCompatActivity() {
      * setAndAllowWhileIdle() (inexacta, el sistema puede demorarla o agruparla) en vez
      * de setExactAndAllowWhileIdle(), lo que explica que "no llegue si la app está
      * cerrada". Se pregunta una vez por apertura de la app hasta que se conceda.
+     * @return true si se mostró el diálogo ahora (para no encadenar el siguiente permiso).
      */
-    private fun maybeShowExactAlarmPrompt() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
-        if (exactAlarmPromptShownThisSession) return
-        if (AlarmScheduler.canScheduleExact(this)) return
+    private fun maybeShowExactAlarmPrompt(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
+        if (exactAlarmPromptShownThisSession) return false
+        if (AlarmScheduler.canScheduleExact(this)) return false
         exactAlarmPromptShownThisSession = true
 
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.exact_alarm_prompt_title))
             .setMessage(getString(R.string.exact_alarm_prompt_message))
             .setPositiveButton(getString(R.string.exact_alarm_prompt_positive)) { _, _ ->
+                awaitingSettingsReturn = true
                 val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
                     .setData(Uri.fromParts("package", packageName, null))
                 startActivity(intent)
             }
-            .setNegativeButton(getString(R.string.exact_alarm_prompt_negative), null)
+            .setNegativeButton(getString(R.string.exact_alarm_prompt_negative)) { _, _ ->
+                maybeShowBatteryOptimizationPrompt()
+            }
             .setCancelable(true)
             .show()
+        return true
     }
-    
+
+    /**
+     * Muchos fabricantes (Xiaomi/MIUI, Oppo/ColorOS, Huawei/EMUI, Samsung, etc.)
+     * congelan o matan procesos en segundo plano por su cuenta, más allá de lo que
+     * permite el permiso de alarma exacta — es la causa más probable de que un
+     * recordatorio no suene en un celular real aunque en el emulador funcione
+     * perfecto. Excluir la app de la optimización de batería del sistema es lo único
+     * que se puede pedir de forma estándar (no hay API pública para las listas de
+     * "autoinicio" propias de cada fabricante; esas hay que activarlas a mano).
+     */
+    private fun maybeShowBatteryOptimizationPrompt(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false
+        if (batteryOptimizationPromptShownThisSession) return false
+        val powerManager = getSystemService(POWER_SERVICE) as android.os.PowerManager
+        if (powerManager.isIgnoringBatteryOptimizations(packageName)) return false
+        batteryOptimizationPromptShownThisSession = true
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.battery_optimization_prompt_title))
+            .setMessage(getString(R.string.battery_optimization_prompt_message))
+            .setPositiveButton(getString(R.string.battery_optimization_prompt_positive)) { _, _ ->
+                awaitingSettingsReturn = true
+                try {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                        .setData(Uri.fromParts("package", packageName, null))
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    // Algunos fabricantes no implementan este intent estándar; mandar
+                    // a la lista general de apps es mejor que no hacer nada.
+                    android.util.Log.w("MainActivity", "ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS no disponible: ${e.message}")
+                    try {
+                        startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                    } catch (e2: Exception) {
+                        android.util.Log.w("MainActivity", "Tampoco hay pantalla de batería disponible: ${e2.message}")
+                    }
+                }
+            }
+            .setNegativeButton(getString(R.string.battery_optimization_prompt_negative), null)
+            .setCancelable(true)
+            .show()
+        return true
+    }
+
     /**
      * Notifica a los fragments que deben refrescar el menú/votos.
      * Soluciona el bug de sincronización web-app.
@@ -227,7 +305,7 @@ class MainActivity : AppCompatActivity() {
                     android.Manifest.permission.POST_NOTIFICATIONS
                 ) == android.content.pm.PackageManager.PERMISSION_GRANTED -> {
                     android.util.Log.d("MainActivity", "✅ Permiso de notificaciones ya concedido")
-                    maybeShowExactAlarmPrompt()
+                    maybeShowNextPermissionPrompt()
                 }
                 shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS) -> {
                     // El usuario denegó el permiso anteriormente, explicar por qué lo necesitamos

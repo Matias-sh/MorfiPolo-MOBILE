@@ -13,6 +13,13 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- El fabricante (MIUI, ColorOS, EMUI, One UI, etc.) puede congelar el proceso
+         en segundo plano y bloquear la entrega de la alarma aunque el permiso de
+         alarma exacta esté concedido. Pedirle al usuario que excluya la app de la
+         optimización de batería reduce (no elimina del todo, eso ya es específico
+         de cada fabricante) ese riesgo. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <application
         android:name=".MorfipoloApplication"
         android:allowBackup="true"

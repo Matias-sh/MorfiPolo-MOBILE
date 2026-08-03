@@ -115,6 +115,9 @@ class NotificationSettingsFragment : Fragment() {
         binding.exactAlarmAction.setOnClickListener {
             openExactAlarmSettings()
         }
+        binding.batteryOptimizationAction.setOnClickListener {
+            openBatteryOptimizationSettings()
+        }
         refreshPermissionsCard()
     }
 
@@ -151,6 +154,13 @@ class NotificationSettingsFragment : Fragment() {
             binding.exactAlarmRow.visibility = View.GONE
             binding.exactAlarmDivider.visibility = View.GONE
         }
+
+        // Optimización de batería: el diálogo al abrir la app se puede posponer con
+        // "Ahora no", así que esta fila queda como la forma de retomarlo más tarde.
+        val powerManager = ContextCompat.getSystemService(context, android.os.PowerManager::class.java)
+        val batteryUnrestricted = powerManager?.isIgnoringBatteryOptimizations(context.packageName) ?: true
+        binding.batteryOptimizationRow.visibility = if (batteryUnrestricted) View.GONE else View.VISIBLE
+        binding.batteryOptimizationDivider.visibility = binding.batteryOptimizationRow.visibility
     }
 
     private fun openAppNotificationSettings() {
@@ -171,6 +181,21 @@ class NotificationSettingsFragment : Fragment() {
         val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
             .setData(Uri.fromParts("package", context.packageName, null))
         startActivity(intent)
+    }
+
+    private fun openBatteryOptimizationSettings() {
+        val context = context ?: return
+        try {
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                .setData(Uri.fromParts("package", context.packageName, null))
+            startActivity(intent)
+        } catch (e: Exception) {
+            try {
+                startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            } catch (e2: Exception) {
+                // Algunos fabricantes no tienen ninguna de las dos pantallas estándar.
+            }
+        }
     }
 
     private fun setupBackButton() {

@@ -137,4 +137,10 @@
     <string name="exact_alarm_prompt_message">Para que tus recordatorios suenen a la hora exacta, incluso con la app cerrada, activá el permiso de "Alarmas exactas" en Ajustes.</string>
     <string name="exact_alarm_prompt_positive">Activar</string>
     <string name="exact_alarm_prompt_negative">Ahora no</string>
+    <string name="battery_optimization_prompt_title">Permitile a la app funcionar en segundo plano</string>
+    <string name="battery_optimization_prompt_message">Algunos celulares suspenden la app cuando no la estás usando y eso puede impedir que lleguen los recordatorios. Excluí a Comedor Polo del ahorro de batería para recibirlos siempre a tiempo.</string>
+    <string name="battery_optimization_prompt_positive">Activar</string>
+    <string name="battery_optimization_prompt_negative">Ahora no</string>
+    <string name="battery_optimization_label">Optimización de batería</string>
+    <string name="battery_optimization_grant">Activar</string>
 </resources>

@@ -12,6 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.*
 
 /**
@@ -35,7 +36,18 @@ class AlarmReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "AlarmReceiver"
         const val ACTION_CUSTOM_NOTIFICATION = "com.cocido.morfipolo.CUSTOM_NOTIFICATION"
-        private const val WAKE_LOCK_TIMEOUT = 60000L // 60 segundos
+        private const val WAKE_LOCK_TIMEOUT = 35000L // 35 segundos
+        // El peor caso real son hasta ~5 llamadas de red secuenciales (menú del día +
+        // hasta 3 páginas de votos), cada una con timeout de 30s en RetrofitClient. Sin
+        // este límite, una conexión lenta podía dejar la corrutina corriendo más allá de
+        // los 60s que duraba antes el wakelock: el sistema lo liberaba solo (PowerManager
+        // lo hace igual al vencer el timeout aunque no llamemos a release()) y el proceso
+        // podía quedar congelado a mitad de la petición, sin enviar la notificación ni
+        // llegar nunca al finally que reprograma mañana. Preferible cortar rápido acá:
+        // si la red está lenta, mejor saltear el aviso de hoy que arriesgar el receiver
+        // entero, y en un celular real con administrador de batería agresivo, sostener
+        // el wakelock por minutos es justo lo que lo pone en la mira para que lo maten.
+        private const val PROCESSING_TIMEOUT = 25000L // 25 segundos
     }
     
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -82,7 +94,12 @@ class AlarmReceiver : BroadcastReceiver() {
                     return@launch
                 }
 
-                processNotification(context, app, notificationId, dayOfWeek)
+                val completed = withTimeoutOrNull(PROCESSING_TIMEOUT) {
+                    processNotification(context, app, notificationId, dayOfWeek)
+                }
+                if (completed == null) {
+                    Log.w(TAG, "⏱️ Se agotó el tiempo procesando la notificación $notificationId, se saltea (mañana se reintenta)")
+                }
 
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Error al procesar notificación: ${e.message}", e)
