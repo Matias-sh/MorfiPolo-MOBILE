@@ -52,9 +52,6 @@ class DailyMenuFragment : Fragment() {
     // Formato largo del spec: "Lunes 28 de julio"
     private val dateFormat = SimpleDateFormat("EEEE d 'de' MMMM", Locale("es", "AR"))
     private val dateFormatApi = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    private val isoInstantFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
-        timeZone = TimeZone.getTimeZone("UTC")
-    }
     private val localHourFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     private fun formatDisplayDate(date: Date): String {
@@ -62,17 +59,14 @@ class DailyMenuFragment : Fragment() {
     }
 
     /**
-     * Hora de cierre del menú en hora local, a partir de end_time real (antes
-     * era un "11:00" fijo en el string). Si por lo que sea no se puede
-     * parsear, "11:00" sigue siendo el valor esperado en la práctica.
+     * Hora de cierre efectiva del menú en hora local — la real (end_time) ya
+     * recortada a las 11:00 como máximo por MenuTimeUtils, sin importar lo
+     * que mande el backend. Si no se puede resolver, "11:00" es el valor
+     * esperado en la práctica.
      */
     private fun formatMenuEndTime(menu: com.cocido.morfipolo.domain.model.Menu): String {
-        return try {
-            val instant = isoInstantFormat.parse(menu.end_time)
-            if (instant != null) localHourFormat.format(instant) else "11:00"
-        } catch (e: Exception) {
-            "11:00"
-        }
+        val effectiveEnd = com.cocido.morfipolo.util.MenuTimeUtils.getEffectiveEndTimeMillis(menu)
+        return if (effectiveEnd != null) localHourFormat.format(Date(effectiveEnd)) else "11:00"
     }
 
     override fun onCreateView(

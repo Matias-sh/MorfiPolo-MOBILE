@@ -24,6 +24,13 @@ import java.util.TimeZone
  */
 object MenuTimeUtils {
 
+    // Decisión de producto explícita: la selección cierra a las 11:00 (hora
+    // del dispositivo) como máximo, sin importar lo que diga end_time del
+    // backend. Si end_time es más temprano que las 11:00 ese día, se respeta
+    // igual (cierre anticipado real); si es más tardío, se recorta a las 11:00.
+    private const val HARD_CLOSE_HOUR = 11
+    private const val HARD_CLOSE_MINUTE = 0
+
     private val isoFormats = listOf(
         "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
         "yyyy-MM-dd'T'HH:mm:ss'Z'"
@@ -44,12 +51,36 @@ object MenuTimeUtils {
     }
 
     /**
-     * true si el instante actual cae dentro de [start_time, end_time) del menú.
+     * end_time real del menú, recortado a las 11:00 (hora del dispositivo)
+     * del mismo día calendario si el backend manda algo más tardío.
+     */
+    private fun effectiveEndMillis(rawEndMillis: Long): Long {
+        val elevenAmSameDay = Calendar.getInstance().apply {
+            timeInMillis = rawEndMillis
+            set(Calendar.HOUR_OF_DAY, HARD_CLOSE_HOUR)
+            set(Calendar.MINUTE, HARD_CLOSE_MINUTE)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        return minOf(rawEndMillis, elevenAmSameDay)
+    }
+
+    /**
+     * Instante real (ya recortado a las 11:00 como máximo) en que cierra la
+     * selección de [menu], o null si end_time no se pudo parsear.
+     */
+    fun getEffectiveEndTimeMillis(menu: Menu): Long? {
+        val rawEnd = parseInstant(menu.end_time) ?: return null
+        return effectiveEndMillis(rawEnd)
+    }
+
+    /**
+     * true si el instante actual cae dentro de [start_time, end_time_efectivo) del menú.
      */
     fun isWithinSelectionTime(menu: Menu): Boolean {
         if (menu.status == "draft" || menu.status == "closed") return false
         val start = parseInstant(menu.start_time) ?: return false
-        val end = parseInstant(menu.end_time) ?: return false
+        val end = getEffectiveEndTimeMillis(menu) ?: return false
         val now = System.currentTimeMillis()
         return now in start until end
     }
