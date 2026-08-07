@@ -63,8 +63,11 @@ class WeeklyMenuAdapter(
             }
 
             val isToday = MenuTimeUtils.isMenuToday(menu)
+            // La elegibilidad para votar depende solo de la ventana real del menú
+            // (start_time/end_time) — ya no de si coincide con el día de hoy, porque
+            // el backend abre la votación de mañana desde la noche anterior.
             val isWithinTime = MenuTimeUtils.isWithinSelectionTime(menu)
-            val isActuallyOpen = menu.status == "open" && isToday && isWithinTime
+            val isActuallyOpen = isWithinTime
             val hasVoted = userVote != null
             val hasOptions = menu.getOptionsOrEmpty().isNotEmpty()
 
@@ -73,7 +76,7 @@ class WeeklyMenuAdapter(
             binding.dayNameTextView.text = dayNameFormat.format(menuDate).replaceFirstChar { it.uppercase() }
             binding.todayBadge.visibility = if (isToday) View.VISIBLE else View.GONE
             binding.menuDescriptionTextView.text = if (hasOptions) {
-                userVote?.option?.name ?: menu.description.ifBlank { menu.getOptionsOrEmpty().joinToString(" · ") { it.name } }
+                userVote?.option?.name ?: menu.description?.ifBlank { null } ?: menu.getOptionsOrEmpty().joinToString(" · ") { it.name }
             } else {
                 context.getString(R.string.no_menu_available)
             }

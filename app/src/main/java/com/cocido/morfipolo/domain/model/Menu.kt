@@ -3,7 +3,7 @@ package com.cocido.morfipolo.domain.model
 data class Menu(
     val id: String,
     val date: String, // formato ISO "YYYY-MM-DD"
-    val description: String,
+    val description: String?, // el backend puede mandar null (antes rompía el parseo de TODA la lista)
     val start_time: String, // formato ISO 8601
     val end_time: String, // formato ISO 8601
     val status: String, // "open", "closed", "draft"
@@ -13,6 +13,9 @@ data class Menu(
 ) {
     // Helper para obtener options de forma segura (sin null)
     fun getOptionsOrEmpty(): List<MenuOption> = options ?: emptyList()
+
+    // Helper para obtener description de forma segura (sin null)
+    fun getDescriptionOrEmpty(): String = description ?: ""
 }
 
 

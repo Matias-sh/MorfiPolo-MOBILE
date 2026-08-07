@@ -10,9 +10,6 @@ import com.cocido.morfipolo.R
 import com.cocido.morfipolo.domain.model.MenuOption
 import com.cocido.morfipolo.domain.model.Vote
 import kotlinx.coroutines.runBlocking
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
 
 /**
  * Servicio para proveer datos dinámicos al widget usando una lista.
@@ -77,17 +74,11 @@ class MenuWidgetFactory(
 
             android.util.Log.d("MenuWidgetFactory", "onDataSetChanged: Usuario logueado, obteniendo menú...")
 
-            // Obtener menú del día
-            val today = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-
+            // Menú vigente para votar ahora: puede ser el de mañana si ya se abrió
+            // la ventana nocturna (el backend abre la votación desde ~21:00).
             val menu = runBlocking {
                 try {
-                    app.menuRepository.getMenuByDate(today.time)
+                    app.menuRepository.getActiveMenu()
                 } catch (e: Exception) {
                     android.util.Log.e("MenuWidgetFactory", "Error al obtener menú", e)
                     null
@@ -107,12 +98,11 @@ class MenuWidgetFactory(
             options = menu.getOptionsOrEmpty()
             android.util.Log.d("MenuWidgetFactory", "onDataSetChanged: Menú cargado: id=$menuId, opciones=${options.size}")
 
-            // Verificar si puede votar - el menú está realmente abierto solo si el status es "open" Y está dentro del horario Y es el menú de hoy
-            val isToday = isMenuToday(menu)
+            // Verificar si puede votar - depende únicamente de la ventana real
+            // start_time/end_time del menú (puede ser el de mañana ya abierto).
             val isWithinTime = isWithinSelectionTime(menu)
-            val isActuallyOpen = menu.status == "open" && isWithinTime && isToday
-            canVote = isActuallyOpen
-            android.util.Log.d("MenuWidgetFactory", "onDataSetChanged: canVote=$canVote (isToday=$isToday, isWithinTime=$isWithinTime, status=${menu.status})")
+            canVote = isWithinTime
+            android.util.Log.d("MenuWidgetFactory", "onDataSetChanged: canVote=$canVote (isWithinTime=$isWithinTime, status=${menu.status})")
 
             // CRÍTICO: Obtener voto del usuario - recargar siempre datos frescos
             val userId = app.sessionManager.getCurrentUserId()
@@ -289,52 +279,6 @@ class MenuWidgetFactory(
 
     override fun hasStableIds(): Boolean = true
 
-    private fun isWithinSelectionTime(menu: com.cocido.morfipolo.domain.model.Menu): Boolean {
-        if (menu.status != "open") return false
-        
-        return try {
-            // Horario fijo: 08:00 - 11:00
-            val now = java.util.Calendar.getInstance()
-            val currentHour = now.get(java.util.Calendar.HOUR_OF_DAY)
-            val currentMinute = now.get(java.util.Calendar.MINUTE)
-
-            val startHour = 8
-            val startMin = 0
-            val endHour = 11
-            val endMin = 0
-
-            val currentTimeInMinutes = currentHour * 60 + currentMinute
-            val startTimeInMinutes = startHour * 60 + startMin
-            val endTimeInMinutes = endHour * 60 + endMin
-
-            currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes
-        } catch (e: Exception) {
-            false
-        }
-    }
-    
-    private fun isMenuToday(menu: com.cocido.morfipolo.domain.model.Menu): Boolean {
-        return try {
-            val today = java.util.Calendar.getInstance().apply {
-                set(java.util.Calendar.HOUR_OF_DAY, 0)
-                set(java.util.Calendar.MINUTE, 0)
-                set(java.util.Calendar.SECOND, 0)
-                set(java.util.Calendar.MILLISECOND, 0)
-            }
-            val menuDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(menu.date)
-            
-            menuDate?.let {
-                val menuCalendar = java.util.Calendar.getInstance().apply {
-                    time = it
-                    set(java.util.Calendar.HOUR_OF_DAY, 0)
-                    set(java.util.Calendar.MINUTE, 0)
-                    set(java.util.Calendar.SECOND, 0)
-                    set(java.util.Calendar.MILLISECOND, 0)
-                }
-                menuCalendar.timeInMillis == today.timeInMillis
-            } ?: false
-        } catch (e: Exception) {
-            false
-        }
-    }
+    private fun isWithinSelectionTime(menu: com.cocido.morfipolo.domain.model.Menu): Boolean =
+        com.cocido.morfipolo.util.MenuTimeUtils.isWithinSelectionTime(menu)
 }

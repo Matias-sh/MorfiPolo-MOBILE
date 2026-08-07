@@ -129,7 +129,7 @@ class MenuPollingWorker(
                     
                     android.util.Log.d("MenuPollingWorker", "📢 Enviando notificación de nuevo menú del día...")
                     notificationHelper.showMenuLoadedNotification(
-                        menu.description,
+                        menu.getDescriptionOrEmpty(),
                         optionsText
                     )
 

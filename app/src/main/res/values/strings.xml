@@ -21,8 +21,8 @@
     <string name="menu_weekly_subtitle">Lunes a viernes</string>
     <string name="select_date_instruction">Seleccione una fecha para ver el menú</string>
     <string name="selection_time">Podés elegir hasta las %1$s</string>
-    <string name="selection_change_until">Podés cambiar tu elección hasta las 11:00</string>
-    <string name="selection_closed_at">La selección cerró a las 11:00</string>
+    <string name="selection_change_until">Podés cambiar tu elección hasta las %1$s</string>
+    <string name="selection_closed_at">La selección cerró a las %1$s</string>
     <string name="already_selected">Ya elegiste</string>
     <string name="open">Abierto</string>
     <string name="closed">Cerrado</string>
@@ -44,7 +44,7 @@
     <string name="no_menu_available">Todavía no hay menú cargado</string>
     <string name="no_menu_available_hint">Volvé a intentarlo más tarde.</string>
     <string name="no_choice_today">No elegiste un menú hoy</string>
-    <string name="no_choice_today_hint">La selección cerró a las 11:00. Mañana hay una nueva oportunidad.</string>
+    <string name="no_choice_today_hint">La selección cerró a las %1$s. Pronto vas a tener una nueva oportunidad.</string>
     <string name="selection_success">Elección guardada</string>
     <string name="selection_updated">Elección actualizada</string>
     <string name="deselection_success">Quitaste tu elección</string>

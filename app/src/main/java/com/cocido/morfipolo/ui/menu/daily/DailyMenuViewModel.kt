@@ -48,56 +48,70 @@ class DailyMenuViewModel(
         _uiState.value = DailyMenuUiState.Loading
 
         viewModelScope.launch {
-            loadMenuForDateInternal(date)
+            try {
+                val menu = menuRepository.getMenuByDate(currentDate.time)
+                loadMenuState(menu)
+            } catch (e: SessionExpiredException) {
+                android.util.Log.w("DailyMenuViewModel", "Sesión expirada al cargar menú")
+                _sessionExpired.value = true
+                _uiState.value = DailyMenuUiState.Error(e.message ?: "Sesión expirada. Por favor, inicia sesión nuevamente.")
+            } catch (e: Exception) {
+                android.util.Log.e("DailyMenuViewModel", "Error al cargar menú", e)
+                _uiState.value = DailyMenuUiState.Error("No se pudo cargar el menú. Intenta de nuevo.")
+            }
         }
     }
-    
-    /**
-     * Carga interna del menú sin cambiar estado de loading.
-     * Útil para recargar después de operaciones de voto.
-     */
-    private suspend fun loadMenuForDateInternal(date: Date) {
-        try {
-            val userId = userRepository.getCurrentUser()?.id
-            if (userId == null) {
-                android.util.Log.e("DailyMenuViewModel", "No hay usuario logueado")
-                _uiState.value = DailyMenuUiState.Error("No hay usuario logueado")
-                return
-            }
-            
-            android.util.Log.d("DailyMenuViewModel", "Obteniendo menú para fecha: ${currentDate.time}")
-            val menu = menuRepository.getMenuByDate(currentDate.time)
 
-            if (menu != null) {
-                android.util.Log.d("DailyMenuViewModel", "Menú encontrado: ${menu.id}, opciones: ${menu.getOptionsOrEmpty().size}")
-                // Obtener voto del usuario para este menú
-                // Si es el menú de hoy, buscar solo en 3 páginas (más rápido)
-                // Si es un menú antiguo, buscar en todas las páginas necesarias para encontrarlo
-                val isToday = isMenuToday(menu)
-                val maxPages = if (isToday) 3 else null // null = buscar en todas las páginas
-                val userVote = voteRepository.getUserVoteForMenu(menu.id, userId, maxPagesToSearch = maxPages)
-                android.util.Log.d("DailyMenuViewModel", "Voto del usuario: ${if (userVote != null) "Sí (${userVote.id}, opción: ${userVote.option.id})" else "No"}")
-                val isWithinTime = isWithinSelectionTime(menu)
-                val isActuallyOpen = menu.status == "open" && isWithinTime && isToday
-                
-                // Determinar mensaje informativo si el menú está cerrado (solo si no tiene voto)
-                val infoMessage = if (!isActuallyOpen && isToday && userVote == null) {
-                    "El horario de selección ha finalizado. Solo puedes votar entre las 08:00 y las 11:00."
-                } else {
-                    null
+    /**
+     * Carga el menú realmente vigente para votar ahora mismo, que desde que el
+     * backend abre la votación ~21:00 del día anterior puede tener fecha de
+     * mañana. Es lo que debe usar la pantalla "Hoy" cuando no vino navegada
+     * con una fecha explícita (p.ej. desde Semanal).
+     */
+    fun loadActiveMenu(showLoading: Boolean = true) {
+        if (showLoading) {
+            _uiState.value = DailyMenuUiState.Loading
+        }
+        viewModelScope.launch {
+            try {
+                val menu = menuRepository.getActiveMenu()
+                if (menu != null) {
+                    val menuDate = try {
+                        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(menu.date)
+                    } catch (e: Exception) {
+                        null
+                    } ?: Date()
+                    currentDate.time = menuDate
+                    currentDate.set(Calendar.HOUR_OF_DAY, 0)
+                    currentDate.set(Calendar.MINUTE, 0)
+                    currentDate.set(Calendar.SECOND, 0)
+                    currentDate.set(Calendar.MILLISECOND, 0)
                 }
-                
-                _uiState.value = DailyMenuUiState.Success(
-                    menu = menu,
-                    userVote = userVote,
-                    isWithinTime = isWithinTime && isToday,
-                    isActuallyOpen = isActuallyOpen,
-                    infoMessage = infoMessage
-                )
-            } else {
-                android.util.Log.w("DailyMenuViewModel", "No se encontró menú para la fecha")
-                _uiState.value = DailyMenuUiState.Error("No hay menú disponible para esta fecha")
+                loadMenuState(menu)
+            } catch (e: SessionExpiredException) {
+                android.util.Log.w("DailyMenuViewModel", "Sesión expirada al cargar menú")
+                _sessionExpired.value = true
+                _uiState.value = DailyMenuUiState.Error(e.message ?: "Sesión expirada. Por favor, inicia sesión nuevamente.")
+            } catch (e: Exception) {
+                android.util.Log.e("DailyMenuViewModel", "Error al cargar menú activo", e)
+                if (showLoading) {
+                    _uiState.value = DailyMenuUiState.Error("No se pudo cargar el menú. Intenta de nuevo.")
+                }
+                // Si era un refresco silencioso (onResume), preferimos dejar el estado
+                // anterior en pantalla antes que reemplazarlo por un error de golpe.
             }
+        }
+    }
+
+    /**
+     * Recarga sin cambiar el estado a Loading primero. Útil para recargar
+     * después de operaciones de voto o de un broadcast de actualización,
+     * manteniendo la fecha ya resuelta en currentDate (que puede ser mañana).
+     */
+    private suspend fun loadMenuForDateInternal() {
+        try {
+            val menu = menuRepository.getMenuByDate(currentDate.time)
+            loadMenuState(menu)
         } catch (e: SessionExpiredException) {
             android.util.Log.w("DailyMenuViewModel", "Sesión expirada al cargar menú")
             _sessionExpired.value = true
@@ -106,6 +120,53 @@ class DailyMenuViewModel(
             android.util.Log.e("DailyMenuViewModel", "Error al cargar menú", e)
             _uiState.value = DailyMenuUiState.Error("No se pudo cargar el menú. Intenta de nuevo.")
         }
+    }
+
+    /**
+     * Construye el UiState a partir de un menú ya resuelto (por fecha
+     * explícita o por getActiveMenu()). La elegibilidad para votar depende
+     * únicamente de la ventana real start_time/end_time del menú — ya no de
+     * si su fecha coincide con "hoy", porque el menú vigente puede tener
+     * fecha de mañana durante la ventana nocturna.
+     */
+    private suspend fun loadMenuState(menu: Menu?) {
+        val userId = userRepository.getCurrentUser()?.id
+        if (userId == null) {
+            android.util.Log.e("DailyMenuViewModel", "No hay usuario logueado")
+            _uiState.value = DailyMenuUiState.Error("No hay usuario logueado")
+            return
+        }
+
+        if (menu == null) {
+            android.util.Log.w("DailyMenuViewModel", "No se encontró menú para la fecha")
+            _uiState.value = DailyMenuUiState.Error("No hay menú disponible para esta fecha")
+            return
+        }
+
+        android.util.Log.d("DailyMenuViewModel", "Menú encontrado: ${menu.id}, opciones: ${menu.getOptionsOrEmpty().size}")
+        // Si el menú es de hoy o mañana, buscar solo en 3 páginas (más rápido,
+        // los votos recientes están al principio). Si es un menú antiguo
+        // (navegado desde Semanal), buscar en todas las páginas necesarias.
+        val isRecent = isMenuToday(menu) || isMenuTomorrow(menu)
+        val maxPages = if (isRecent) 3 else null // null = buscar en todas las páginas
+        val userVote = voteRepository.getUserVoteForMenu(menu.id, userId, maxPagesToSearch = maxPages)
+        android.util.Log.d("DailyMenuViewModel", "Voto del usuario: ${if (userVote != null) "Sí (${userVote.id}, opción: ${userVote.option.id})" else "No"}")
+        val isWithinTime = isWithinSelectionTime(menu)
+        val isActuallyOpen = isWithinTime
+
+        val infoMessage = if (!isActuallyOpen && userVote == null) {
+            "El horario de selección para este menú ya finalizó."
+        } else {
+            null
+        }
+
+        _uiState.value = DailyMenuUiState.Success(
+            menu = menu,
+            userVote = userVote,
+            isWithinTime = isWithinTime,
+            isActuallyOpen = isActuallyOpen,
+            infoMessage = infoMessage
+        )
     }
 
     fun selectOption(optionId: String) {
@@ -125,7 +186,7 @@ class DailyMenuViewModel(
                         val currentState = _uiState.value
                         if (currentState is DailyMenuUiState.Success) {
                             _uiState.value = currentState.copy(
-                                infoMessage = "El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00)."
+                                infoMessage = "El menú está cerrado. El horario de selección ya finalizó."
                             )
                         }
                         isOperationInProgress = false
@@ -158,10 +219,8 @@ class DailyMenuViewModel(
                         val currentState = _uiState.value
                         if (currentState is DailyMenuUiState.Success && newVote != null) {
                             // Actualizar el estado con el nuevo voto sin recargar todo
-                            val isToday = isMenuToday(currentState.menu)
-                            val isWithinTime = isWithinSelectionTime(currentState.menu)
-                            val isActuallyOpen = currentState.menu.status == "open" && isWithinTime && isToday
-                            
+                            val isActuallyOpen = isWithinSelectionTime(currentState.menu)
+
                             _uiState.value = currentState.copy(
                                 userVote = newVote,
                                 isActuallyOpen = isActuallyOpen,
@@ -200,8 +259,7 @@ class DailyMenuViewModel(
                         // como si siguiera vigente.
                         val isHorarioError = errorMessage?.contains("cerrado", ignoreCase = true) == true ||
                             errorMessage?.contains("horario", ignoreCase = true) == true ||
-                            errorMessage?.contains("time", ignoreCase = true) == true ||
-                            errorMessage?.contains("08:00", ignoreCase = true) == true
+                            errorMessage?.contains("time", ignoreCase = true) == true
                         if (!isHorarioError) {
                             val menuId = (currentState as? DailyMenuUiState.Success)?.menu?.id
                             if (menuId != null) {
@@ -217,7 +275,7 @@ class DailyMenuViewModel(
             } catch (e: Exception) {
                 android.util.Log.e("DailyMenuViewModel", "Error al seleccionar opción", e)
                 // Aún así recargar para sincronizar estado
-                loadMenuForDateInternal(currentDate.time)
+                loadMenuForDateInternal()
             } finally {
                 isOperationInProgress = false
             }
@@ -241,7 +299,7 @@ class DailyMenuViewModel(
                         val currentState = _uiState.value
                         if (currentState is DailyMenuUiState.Success) {
                             _uiState.value = currentState.copy(
-                                infoMessage = "El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00)."
+                                infoMessage = "El menú está cerrado. El horario de selección ya finalizó."
                             )
                         }
                         isOperationInProgress = false
@@ -263,10 +321,8 @@ class DailyMenuViewModel(
                             // OPTIMIZACIÓN: Actualizar estado localmente sin recargar todo el menú
                             val currentState = _uiState.value
                             if (currentState is DailyMenuUiState.Success) {
-                                val isToday = isMenuToday(currentState.menu)
-                                val isWithinTime = isWithinSelectionTime(currentState.menu)
-                                val isActuallyOpen = currentState.menu.status == "open" && isWithinTime && isToday
-                                
+                                val isActuallyOpen = isWithinSelectionTime(currentState.menu)
+
                                 _uiState.value = currentState.copy(
                                     userVote = null,
                                     isActuallyOpen = isActuallyOpen,
@@ -297,7 +353,7 @@ class DailyMenuViewModel(
                     } else {
                         android.util.Log.w("DailyMenuViewModel", "⚠️ No hay voto para eliminar")
                         // Recargar de todos modos por si hay desincronización
-                        loadMenuForDateInternal(currentDate.time)
+                        loadMenuForDateInternal()
                     }
                 }
             } catch (e: SessionExpiredException) {
@@ -307,7 +363,7 @@ class DailyMenuViewModel(
             } catch (e: Exception) {
                 android.util.Log.e("DailyMenuViewModel", "Error al eliminar voto", e)
                 // Aún así recargar para sincronizar estado
-                loadMenuForDateInternal(currentDate.time)
+                loadMenuForDateInternal()
             } finally {
                 isOperationInProgress = false
             }
@@ -343,10 +399,8 @@ class DailyMenuViewModel(
             val userVote = voteRepository.getUserVoteForMenu(menuId, userId, maxPagesToSearch = 3)
             val currentState = _uiState.value
             if (currentState is DailyMenuUiState.Success) {
-                val isToday = isMenuToday(currentState.menu)
-                val isWithinTime = isWithinSelectionTime(currentState.menu)
-                val isActuallyOpen = currentState.menu.status == "open" && isWithinTime && isToday
-                
+                val isActuallyOpen = isWithinSelectionTime(currentState.menu)
+
                 _uiState.value = currentState.copy(
                     userVote = userVote,
                     isActuallyOpen = isActuallyOpen
@@ -356,13 +410,15 @@ class DailyMenuViewModel(
         } catch (e: Exception) {
             android.util.Log.e("DailyMenuViewModel", "Error al actualizar voto", e)
             // Si falla, recargar todo como fallback
-            loadMenuForDateInternal(currentDate.time)
+            loadMenuForDateInternal()
         }
     }
     
     private fun isWithinSelectionTime(menu: Menu) = com.cocido.morfipolo.util.MenuTimeUtils.isWithinSelectionTime(menu)
 
     private fun isMenuToday(menu: Menu) = com.cocido.morfipolo.util.MenuTimeUtils.isMenuToday(menu)
+
+    private fun isMenuTomorrow(menu: Menu) = com.cocido.morfipolo.util.MenuTimeUtils.isMenuTomorrow(menu)
 }
 
 sealed class DailyMenuUiState {

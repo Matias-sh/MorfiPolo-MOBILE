@@ -35,8 +35,10 @@ class VoteRepository(
                                 "Ya tienes un voto registrado para este menú"
                             }
                             else -> {
-                                // Cualquier otro error 400 es probablemente por horario cerrado
-                                "No se puede votar. Solo puedes elegir tu opción de 08:00 a 11:00."
+                                // Cualquier otro error 400 es probablemente por horario cerrado.
+                                // No se hardcodea un rango de horas: cada menú define el suyo
+                                // (el backend lo abre desde la noche anterior) y puede variar.
+                                "No se puede votar. El horario de selección para este menú está cerrado."
                             }
                         }
                     }
@@ -80,7 +82,7 @@ class VoteRepository(
                 val errorMessage = when (response.code()) {
                     400 -> {
                         // Cualquier error 400 al eliminar voto es probablemente por horario cerrado
-                        "No se puede eliminar el voto. Solo puedes modificar tu elección de 08:00 a 11:00."
+                        "No se puede quitar la elección. El horario de selección para este menú está cerrado."
                     }
                     401 -> throw SessionExpiredException("Sesión expirada. Por favor, inicia sesión nuevamente.")
                     404 -> "No se encontró el voto"

@@ -234,8 +234,11 @@ class AlarmReceiver : BroadcastReceiver() {
                 app.menuRepository.getMenuByDate(todayDate)
             }
 
-            // Solo devolver menú si corresponde al día actual y está publicado/abierto.
-            if (menu != null && menu.date == todayString && menu.status == "open") {
+            // Solo devolver menú si corresponde al día actual y su ventana real
+            // (start_time/end_time) sigue abierta ahora — no el status a secas,
+            // que el backend puede dejar en "open" horas después de cerrada.
+            if (menu != null && menu.date == todayString &&
+                com.cocido.morfipolo.util.MenuTimeUtils.isWithinSelectionTime(menu)) {
                 menu
             } else {
                 null
@@ -256,7 +259,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 "${index + 1}. ${option.name}"
             }.joinToString("\n")
         } else {
-            menu.description
+            menu.getDescriptionOrEmpty()
         }
     }
     

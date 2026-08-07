@@ -52,9 +52,27 @@ class DailyMenuFragment : Fragment() {
     // Formato largo del spec: "Lunes 28 de julio"
     private val dateFormat = SimpleDateFormat("EEEE d 'de' MMMM", Locale("es", "AR"))
     private val dateFormatApi = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private val isoInstantFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
+    private val localHourFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     private fun formatDisplayDate(date: Date): String {
         return dateFormat.format(date).replaceFirstChar { it.uppercase() }
+    }
+
+    /**
+     * Hora de cierre del menú en hora local, a partir de end_time real (antes
+     * era un "11:00" fijo en el string). Si por lo que sea no se puede
+     * parsear, "11:00" sigue siendo el valor esperado en la práctica.
+     */
+    private fun formatMenuEndTime(menu: com.cocido.morfipolo.domain.model.Menu): String {
+        return try {
+            val instant = isoInstantFormat.parse(menu.end_time)
+            if (instant != null) localHourFormat.format(instant) else "11:00"
+        } catch (e: Exception) {
+            "11:00"
+        }
     }
 
     override fun onCreateView(
@@ -122,17 +140,14 @@ class DailyMenuFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         // Si no hay argumentos de fecha (viene de la barra de navegación, no del menú semanal),
-        // resetear a la fecha de hoy
+        // resolver de nuevo cuál es el menú vigente. No alcanza con comparar contra "hoy": el
+        // backend abre la votación de mañana desde ~21:00, así que el menú vigente puede
+        // cambiar de identidad (de hoy a mañana) sin que el usuario navegue a ningún lado —
+        // solo por haber pasado esa hora mientras la app estaba en segundo plano.
         val menuDateArg = arguments?.getString("menuDate", "") ?: ""
         if (menuDateArg.isEmpty()) {
-            // Viene de la barra de navegación, mostrar menú de hoy
-            val today = getTodayDate()
-            val currentDate = viewModel.getCurrentDate()
-            // Solo recargar si la fecha actual no es hoy
-            if (!isSameDate(currentDate, today)) {
-                android.util.Log.d("DailyMenuFragment", "🔄 Reseteando a fecha de hoy desde barra de navegación")
-                viewModel.loadMenuForDate(today)
-            }
+            android.util.Log.d("DailyMenuFragment", "🔄 Resolviendo menú vigente desde barra de navegación")
+            viewModel.loadActiveMenu(showLoading = false)
         } else {
             // Hay argumentos, pero si la fecha es diferente a hoy y ya se cargó,
             // limpiar los argumentos para que la próxima vez muestre hoy
@@ -153,16 +168,18 @@ class DailyMenuFragment : Fragment() {
     
     private fun loadMenuFromArguments() {
         val menuDateArg = arguments?.getString("menuDate", "") ?: ""
-        val dateToLoad = if (menuDateArg.isNotEmpty()) {
-            try {
+        if (menuDateArg.isNotEmpty()) {
+            val dateToLoad = try {
                 dateFormatApi.parse(menuDateArg) ?: getTodayDate()
             } catch (e: Exception) {
                 getTodayDate()
             }
+            viewModel.loadMenuForDate(dateToLoad)
         } else {
-            getTodayDate()
+            // Sin fecha explícita: resolver cuál es el menú vigente para votar
+            // ahora (puede ser el de mañana si ya se abrió la ventana nocturna).
+            viewModel.loadActiveMenu()
         }
-        viewModel.loadMenuForDate(dateToLoad)
     }
     
     private fun isSameDate(date1: Date, date2: Date): Boolean {
@@ -188,19 +205,19 @@ class DailyMenuFragment : Fragment() {
             R.color.comedor_success
         )
         binding.swipeRefreshLayout.setOnRefreshListener {
-            // Si no hay argumentos de fecha, usar fecha de hoy
-            // Si hay argumentos, mantener la fecha del argumento
+            // Si hay argumentos, mantener la fecha del argumento. Si no, volver a
+            // resolver el menú vigente (puede haber cambiado a partir de ~21:00).
             val menuDateArg = arguments?.getString("menuDate", "") ?: ""
-            val dateToLoad = if (menuDateArg.isNotEmpty()) {
-                try {
+            if (menuDateArg.isNotEmpty()) {
+                val dateToLoad = try {
                     dateFormatApi.parse(menuDateArg) ?: getTodayDate()
                 } catch (e: Exception) {
                     getTodayDate()
                 }
+                viewModel.loadMenuForDate(dateToLoad)
             } else {
-                getTodayDate()
+                viewModel.loadActiveMenu(showLoading = false)
             }
-            viewModel.loadMenuForDate(dateToLoad)
         }
     }
     
@@ -270,8 +287,6 @@ class DailyMenuFragment : Fragment() {
                                     // No hay menú - mostrar mensaje en el área de opciones en lugar del snackbar
                                     showNoMenuMessage()
                                 }
-                                state.message.contains("08:00", ignoreCase = true) ||
-                                state.message.contains("11:00", ignoreCase = true) ||
                                 state.message.contains("horario", ignoreCase = true) ||
                                 state.message.contains("cerrado", ignoreCase = true) ||
                                 state.message.contains("eliminar el voto", ignoreCase = true) ||
@@ -339,10 +354,11 @@ class DailyMenuFragment : Fragment() {
         }
 
         // Subtítulo contextual según estado y elección
+        val menuEndTime = formatMenuEndTime(menu)
         binding.timeRangeTextView.text = when {
-            isActuallyOpen && state.userVote != null -> getString(R.string.selection_change_until)
-            isActuallyOpen -> getString(R.string.selection_time, "11:00")
-            else -> getString(R.string.selection_closed_at)
+            isActuallyOpen && state.userVote != null -> getString(R.string.selection_change_until, menuEndTime)
+            isActuallyOpen -> getString(R.string.selection_time, menuEndTime)
+            else -> getString(R.string.selection_closed_at, menuEndTime)
         }
 
         // El chip "Ya elegiste" del header queda oculto: la card de confirmación lo comunica
@@ -493,7 +509,7 @@ class DailyMenuFragment : Fragment() {
         binding.optionsHint.visibility = if (showChooseHeader) View.VISIBLE else View.GONE
 
         if (options.isEmpty()) {
-            if (menu.description.isNotBlank()) {
+            if (!menu.description.isNullOrBlank()) {
                 // Menú sin opciones estructuradas: mostrar la descripción en una card simple
                 val descriptionView = LayoutInflater.from(requireContext())
                     .inflate(R.layout.item_menu_option, binding.optionsContainer, false)
@@ -524,15 +540,16 @@ class DailyMenuFragment : Fragment() {
 
             name.text = userVote!!.option.name
 
+            val menuEndTime = formatMenuEndTime(menu)
             if (canVote) {
                 label.setText(R.string.your_choice_today)
-                hint.setText(R.string.selection_change_until)
+                hint.text = getString(R.string.selection_change_until, menuEndTime)
                 removeAction.visibility = View.VISIBLE
                 removeAction.setOnClickListener { confirmRemoveVote() }
             } else {
                 // Variante cerrada: neutral beige, check apagado, sin acciones
                 label.setText(R.string.your_menu_today)
-                hint.setText(R.string.selection_closed_at)
+                hint.text = getString(R.string.selection_closed_at, menuEndTime)
                 card.setCardBackgroundColor(
                     androidx.core.content.ContextCompat.getColor(requireContext(), R.color.md_surface_container_high)
                 )
@@ -584,7 +601,7 @@ class DailyMenuFragment : Fragment() {
             addEmptyState(
                 icon = "–",
                 title = getString(R.string.no_choice_today),
-                subtitle = getString(R.string.no_choice_today_hint)
+                subtitle = getString(R.string.no_choice_today_hint, formatMenuEndTime(menu))
             )
         }
     }

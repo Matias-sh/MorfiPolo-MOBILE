@@ -17,7 +17,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -289,18 +288,12 @@ class MenuWidgetProvider : AppWidgetProvider() {
                     }
                 }
 
-                // Obtener menú del día
-                android.util.Log.d(TAG, "updateWidget: Obteniendo menú del día...")
-                val today = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-
+                // Menú vigente para votar ahora: puede ser el de mañana si ya se abrió
+                // la ventana nocturna (el backend abre la votación desde ~21:00).
+                android.util.Log.d(TAG, "updateWidget: Obteniendo menú vigente...")
                 val menu = kotlinx.coroutines.withContext(Dispatchers.IO) {
                     try {
-                        app.menuRepository.getMenuByDate(today.time)
+                        app.menuRepository.getActiveMenu()
                     } catch (e: Exception) {
                         android.util.Log.e(TAG, "updateWidget: Error al obtener menú", e)
                         null
@@ -486,9 +479,11 @@ class MenuWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widgetMenuDescriptionTextView, menu.description)
             android.util.Log.d(TAG, "showMenuState: Textos principales configurados")
             
-            // Configurar estado del menú - validar si realmente está abierto según el horario (08:00 - 11:00)
+            // Configurar estado del menú - depende únicamente de la ventana real
+            // start_time/end_time del menú, no del status (puede quedar "open"
+            // varias horas después de que la ventana ya cerró).
             val isWithinTime = isWithinSelectionTime(menu)
-            val isActuallyOpen = menu.status == "open" && isWithinTime
+            val isActuallyOpen = isWithinTime
             val statusText = when {
                 isActuallyOpen -> "Abierto"
                 menu.status == "closed" -> "Cerrado"
@@ -687,7 +682,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
                         message.contains("expired", ignoreCase = true) ||
                         message.contains("closed", ignoreCase = true)) {
                         // Mostrar mensaje temporal en el widget
-                        showTemporaryMessage(context, appWidgetId, "El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00).")
+                        showTemporaryMessage(context, appWidgetId, "El menú está cerrado. El horario de selección ya finalizó.")
                         return@launch
                     }
                 }
@@ -714,7 +709,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
                     message.contains("time", ignoreCase = true) || 
                     message.contains("expired", ignoreCase = true) ||
                     message.contains("closed", ignoreCase = true)) {
-                    showTemporaryMessage(context, appWidgetId, "El menú está cerrado. No puedes agregar votos fuera del horario de selección (08:00 - 11:00).")
+                    showTemporaryMessage(context, appWidgetId, "El menú está cerrado. El horario de selección ya finalizó.")
                 } else {
                     // Aún así intentar actualizar el widget
                     updateAllWidgets(context)
@@ -752,7 +747,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
                         message.contains("expired", ignoreCase = true) ||
                         message.contains("closed", ignoreCase = true)) {
                         // Mostrar mensaje temporal en el widget
-                        showTemporaryMessage(context, appWidgetId, "El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00).")
+                        showTemporaryMessage(context, appWidgetId, "El menú está cerrado. El horario de selección ya finalizó.")
                         return@launch
                     }
                 }
@@ -780,7 +775,7 @@ class MenuWidgetProvider : AppWidgetProvider() {
                     message.contains("time", ignoreCase = true) || 
                     message.contains("expired", ignoreCase = true) ||
                     message.contains("closed", ignoreCase = true)) {
-                    showTemporaryMessage(context, appWidgetId, "El menú está cerrado. No puedes quitar votos fuera del horario de selección (08:00 - 11:00).")
+                    showTemporaryMessage(context, appWidgetId, "El menú está cerrado. El horario de selección ya finalizó.")
                 } else {
                     // Aún así intentar actualizar el widget
                     updateAllWidgets(context)
@@ -877,8 +872,8 @@ class MenuWidgetProvider : AppWidgetProvider() {
     }
 
     /**
-     * Verifica si la hora actual está dentro del tiempo de selección del menú.
-     * Horario fijo: 08:00 - 11:00
+     * Verifica si el instante actual está dentro de la ventana real
+     * (start_time/end_time) del menú.
      */
     private fun isWithinSelectionTime(menu: com.cocido.morfipolo.domain.model.Menu): Boolean =
         com.cocido.morfipolo.util.MenuTimeUtils.isWithinSelectionTime(menu)

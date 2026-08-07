@@ -6,6 +6,7 @@ import com.cocido.morfipolo.data.remote.SessionExpiredException
 import com.cocido.morfipolo.data.remote.api.MorfiPoloApiService
 import com.cocido.morfipolo.domain.model.Menu
 import com.cocido.morfipolo.domain.model.MenuOption
+import com.cocido.morfipolo.util.MenuTimeUtils
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
@@ -30,7 +31,7 @@ class MenuRepository(
     suspend fun getMenuByDate(date: Date): Menu? {
         val dateString = dateFormat.format(date)
         val timestamp = date.time
-        
+
         // OPTIMIZACIÓN: Intentar primero desde caché local (más rápido)
         val cachedMenuEntity = menuDao.getMenuByDate(timestamp)
         if (cachedMenuEntity != null) {
@@ -44,16 +45,16 @@ class MenuRepository(
                 }
             }
         }
-        
+
         // Si no hay caché o está desactualizado, obtener desde API
         return try {
             // OPTIMIZACIÓN: Solo obtener menús recientes (últimos 10) en lugar de todos
             val response = apiService.getMenus()
-            
+
             if (response.isSuccessful) {
                 val menusResponse = response.body()
                 val menu = menusResponse?.data?.find { it.date == dateString }
-                
+
                 menu?.let {
                     // Filtrar menús "draft" - no mostrar borradores
                     if (it.status == "draft") {
@@ -76,24 +77,54 @@ class MenuRepository(
                 }
             }
         } catch (e: HttpException) {
+            android.util.Log.w("MenuRepository", "⚠️ getMenuByDate($dateString): HttpException code=${e.code()} msg=${e.message()}")
             // Si falla, usar base de datos local
-            cachedMenuEntity?.let { 
+            cachedMenuEntity?.let {
                 val menu = entityToMenu(it)
                 if (menu.status != "draft") menu else null
             }
         } catch (e: IOException) {
+            android.util.Log.w("MenuRepository", "⚠️ getMenuByDate($dateString): IOException ${e.message}")
             // Si no hay conexión, usar base de datos local
-            cachedMenuEntity?.let { 
+            cachedMenuEntity?.let {
                 val menu = entityToMenu(it)
                 if (menu.status != "draft") menu else null
             }
         } catch (e: Exception) {
+            android.util.Log.w("MenuRepository", "⚠️ getMenuByDate($dateString): Exception ${e.javaClass.simpleName} ${e.message}")
             // En caso de cualquier otro error, intentar usar caché
-            cachedMenuEntity?.let { 
+            cachedMenuEntity?.let {
                 val menu = entityToMenu(it)
                 if (menu.status != "draft") menu else null
             }
         }
+    }
+
+    /**
+     * El menú "activo" para votar ahora mismo. El backend abre la votación
+     * del menú de mañana desde ~21:00 de hoy, así que durante esa ventana
+     * nocturna el menú realmente vigente tiene date = mañana, no hoy. Se
+     * prioriza mañana si ya está dentro de su horario real; si no, se cae al
+     * de hoy (abierto, cerrado, o inexistente) como antes.
+     */
+    suspend fun getActiveMenu(): Menu? {
+        val today = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val tomorrow = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, 1) }
+
+        val tomorrowMenu = try {
+            getMenuByDate(tomorrow.time)
+        } catch (e: Exception) {
+            null
+        }
+        if (tomorrowMenu != null && MenuTimeUtils.isWithinSelectionTime(tomorrowMenu)) {
+            return tomorrowMenu
+        }
+        return getMenuByDate(today.time)
     }
 
     fun getMenuByDateFlow(date: Date): Flow<Menu?> {
@@ -130,7 +161,7 @@ class MenuRepository(
                 // con date_from/date_to: los ignora), así que se filtra acá con los datos
                 // ya traídos por /menus (page=1, limit=20 por defecto — de sobra para
                 // cubrir la semana actual).
-                val currentWeekMenus = sortedMenus.filter { isInCurrentWeek(it.date) }
+                val currentWeekMenus = sortedMenus.filter { isInCurrentWeek(it.date) || isTomorrow(it.date) }
                 val limitedMenus = if (currentWeekMenus.isNotEmpty()) {
                     currentWeekMenus
                 } else {
@@ -176,7 +207,7 @@ class MenuRepository(
         // Filtrar menús "draft" - no mostrar borradores
         val publishedMenus = menus.filter { it.status != "draft" }
 
-        val currentWeekMenus = publishedMenus.filter { isInCurrentWeek(it.date) }
+        val currentWeekMenus = publishedMenus.filter { isInCurrentWeek(it.date) || isTomorrow(it.date) }
         return currentWeekMenus.ifEmpty { publishedMenus.take(10) }
     }
 
@@ -210,6 +241,37 @@ class MenuRepository(
         return date.time in monday.timeInMillis..friday.timeInMillis
     }
 
+    /**
+     * true si [dateString] es el día calendario de mañana. El backend ahora
+     * publica y abre el menú del día siguiente desde la noche anterior; en un
+     * domingo a la noche eso es el lunes de la semana ENTRANTE, que
+     * isInCurrentWeek() no detecta (calcula lunes-viernes de la semana que
+     * está terminando). Sin este chequeo aparte, ese menú ya publicado y
+     * abierto no aparecía en Semanal hasta que cambiara el día.
+     */
+    private fun isTomorrow(dateString: String): Boolean {
+        val date = try {
+            dateFormat.parse(dateString) ?: return false
+        } catch (e: Exception) {
+            return false
+        }
+        val tomorrow = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            add(Calendar.DAY_OF_MONTH, 1)
+        }
+        val menuDay = Calendar.getInstance().apply {
+            time = date
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        return menuDay.timeInMillis == tomorrow.timeInMillis
+    }
+
     fun getWeeklyMenusFlow(): Flow<List<Menu>> {
         val calendar = Calendar.getInstance()
         calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -241,7 +303,7 @@ class MenuRepository(
         return MenuEntity(
             id = menu.id,
             fecha = date.time,
-            descripcion = menu.description,
+            descripcion = menu.getDescriptionOrEmpty(),
             horarioInicio = menu.start_time,
             horarioFin = menu.end_time,
             estado = menu.status,
